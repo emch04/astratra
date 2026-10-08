@@ -1,8 +1,8 @@
 # @astratra/booking
 
 Prise de rendez-vous : calcul des créneaux libres et réservation **sans
-double réservation**. Pour l'accueil d'une entreprise (module Accueil de
-AppPro), un salon (Salon Démo), une salle de réunion, un cours collectif.
+double réservation**. Pour l'accueil d'une entreprise (module Accueil d'un
+logiciel de gestion), un salon de coiffure, une salle de réunion, un cours collectif.
 
 Aucune dépendance. Les fuseaux horaires passent par `Intl`, inclus dans Node.
 
