@@ -7,7 +7,7 @@ Chaque package Astratra est versionné indépendamment.
 
 ### Documentation et commentaires neutres
 - Commentaires, descriptions et données de test des paquets retirent les noms de projets d'origine ; aucun comportement ne change.
-- `@astratra/testkit` : la liste de régions de test change une province (donnée de test).
+- `@astratra/testkit` : une région de la liste de test de `@astratra/testkit` est remplacée par une autre (donnée de test).
 - Licence : titulaire du copyright « Astratra contributors ».
 
 ## 2026-10-08 — `@astratra/memory` 2.0.0 et `@astratra/voice` 1.1.0 : ce que les apps écrivaient autour
