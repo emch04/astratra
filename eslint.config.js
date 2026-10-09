@@ -45,6 +45,10 @@ module.exports = [
     }
   },
   {
+    files: ['packages/saas-kit/__tests__/**/*.js'],
+    languageOptions: { globals: { fetch: 'readonly' } }
+  },
+  {
     files: ['packages/create-astratra-app/**/*.js'],
     languageOptions: {
       ecmaVersion: 2022,
