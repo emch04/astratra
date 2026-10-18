@@ -116,7 +116,7 @@ est dans [CHANGELOG.md](CHANGELOG.md).
 
 | Paquet | Version | Rôle |
 |---|---|---|
-| [`@astratra/ai`](packages/ai/README.md) | 1.11.0 | Routage multi-fournisseur avec quotas et repli, registre d'outils, boucle d'agent, niveaux de risque avec confirmation, fournisseur llama.cpp local |
+| [`@astratra/ai`](packages/ai/README.md) | 1.12.0 | Routage multi-fournisseur avec quotas et repli, registre d'outils, boucle d'agent, niveaux de risque avec confirmation, fournisseur llama.cpp local |
 | [`@astratra/agent`](packages/agent/README.md) | 1.3.0 | Tâches durables, budgets, plans, vérifications de fin, résumés de contexte, suivi de la consommation, retours utilisateur (👍/👎), ordonnanceur de tâches à heure fixe et file d'actions en attente d'approbation |
 | [`@astratra/models`](packages/models/README.md) | 1.1.0 | Service local de modèles sur CPU (vecteurs, reclassement, NLI, entités, transcription) et son client Node ; catalogue des prix et calcul du coût |
 | [`@astratra/conscience`](packages/conscience/README.md) | 1.4.0 | Mémoire documentée des décisions d'un agent (résultats, corrections, leçons avec preuves, modèle de soi, traçabilité, effacement) sous un gouverneur déterministe sans aucun modèle de langage |

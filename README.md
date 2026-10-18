@@ -111,7 +111,7 @@ package is in [CHANGELOG.md](CHANGELOG.md).
 
 | Package | Version | What it does |
 |---|---|---|
-| [`@astratra/ai`](packages/ai/README.md) | 1.11.0 | Multi-provider AI routing with quotas and fallback, tool registry, agent loop, risk levels with confirmation, local llama.cpp provider |
+| [`@astratra/ai`](packages/ai/README.md) | 1.12.0 | Multi-provider AI routing with quotas and fallback, tool registry, agent loop, risk levels with confirmation, local llama.cpp provider |
 | [`@astratra/agent`](packages/agent/README.md) | 1.3.0 | Durable tasks, budgets, plans, completion checks, context summaries, consumption tracking, user feedback (👍/👎), a timed task scheduler and an approval queue for proposed actions |
 | [`@astratra/models`](packages/models/README.md) | 1.1.0 | Local CPU model service (embeddings, reranking, NLI, entities, speech-to-text) and its Node client; price catalogue and cost calculation |
 | [`@astratra/conscience`](packages/conscience/README.md) | 1.4.0 | Documented memory of an agent's decisions (outcomes, corrections, lessons with evidence, self-model, lineage, erasure) under a deterministic governor without any language model |
