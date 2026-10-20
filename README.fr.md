@@ -164,7 +164,7 @@ est dans [CHANGELOG.md](CHANGELOG.md).
 
 | Paquet | Version | Rôle |
 |---|---|---|
-| [`@astratra/tooling`](packages/tooling/README.md) | 1.6.1 | Audit de l'espace de travail (secrets, routes, traductions), lanceur de tests, déploiement avec retour arrière, publication d'applications, évaluation d'IA |
+| [`@astratra/tooling`](packages/tooling/README.md) | 1.6.2 | Audit de l'espace de travail (secrets, routes, traductions), lanceur de tests, déploiement avec retour arrière, publication d'applications, évaluation d'IA |
 | [`@astratra/testkit`](packages/testkit/README.md) | 1.1.0 | Bases de test MongoDB ou PostgreSQL jetables, fausses données reproductibles par pays, garde contre les bases de production |
 
 L'exemple [`examples/dashboard-ui`](examples/dashboard-ui/README.md) montre
