@@ -159,7 +159,7 @@ package is in [CHANGELOG.md](CHANGELOG.md).
 
 | Package | Version | What it does |
 |---|---|---|
-| [`@astratra/tooling`](packages/tooling/README.md) | 1.5.0 | Workspace audit (secrets, routes, translations), test runner, deployment with rollback, app publishing, AI evaluation |
+| [`@astratra/tooling`](packages/tooling/README.md) | 1.6.0 | Workspace audit (secrets, routes, translations), test runner, deployment with rollback, app publishing, AI evaluation |
 | [`@astratra/testkit`](packages/testkit/README.md) | 1.1.0 | Disposable MongoDB or PostgreSQL test databases, reproducible per-country fake data, guard against production databases |
 
 The example [`examples/dashboard-ui`](examples/dashboard-ui/README.md) shows
