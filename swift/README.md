@@ -63,7 +63,7 @@ Le contenu des messages envoyés à une IA, le texte saisi, les identifiants ré
 
 - La pile d'un blocage n'est connue que par le rapport d'Apple (le gardien ne lit pas le fil principal).
 - Une app tuée en arrière-plan par le système (normal sur iPhone) n'est signalée que si un blocage était en cours.
-- Les noms de fonctions des piles ne sont pas symbolisés.
+- Les piles d'une app publiée ne portent pas les noms de fonctions (symboles retirés) : chaque cadre porte l'UUID de son binaire et son décalage (`+5552808`), que le tableau de bord traduit avec la table de symboles envoyée à la publication (`centrale envoyer-symboles`, paquet `@astratra/centrale-cli`).
 
 ## Tests
 

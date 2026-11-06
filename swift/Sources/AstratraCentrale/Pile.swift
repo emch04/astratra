@@ -8,9 +8,14 @@ enum Pile {
         Bundle.main.object(forInfoDictionaryKey: "CFBundleExecutable") as? String ?? ProcessInfo.processInfo.processName
     }
 
-    static func lire(_ symboles: [String], moduleApp: String = Pile.moduleApp, ignorerModule: String? = "AstratraCentrale") -> [Cadre] {
+    /// `adresses` (les adresses de retour, dans le même ordre que `symboles`) ajoutent à chaque cadre l'UUID de son binaire ;
+    /// un cadre sans nom de fonction (binaire publié, symboles retirés : « MonApp + 5552808 ») prend son décalage, « +5552808 »,
+    /// que le serveur traduit avec la table de symboles du build.
+    static func lire(_ symboles: [String], adresses: [NSNumber]? = nil, moduleApp: String = Pile.moduleApp, ignorerModule: String? = "AstratraCentrale",
+                     position: (UInt) -> Binaires.Position? = Binaires.position) -> [Cadre] {
         var cadres: [Cadre] = []
-        for ligne in symboles {
+        let adresses = adresses?.count == symboles.count ? adresses : nil
+        for (rang, ligne) in symboles.enumerated() {
             let morceaux = ligne.split(separator: " ", omittingEmptySubsequences: true)
             guard morceaux.count >= 3 else { continue }
             let module = String(morceaux[1])
@@ -21,7 +26,13 @@ enum Pile {
                 if let plus = reste.range(of: " + ", options: .backwards) { reste = String(reste[..<plus.lowerBound]) }
                 fonction = reste.isEmpty ? nil : String(reste.prefix(300))
             }
-            cadres.append(Cadre(fichier: module, fonction: fonction, app: module == moduleApp))
+            var debugId: String?
+            if let adresse = adresses?[rang].uintValue, let p = position(adresse) {
+                debugId = p.uuid
+                /* « MonApp + 123 » : le seul « nom » est celui du binaire, la vraie position est le décalage. */
+                if fonction == nil || fonction == module || fonction == p.module { fonction = "+\(p.decalage)" }
+            }
+            cadres.append(Cadre(fichier: module, fonction: fonction, app: module == moduleApp, debugId: debugId))
             if cadres.count >= Envoi.cadresMax { break }
         }
         return cadres

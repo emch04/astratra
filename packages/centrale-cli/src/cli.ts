@@ -4,6 +4,7 @@
  *   centrale injecter <dossier>
  *   centrale envoyer-cartes <dossier> --version X
  *   centrale deploiement --version X --commit SHA [--depot owner/repo] [--environnement production]
+ *   centrale envoyer-symboles <archive.xcarchive | App.dSYM> [--version X] [--racine dossier]
  * Le jeton de déploiement se lit dans CENTRALE_JETON, l'adresse du backend dans CENTRALE_ADRESSE.
  * Code de sortie : 0 si tout va bien, 1 en cas d'échec, 2 pour une commande mal formée.
  */
@@ -13,6 +14,7 @@ import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { cheminRelatif, injecterDossier } from './injecter.ts';
 import { declarerDeploiement, envoyerCartes, type Connexion } from './envoyer.ts';
+import { envoyerSymboles, extraireTables, type Outil } from './symboles.ts';
 
 const AIDE = `Utilisation :
   centrale injecter <dossier>
@@ -21,11 +23,15 @@ const AIDE = `Utilisation :
       Envoie les cartes (.map) au backend ; celles qu'il a déjà sont sautées.
   centrale deploiement --version X --commit SHA [--depot owner/repo] [--environnement production]
       Déclare un déploiement (pour la version d'apparition et le commit suspect).
+  centrale envoyer-symboles <archive.xcarchive | App.dSYM> [--version X] [--racine dossier]
+      Sur un Mac avec Xcode : lit les dSYM et envoie une table de symboles par binaire (UUID), pour que les plantages
+      iOS et macOS soient traduits en fonction, fichier et ligne. Les chemins sous --racine (dossier courant par défaut)
+      deviennent relatifs ; aucun autre chemin de la machine ne part.
 
 Variables d'environnement : CENTRALE_JETON (jeton de déploiement clj_dep_…), CENTRALE_ADRESSE (adresse du backend).`;
 
 interface Sorties { ecrire: (texte: string) => void; erreur: (texte: string) => void }
-interface Options { env?: NodeJS.ProcessEnv; sorties?: Sorties; connexion?: Partial<Connexion> }
+interface Options { env?: NodeJS.ProcessEnv; sorties?: Sorties; connexion?: Partial<Connexion>; outil?: Outil }
 
 /** Sépare les arguments positionnels et les options `--nom valeur` / `--nom=valeur`. */
 export function lireArguments(args: string[]): { positionnels: string[]; options: Record<string, string> } {
@@ -61,7 +67,7 @@ function dossierValide(chemin: string | undefined, sorties: Sorties): string | n
 }
 
 /** Exécute une commande ; rend le code de sortie. Ne lève pas. */
-export async function executer(args: string[], { env = process.env, sorties = { ecrire: console.log, erreur: console.error }, connexion: surcharge }: Options = {}): Promise<number> {
+export async function executer(args: string[], { env = process.env, sorties = { ecrire: console.log, erreur: console.error }, connexion: surcharge, outil }: Options = {}): Promise<number> {
   const [commande, ...reste] = args;
   const { positionnels, options } = lireArguments(reste);
   try {
@@ -101,6 +107,18 @@ export async function executer(args: string[], { env = process.env, sorties = { 
           ...(options.environnement ? { environnement: options.environnement } : {})
         });
         sorties.ecrire(`Déploiement ${options.version} (${options.commit.slice(0, 12)}) déclaré.`);
+        return 0;
+      }
+      case 'envoyer-symboles': {
+        const chemin = positionnels[0];
+        if (!chemin || !existsSync(resolve(chemin))) { sorties.erreur(`Archive ou dSYM introuvable : ${chemin ?? ''}`); return 2; }
+        if (options.version === 'true') { sorties.erreur('--version demande une valeur.'); return 2; }
+        const connexion = connexionDe(env, sorties, surcharge);
+        if (!connexion) return 2;
+        const tables = await extraireTables(chemin, { racine: options.racine && options.racine !== 'true' ? options.racine : process.cwd(), ...(outil ? { outil } : {}) });
+        if (!tables.length) { sorties.erreur(`Aucun dSYM lisible dans ${chemin}.`); return 1; }
+        const bilan = await envoyerSymboles(connexion, tables, { ...(options.version ? { version: options.version } : {}), signaler: (m) => sorties.ecrire(`… ${m}`) });
+        sorties.ecrire(`${bilan.envoyees.length} table(s) de symboles envoyée(s), ${bilan.dejaConnues.length} déjà connue(s).`);
         return 0;
       }
       case undefined:

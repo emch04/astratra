@@ -230,7 +230,9 @@ extension Centrale {
         while let cadre = niveau.first, cadres.count < 60 {
             let binaire = cadre["binaryName"] as? String ?? "?"
             let decalage = cadre["offsetIntoBinaryTextSegment"] as? Int
-            cadres.append(Cadre(fichier: binaire, fonction: decalage.map { "+\($0)" }, app: binaire == app))
+            /* L'UUID du binaire : sans lui, le décalage ne se traduit pas (il change à chaque build). */
+            let uuid = cadre["binaryUUID"] as? String
+            cadres.append(Cadre(fichier: binaire, fonction: decalage.map { "+\($0)" }, app: binaire == app, debugId: uuid))
             niveau = cadre["subFrames"] as? [[String: Any]] ?? []
         }
         return cadres

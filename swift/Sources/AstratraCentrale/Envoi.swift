@@ -32,13 +32,16 @@ public struct Cadre: Codable, Sendable, Equatable {
     public var ligne: Int?
     public var colonne: Int?
     public var app: Bool
+    /// L'UUID du binaire (Mach-O) du cadre : le serveur y retrouve la table de symboles de ce build exact.
+    public var debugId: String?
 
-    public init(fichier: String, fonction: String? = nil, ligne: Int? = nil, colonne: Int? = nil, app: Bool) {
+    public init(fichier: String, fonction: String? = nil, ligne: Int? = nil, colonne: Int? = nil, app: Bool, debugId: String? = nil) {
         self.fichier = fichier
         self.fonction = fonction
         self.ligne = ligne
         self.colonne = colonne
         self.app = app
+        self.debugId = debugId
     }
 }
 

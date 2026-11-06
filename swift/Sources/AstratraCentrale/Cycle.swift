@@ -76,7 +76,7 @@ extension Centrale {
         GestionnairePrecedent.valeur = precedent
         NSSetUncaughtExceptionHandler { exception in
             Centrale.partagee?.garderFatale(
-                type: exception.name.rawValue, message: exception.reason ?? "", symboles: exception.callStackSymbols)
+                type: exception.name.rawValue, message: exception.reason ?? "", symboles: exception.callStackSymbols, adresses: exception.callStackReturnAddresses)
             GestionnairePrecedent.valeur?(exception)
         }
     }

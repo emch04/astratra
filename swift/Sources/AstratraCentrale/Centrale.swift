@@ -127,13 +127,13 @@ public final class Centrale: @unchecked Sendable {
     public func erreur(_ e: Error, niveau: Niveau = .erreur, etiquettes: [String: String]? = nil) -> String? {
         let type = String(reflecting: Swift.type(of: e)).split(separator: ".").last.map(String.init) ?? "Error"
         let message = (e as? LocalizedError)?.errorDescription ?? String(describing: e)
-        return enregistrerErreur(type: type, message: message, pile: Pile.lire(Thread.callStackSymbols), niveau: niveau, etiquettes: etiquettes)
+        return enregistrerErreur(type: type, message: message, pile: Pile.lire(Thread.callStackSymbols, adresses: Thread.callStackReturnAddresses), niveau: niveau, etiquettes: etiquettes)
     }
 
     /// Un message d'erreur sans `Error` (un état impossible, une réponse inattendue…).
     @discardableResult
     public func message(_ texte: String, niveau: Niveau = .avertissement, etiquettes: [String: String]? = nil) -> String? {
-        enregistrerErreur(type: "Message", message: texte, pile: Pile.lire(Thread.callStackSymbols), niveau: niveau, etiquettes: etiquettes)
+        enregistrerErreur(type: "Message", message: texte, pile: Pile.lire(Thread.callStackSymbols, adresses: Thread.callStackReturnAddresses), niveau: niveau, etiquettes: etiquettes)
     }
 
     /// Un écran vu. `nom` est un gabarit (`/titre/:id`), jamais un nom avec un identifiant réel.
@@ -251,9 +251,9 @@ public final class Centrale: @unchecked Sendable {
     // MARK: - Plantages
 
     /// Garde une erreur fatale sur le disque (appelé juste avant que l'app s'arrête) : elle part au lancement suivant.
-    func garderFatale(type: String, message: String, symboles: [String]) {
+    func garderFatale(type: String, message: String, symboles: [String], adresses: [NSNumber]? = nil) {
         guard actif, let dossier = config.dossier else { return }
-        let exception = Exception(type: String(type.prefix(200)), message: Masquage.texte(String(message.prefix(4000)), noms: config.noms), pile: Pile.lire(symboles))
+        let exception = Exception(type: String(type.prefix(200)), message: Masquage.texte(String(message.prefix(4000)), noms: config.noms), pile: Pile.lire(symboles, adresses: adresses))
         let fatale = Fatale(id: UUID().uuidString.lowercased(), horodatage: horodatage(), exception: exception, sessionId: verrou.withLock { contexte.sessionId })
         if let donnees = try? JSONEncoder().encode(fatale) {
             try? FileManager.default.createDirectory(at: dossier, withIntermediateDirectories: true)

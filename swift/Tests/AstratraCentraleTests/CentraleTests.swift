@@ -191,3 +191,46 @@ struct PanneEssai: LocalizedError {
     await troisieme.vider()
     #expect(faux3.evenements.map { "\($0["type"] ?? "")/\($0["niveau"] ?? $0["etat"] ?? "")" } == ["session/anormal"])
 }
+
+// MARK: - Symbolisation : l'UUID du binaire accompagne chaque cadre
+
+@Test func lesCadresDApplePortentLUUIDDuBinaire() throws {
+    #if canImport(MetricKit) && !os(watchOS) && !os(tvOS)
+    let json = #"{"callStacks":[{"threadAttributed":true,"callStackRootFrames":[{"binaryName":"MonApp","binaryUUID":"ECBBF78A-B58E-3DF9-819C-7B2EA15372F5","offsetIntoBinaryTextSegment":5552808,"subFrames":[{"binaryName":"libswiftCore.dylib","binaryUUID":"11111111-2222-3333-4444-555555555555","offsetIntoBinaryTextSegment":12}]}]}]}"#
+    let cadres = Centrale.pileMetricKit(Data(json.utf8))
+    #expect(cadres.count == 2)
+    #expect(cadres[0].fonction == "+5552808")
+    #expect(cadres[0].debugId == "ECBBF78A-B58E-3DF9-819C-7B2EA15372F5")
+    #expect(cadres[1].debugId == "11111111-2222-3333-4444-555555555555")
+    #endif
+}
+
+@Test func unePileEnDirectSansSymbolesPrendLeDecalageEtLUUID() {
+    let symboles = [
+        "0   MonApp                              0x0000000100abc123 MonApp + 52",
+        "1   MonApp                              0x0000000100abd000 $s6MonApp4vueV4corpsyyF + 12",
+        "2   libsystem                           0x0000000180000000 start + 4"
+    ]
+    let adresses: [NSNumber] = [0x100abc123, 0x100abd000, 0x180000000]
+    let position: (UInt) -> Binaires.Position? = { a in
+        a == 0x180000000 ? nil : Binaires.Position(uuid: "AAAAAAAA-BBBB-CCCC-DDDD-EEEEEEEEEEEE", decalage: a - 0x100000000, module: "MonApp")
+    }
+    let cadres = Pile.lire(symboles, adresses: adresses, moduleApp: "MonApp", ignorerModule: nil, position: position)
+    #expect(cadres[0].fonction == "+\(0xabc123)", "sans symbole, le décalage dans le binaire")
+    #expect(cadres[0].debugId == "AAAAAAAA-BBBB-CCCC-DDDD-EEEEEEEEEEEE")
+    #expect(cadres[1].fonction == "$s6MonApp4vueV4corpsyyF", "un symbole présent est gardé")
+    #expect(cadres[1].debugId == "AAAAAAAA-BBBB-CCCC-DDDD-EEEEEEEEEEEE")
+    #expect(cadres[2].debugId == nil)
+    /* Sans adresses (ou pas autant que de lignes) : comme avant. */
+    #expect(Pile.lire(symboles, adresses: [1], moduleApp: "MonApp", ignorerModule: nil, position: position)[0].debugId == nil)
+}
+
+@Test func lUUIDDUneImageChargeeSeLitDansSonEnTete() {
+    #if canImport(MachO)
+    let ici = UInt(bitPattern: #dsohandle) + 16
+    let p = Binaires.position(ici)
+    #expect(p != nil)
+    #expect(p?.uuid.range(of: #"^[0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12}$"#, options: .regularExpression) != nil)
+    #expect(p?.decalage == 16)
+    #endif
+}

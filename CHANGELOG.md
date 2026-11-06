@@ -3,6 +3,12 @@
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Chaque package Astratra est versionné indépendamment.
 
+## 2026-11-06 — `@astratra/centrale-cli` 1.1.0 et AstratraCentrale (Swift) : les plantages Apple traduits en fonction, fichier et ligne
+
+### Ajouté
+- `@astratra/centrale-cli` : `centrale envoyer-symboles <archive | .dSYM> [--version X] [--racine dossier]`. Sur le Mac de publication, une table de symboles par binaire et par architecture (UUID, fonctions, fichiers, lignes, en décalages depuis `__TEXT`), extraite avec les outils de Xcode ; sur arm64, chaque instruction est traduite par `atos`, et la table rend exactement ce que rendrait `atos` (vérifié sur un binaire compilé pendant les tests, et sur une app de 100 000 lignes : 5 cadres sur 5 identiques, 138 lignes sur 138). Seuls les changements sont gardés : quelques Mo, moins de 1 Mo compressés. Chemins relatifs à `--racine`, deux derniers segments ailleurs : aucun chemin de la machine ne part. Les tables déjà connues du serveur sont sautées (`POST /v1/symboles/connues`, puis `POST /v1/symboles`). Bibliothèque : `extraireTables`, `envoyerSymboles` et les lecteurs de sorties (`lireUuids`, `lireBaseTexte`, `lireFonctions`, `lireLignes`, `lireAtos`).
+- AstratraCentrale (Swift) : chaque cadre porte l'UUID de son binaire (`debugId`). Pour les rapports d'Apple (MetricKit), il vient de `binaryUUID` ; pour les erreurs et messages signalés en direct, et les exceptions Objective-C, des adresses de retour (`dladdr`, commande `LC_UUID` de l'image), et un cadre sans nom de fonction (« App + 5552808 ») prend son décalage, `+5552808`. Avant, l'UUID était perdu et la pile d'une app publiée ne pouvait plus être traduite.
+
 ## 2026-11-06 — `@astratra/web-search` 1.0.0, `@astratra/ai` 1.15.0 : une recherche web où chaque fait reste attaché à sa page
 
 ### Ajouté

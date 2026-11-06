@@ -3,4 +3,6 @@ export { injecterDossier, injecterFichier, marquerCarteSeule, debugIdDe, ligneEn
 export type { Resultat } from './injecter.ts';
 export { envoyerCartes, declarerDeploiement, cartesDe, appeler, ErreurCentrale, LOT_OCTETS, LOT_MAX_OCTETS } from './envoyer.ts';
 export type { Connexion, CarteLocale, BilanEnvoi, Deploiement } from './envoyer.ts';
+export { extraireTables, envoyerSymboles, lireUuids, lireBaseTexte, lireFonctions, lireLignes, lireAtos, cheminPropre, instructions, fichiersDwarf, outilXcode } from './symboles.ts';
+export type { TableSymboles, BilanSymboles, Outil } from './symboles.ts';
 export { executer } from './cli.ts';
