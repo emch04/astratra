@@ -235,7 +235,7 @@ runToolLoop({ system: 's', messages: [], tools: toolSpecs(nativeTools), turn: as
   .then(({ text, turns }) => `${text}${turns}`);
 const params: Record<string, string | number> = stepParams(nativeTools[0], { reference: 'Jean 3:16' });
 const sentence: string = wholeSentences('Une phrase. Coup');
-searchSerper({ query: 'q', sites: ['jw.org'] }, { key: 'k', fetch: async () => ({ ok: true, status: 200, json: async () => ({}) }) }).then((results) => results.map((result) => result.url));
+searchSerper({ query: 'q', sites: ['example.com'], gl: 'fr', period: 'day' }, { key: 'k', fetch: async () => ({ ok: true, status: 200, json: async () => ({}) }) }).then((results) => results.map((result) => result.url));
 declare const serverResponse: Parameters<typeof openEventStream>[0];
 openEventStream(serverResponse).send('answer', { text: `${params.reference}${sentence}` });
 

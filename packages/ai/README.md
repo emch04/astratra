@@ -342,14 +342,20 @@ un proxy (`X-Accel-Buffering: no`) ; écrire après la fin ne fait rien.
 ## Recherche web (Serper)
 
 ```js
-const resultats = await searchSerper({ query, sites: ['jw.org'], hl: 'fr' }, {
+const resultats = await searchSerper({ query, sites: ['example.com'], hl: 'fr', gl: 'fr', period: 'week' }, {
   key: process.env.SERPER_API_KEY, fetch,
   accept: (resultat, url) => !estHostile(resultat)   // écarté avant que le modèle ne lise
 });
 ```
 
-Des résultats https avec un titre, 8 au plus. Sans clé, rien n'est demandé
-(`code: 'WEB_SEARCH_NO_KEY'`) ; une panne porte `'WEB_SEARCH_FAILED'`, jamais la clé.
+Des résultats https avec un titre, 8 au plus. `gl` choisit le pays, `period`
+(`hour`, `day`, `week`, `month`, `year`) ne garde que les résultats récents.
+Sans clé, rien n'est demandé (`code: 'WEB_SEARCH_NO_KEY'`) ; une panne porte
+`'WEB_SEARCH_FAILED'` et, si Serper a répondu, son `status` — jamais la clé.
+
+Pour plusieurs moteurs (Serper, Brave, Tavily, Exa) fusionnés sans mélanger les
+pages, la lecture sûre d'une page et un outil prêt pour les modèles, voir
+[`@astratra/web-search`](../web-search/README.md), qui réutilise `searchSerper`.
 
 ## Registre d'outils
 

@@ -709,6 +709,8 @@ export function askGeminiModel(
 
 /** Les sources d'une réponse generateContent (ou d'un de ses candidats), nettoyées et bornées. Ne lève jamais. */
 export function readGeminiGrounding(answer: unknown): GeminiGrounding;
+/** Un schéma JSON accepté par l'API Gemini native : additionalProperties, $schema et $id retirés à toute profondeur. */
+export function geminiSchema<T>(schema: T): T;
 
 export function createGeminiProvider(options: ChatProviderOptions & {
   id?: string;
@@ -820,9 +822,15 @@ export function openEventStream(
 
 export interface WebResult { title: string; url: string; snippet: string; date: string | null }
 
-/** Lève une erreur de code 'WEB_SEARCH_NO_KEY' (rien n'est demandé) ou 'WEB_SEARCH_FAILED'. */
+export type SerperPeriod = 'hour' | 'day' | 'week' | 'month' | 'year';
+export const SERPER_PERIODS: Readonly<Record<SerperPeriod, string>>;
+
+/**
+ * Lève une erreur de code 'WEB_SEARCH_NO_KEY' (rien n'est demandé) ou 'WEB_SEARCH_FAILED', avec `status` quand Serper a
+ * répondu. Pour plusieurs moteurs fusionnés et la lecture des pages, voir @astratra/web-search, qui réutilise celui-ci.
+ */
 export function searchSerper(
-  search: { query: string; sites?: string[]; hl?: string; num?: number },
+  search: { query: string; sites?: string[]; hl?: string; gl?: string; period?: SerperPeriod; num?: number },
   io: { key: string | null | undefined; fetch: FetchLike; accept?: (result: WebResult, url: URL) => boolean; timeoutMs?: number; endpoint?: string }
 ): Promise<WebResult[]>;
 

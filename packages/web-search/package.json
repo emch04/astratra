@@ -1,0 +1,69 @@
+{
+  "name": "@astratra/web-search",
+  "version": "1.0.0",
+  "description": "Web search for AI agents: several engines (Serper, Brave, Tavily, Exa, or a gateway of your own) with automatic fallback, rank fusion without content mixing (one entry = one page = one site), verbatim passages with their position, SSRF-safe page reading, content framed as data, cache, quotas, cost report, tool definitions and an MCP server.",
+  "engines": {
+    "node": ">=20.3"
+  },
+  "main": "src/index.js",
+  "types": "src/index.d.ts",
+  "type": "commonjs",
+  "files": [
+    "src"
+  ],
+  "bin": {
+    "astratra-web-search-mcp": "src/mcpStdio.js"
+  },
+  "scripts": {
+    "test": "jest",
+    "eval:live": "node scripts/evalLive.js"
+  },
+  "jest": {
+    "testMatch": [
+      "**/__tests__/**/*.test.js"
+    ]
+  },
+  "keywords": [
+    "astratra",
+    "web-search",
+    "ai",
+    "agents",
+    "rag",
+    "serper",
+    "brave-search",
+    "tavily",
+    "exa",
+    "mcp",
+    "ssrf"
+  ],
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  },
+  "dependencies": {
+    "@astratra/ai": "^1.15.0"
+  },
+  "peerDependencies": {
+    "@modelcontextprotocol/sdk": ">=1.20.0"
+  },
+  "peerDependenciesMeta": {
+    "@modelcontextprotocol/sdk": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@modelcontextprotocol/sdk": "^1.32.1",
+    "jest": "30.4.2"
+  },
+  "exports": {
+    ".": {
+      "types": "./src/index.d.ts",
+      "default": "./src/index.js"
+    },
+    "./mcp": {
+      "types": "./src/mcp.d.ts",
+      "default": "./src/mcp.js"
+    },
+    "./package.json": "./package.json"
+  }
+}

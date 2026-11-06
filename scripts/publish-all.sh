@@ -64,6 +64,7 @@ ORDER=(
   "@astratra/repomap"
   "@astratra/srs"
   "@astratra/testkit"
+  "@astratra/web-search"
   "create-astratra-app"
 )
 
