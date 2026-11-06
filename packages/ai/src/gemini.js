@@ -303,4 +303,4 @@ function createGeminiProvider(options = {}) {
   };
 }
 
-module.exports = { askGeminiModel, createGeminiProvider, readGeminiGrounding };
+module.exports = { askGeminiModel, createGeminiProvider, readGeminiGrounding, geminiSchema };

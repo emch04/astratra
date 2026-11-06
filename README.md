@@ -103,7 +103,7 @@ options and what it does not do. The table below links to them.
 
 ## Packages
 
-The 45 packages in [`packages/`](packages/) are all published under the
+The 47 packages in [`packages/`](packages/) are all published under the
 `@astratra` scope, except `create-astratra-app`, which is published under its
 own name. Versions are the ones in each `package.json`; the history of every
 package is in [CHANGELOG.md](CHANGELOG.md).
@@ -125,7 +125,7 @@ package is in [CHANGELOG.md](CHANGELOG.md).
 
 | Package | Version | What it does |
 |---|---|---|
-| [`@astratra/ai`](packages/ai/README.md) | 1.13.0 | Multi-provider AI routing with quotas and fallback, tool registry, agent loop, risk levels with confirmation, local llama.cpp provider |
+| [`@astratra/ai`](packages/ai/README.md) | 1.15.0 | Multi-provider AI routing with quotas and fallback, tool registry, agent loop, risk levels with confirmation, local llama.cpp provider |
 | [`@astratra/agent`](packages/agent/README.md) | 1.3.0 | Durable tasks, budgets, plans, completion checks, context summaries, consumption tracking, user feedback (👍/👎), a timed task scheduler and an approval queue for proposed actions |
 | [`@astratra/models`](packages/models/README.md) | 1.2.0 | Local CPU model service (embeddings, reranking, NLI, entities, speech-to-text) and its Node client; price catalogue and cost calculation |
 | [`@astratra/conscience`](packages/conscience/README.md) | 1.4.0 | Documented memory of an agent's decisions (outcomes, corrections, lessons with evidence, self-model, lineage, erasure) under a deterministic governor without any language model |
@@ -136,6 +136,7 @@ package is in [CHANGELOG.md](CHANGELOG.md).
 | [`@astratra/live`](packages/live/README.md) | 1.0.0 | Real-time voice call sessions and client protocol helpers |
 | [`@astratra/app-guide`](packages/app-guide/README.md) | 1.0.0 | Role-aware in-app guide generated from the screen configuration, with coverage checks |
 | [`@astratra/repomap`](packages/repomap/README.md) | 1.0.1 | Weighted symbol map of a repository, for exploring code within a token budget |
+| [`@astratra/web-search`](packages/web-search/README.md) | 1.0.0 | Web search for agents: several engines with fallback, rank fusion without content mixing (one entry = one page = one site), verbatim passages, SSRF-safe page reading, tool definitions and an MCP server |
 
 ### Business logic
 

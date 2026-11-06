@@ -66,6 +66,7 @@ ORDER=(
   "@astratra/srs"
   "@astratra/testkit"
   "@astratra/centrale"
+  "@astratra/web-search"
   "@astratra/centrale-cli"
   "create-astratra-app"
 )

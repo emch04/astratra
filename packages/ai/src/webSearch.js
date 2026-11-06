@@ -5,15 +5,21 @@
  * seulement, un titre obligatoire, au plus `num`, et un filtre de l'appelant
  * (un site hostile, une source refusée) appliqué AVANT que le modèle ne lise.
  * La clé part dans l'en-tête et n'apparaît dans aucune erreur.
+ *
+ * C'est aussi l'adaptateur Serper de @astratra/web-search, qui le réutilise
+ * (fusion de plusieurs moteurs, lecture des pages) au lieu d'en écrire un autre.
  */
 
 const DEFAULT_ENDPOINT = 'https://google.serper.dev/search';
 const DEFAULT_NUM = 8;
 const DEFAULT_TIMEOUT_MS = 10_000;
+/** La période de Google (`tbs=qdr:…`) : dernière heure, jour, semaine, mois, an. */
+const PERIODS = Object.freeze({ hour: 'qdr:h', day: 'qdr:d', week: 'qdr:w', month: 'qdr:m', year: 'qdr:y' });
 
-function failure(code, message) {
+function failure(code, message, status) {
   const error = new Error(message);
   error.code = code;
+  if (status !== undefined) error.status = status;
   return error;
 }
 
@@ -22,6 +28,8 @@ function failure(code, message) {
  * @param {string} search.query
  * @param {string[]} [search.sites]  la recherche restreinte à ces sites (site:a OR site:b).
  * @param {string} [search.hl]       la langue de l'interface de recherche.
+ * @param {string} [search.gl]       le pays des résultats (code à deux lettres).
+ * @param {string} [search.period]   'hour' | 'day' | 'week' | 'month' | 'year' : seulement les résultats récents.
  * @param {number} [search.num]      Défaut 8.
  * @param {object} io
  * @param {string} io.key
@@ -30,25 +38,36 @@ function failure(code, message) {
  * @param {number} [io.timeoutMs]    Défaut 10 s.
  * @param {string} [io.endpoint]
  * @returns {Promise<{ title: string, url: string, snippet: string, date: string|null }[]>}
- * @throws {Error} code 'WEB_SEARCH_NO_KEY' sans clé (rien n'est demandé), 'WEB_SEARCH_FAILED' sinon.
+ * @throws {Error} code 'WEB_SEARCH_NO_KEY' sans clé (rien n'est demandé), 'WEB_SEARCH_FAILED' sinon,
+ *   avec `status` quand Serper a répondu (429, 5xx…) : de quoi décider d'un repli.
  */
 async function searchSerper(search = {}, io = {}) {
   if (!io.key) throw failure('WEB_SEARCH_NO_KEY', 'no key');
   if (typeof io.fetch !== 'function') throw new Error('searchSerper requires io.fetch.');
   const num = search.num || DEFAULT_NUM;
   const scope = (search.sites || []).map((site) => `site:${site}`).join(' OR ');
+  if (search.period !== undefined && !PERIODS[search.period]) throw new Error(`searchSerper: unknown period ${search.period}.`);
+  const extra = {
+    ...(search.hl ? { hl: search.hl } : {}),
+    ...(search.gl ? { gl: String(search.gl).toLowerCase() } : {}),
+    ...(search.period ? { tbs: PERIODS[search.period] } : {})
+  };
   let answer;
+  let status;
   try {
     const response = await io.fetch(io.endpoint || DEFAULT_ENDPOINT, {
       method: 'POST',
       headers: { 'X-API-KEY': io.key, 'content-type': 'application/json' },
-      body: JSON.stringify({ q: scope ? `${search.query} ${scope}` : search.query, num, ...(search.hl ? { hl: search.hl } : {}) }),
+      body: JSON.stringify({ q: scope ? `${search.query} ${scope}` : search.query, num, ...extra }),
       signal: globalThis.AbortSignal.timeout(io.timeoutMs || DEFAULT_TIMEOUT_MS)
     });
-    if (!response.ok) throw new Error(`Serper answered ${response.status}`);
+    if (!response.ok) {
+      status = response.status;
+      throw new Error(`Serper answered ${response.status}`);
+    }
     answer = await response.json();
   } catch (error) {
-    throw failure('WEB_SEARCH_FAILED', error.message);
+    throw failure('WEB_SEARCH_FAILED', error.message, status);
   }
   const accept = typeof io.accept === 'function' ? io.accept : () => true;
   return (Array.isArray(answer?.organic) ? answer.organic : [])
@@ -68,4 +87,4 @@ async function searchSerper(search = {}, io = {}) {
     .slice(0, num);
 }
 
-module.exports = { searchSerper };
+module.exports = { searchSerper, SERPER_PERIODS: PERIODS };

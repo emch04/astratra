@@ -109,7 +109,7 @@ liens.
 
 ## Paquets
 
-Les 45 paquets de [`packages/`](packages/) sont publiés sous le périmètre
+Les 47 paquets de [`packages/`](packages/) sont publiés sous le périmètre
 `@astratra`, sauf `create-astratra-app`, publié sous son propre nom. Les
 versions sont celles de chaque `package.json` ; l'historique de chaque paquet
 est dans [CHANGELOG.md](CHANGELOG.md).
@@ -131,7 +131,7 @@ est dans [CHANGELOG.md](CHANGELOG.md).
 
 | Paquet | Version | Rôle |
 |---|---|---|
-| [`@astratra/ai`](packages/ai/README.md) | 1.13.0 | Routage multi-fournisseur avec quotas et repli, registre d'outils, boucle d'agent, niveaux de risque avec confirmation, fournisseur llama.cpp local |
+| [`@astratra/ai`](packages/ai/README.md) | 1.15.0 | Routage multi-fournisseur avec quotas et repli, registre d'outils, boucle d'agent, niveaux de risque avec confirmation, fournisseur llama.cpp local |
 | [`@astratra/agent`](packages/agent/README.md) | 1.3.0 | Tâches durables, budgets, plans, vérifications de fin, résumés de contexte, suivi de la consommation, retours utilisateur (👍/👎), ordonnanceur de tâches à heure fixe et file d'actions en attente d'approbation |
 | [`@astratra/models`](packages/models/README.md) | 1.2.0 | Service local de modèles sur CPU (vecteurs, reclassement, NLI, entités, transcription) et son client Node ; catalogue des prix et calcul du coût |
 | [`@astratra/conscience`](packages/conscience/README.md) | 1.4.0 | Mémoire documentée des décisions d'un agent (résultats, corrections, leçons avec preuves, modèle de soi, traçabilité, effacement) sous un gouverneur déterministe sans aucun modèle de langage |
@@ -142,6 +142,7 @@ est dans [CHANGELOG.md](CHANGELOG.md).
 | [`@astratra/live`](packages/live/README.md) | 1.0.0 | Sessions d'appel vocal en temps réel et aides au protocole côté client |
 | [`@astratra/app-guide`](packages/app-guide/README.md) | 1.0.0 | Guide d'usage filtré par rôle, généré depuis la configuration des écrans, avec contrôle de couverture |
 | [`@astratra/repomap`](packages/repomap/README.md) | 1.0.1 | Carte pondérée des symboles d'un dépôt, pour explorer du code dans un budget de jetons |
+| [`@astratra/web-search`](packages/web-search/README.md) | 1.0.0 | Recherche web pour les agents : plusieurs moteurs avec repli, fusion des classements sans mélange des contenus (une entrée = une page = un site), passages mot pour mot, lecture des pages protégée contre le SSRF, définitions d'outils et serveur MCP |
 
 ### Métier
 
