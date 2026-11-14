@@ -7,3 +7,6 @@ dist
 dist
 .build
 .swiftpm
+
+# Dossier de l'outil Serena (réglages, cache et notes de la machine)
+.serena/
