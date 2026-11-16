@@ -169,7 +169,7 @@ function verifyValidation(validation, { trust, proposal, environment, now = Date
   if (!isPlainObject(validation) || validation.schema !== VALIDATION_SCHEMA || typeof validation.signature !== 'string') return { ok: false, code: 'bad_signature' };
   const entry = trust.keys.get(validation.keyId);
   if (!entry) return { ok: false, code: 'unknown_key' };
-  let signedOk = false;
+  let signedOk;
   try {
     signedOk = crypto.verify(null, Buffer.from(stableStringify(bodyOf(validation)), 'utf8'), entry.key, Buffer.from(validation.signature, 'base64url'));
   } catch (_error) {

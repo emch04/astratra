@@ -18,8 +18,8 @@ async function dependency(name) {
   let resolved;
   try {
     resolved = require.resolve(name, { paths: [process.cwd()] });
-  } catch (_error) {
-    throw new Error(`@astratra/prerender requires ${name}. Install it in your project.`);
+  } catch (error) {
+    throw new Error(`@astratra/prerender requires ${name}. Install it in your project.`, { cause: error });
   }
 
   return import(pathToFileURL(resolved).href);

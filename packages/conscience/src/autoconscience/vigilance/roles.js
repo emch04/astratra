@@ -92,7 +92,7 @@ async function reviewByRoles(options = {}) {
     const items = Array.isArray(verifierAnswer.value?.evidence) ? verifierAnswer.value.evidence : Array.isArray(verifierAnswer.value) ? verifierAnswer.value : [];
     for (const item of items) {
       if (!item || !EVIDENCE_KINDS.includes(item.kind) || !isNonEmptyString(item.ref) || ownRefs.has(item.ref)) continue;
-      let exists = false;
+      let exists;
       try { exists = (await options.evidenceExists({ kind: item.kind, ref: item.ref, organisationId: org })) === true; } catch (_error) { exists = false; }
       verified.set(`${item.kind}\u0000${item.ref}`, exists);
     }

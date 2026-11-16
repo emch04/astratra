@@ -120,7 +120,7 @@ async function verifyQuotations(text, options = {}) {
     const end = match.index + match[0].length;
     const reference = references.find((found) => found.start >= end && BETWEEN.test(source.slice(end, found.start)));
     if (!reference) continue;
-    let truth = null;
+    let truth;
     try {
       truth = await options.resolve(reference.refs);
     } catch (_error) {

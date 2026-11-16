@@ -72,7 +72,7 @@ function createMongoMigrationRunner(options = {}) {
           await ledger.insertOne({ id: migration.id, appliedAt: new Date() });
           applied.push(migration.id);
         } catch (error) {
-          throw new Error(`Migration "${migration.id}" failed: ${error.message}`);
+          throw new Error(`Migration "${migration.id}" failed: ${error.message}`, { cause: error });
         }
       }
 

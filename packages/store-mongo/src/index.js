@@ -4,8 +4,8 @@ const DEFAULT_SETTINGS_COLLECTION = 'astratra_settings';
 function loadMongoose() {
   try {
     return require('mongoose');
-  } catch (_error) {
-    throw new Error('@astratra/store-mongo requires mongoose. Install mongoose or pass it from an app that already depends on it.');
+  } catch (error) {
+    throw new Error('@astratra/store-mongo requires mongoose. Install mongoose or pass it from an app that already depends on it.', { cause: error });
   }
 }
 

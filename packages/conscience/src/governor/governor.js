@@ -85,7 +85,7 @@ function createGovernor(policy, options = {}) {
 
   function judge(proposal, halted) {
     const reasons = [];
-    let touched = [];
+    let touched;
     if (halted) reasons.push(REASONS.HALTED);
     const target = proposal.target;
     if (!target || !isNonEmptyString(target.kind) || !isNonEmptyString(target.id) || proposal.change === null
