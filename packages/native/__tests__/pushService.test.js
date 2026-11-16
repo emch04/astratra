@@ -41,7 +41,7 @@ function harness(overrides = {}) {
       deviceName: 'iPhone de Test',
       randomUUID: () => 'uuid-1',
       keystore,
-      projectId: 'project-1',
+      projectId: 'projectId' in overrides ? overrides.projectId : 'project-1',
       notifications,
       channels: [{ id: 'acme-orders', name: 'Orders' }],
       categories: [{ id: 'order', actions: [{ identifier: 'VIEW', buttonTitle: 'Voir', options: { opensAppToForeground: true } }] }],
@@ -310,5 +310,47 @@ describe('logout', () => {
 
     expect(signOuts).toBe(1);
     expect(calls.unregistered).toHaveLength(1);
+  });
+});
+
+describe('what is refused', () => {
+  test('sync with a denied permission unregisters the device and never registers it', async () => {
+    const { service, calls } = harness({ permission: { ios: { status: IOS_STATUS.DENIED }, status: 'denied' } });
+    expect(await service.sync()).toBe('denied');
+    expect(calls.registered).toEqual([]);
+    expect(calls.unregistered).toHaveLength(1);
+  });
+
+  test('without a project id, no token is asked for and nothing is registered', async () => {
+    for (const projectId of [undefined, '', '   ', async () => '', async () => null]) {
+      let asked = false;
+      const { service, calls } = harness({ projectId, notifications: { getExpoPushTokenAsync: async () => { asked = true; return { data: 'x' }; } } });
+      expect(await service.enable()).toBe('error');
+      expect(asked).toBe(false);
+      expect(calls.registered).toEqual([]);
+    }
+  });
+
+  test('a keystore that fails once does not leave the installation id broken for good', async () => {
+    let fail = true;
+    const store = createMemoryKeystore();
+    const keystore = { ...store, getItemAsync: async (key) => { if (fail) { fail = false; throw new Error('trousseau verrouillé'); } return store.getItemAsync(key); } };
+    const { service } = harness({ keystore });
+    await expect(service.getInstallationId()).rejects.toThrow('trousseau verrouillé');
+    await expect(service.getInstallationId()).resolves.toBe('uuid-1');
+  });
+
+  test('listeners that cannot all be installed are all removed, and the failure is reported', async () => {
+    const removed = [];
+    const { service, listeners } = harness({
+      notifications: {
+        addNotificationReceivedListener: () => ({ remove: () => removed.push('received') }),
+        addNotificationResponseReceivedListener: () => ({ remove: () => removed.push('response') }),
+        addPushTokenListener: () => { throw new Error('module natif absent'); }
+      }
+    });
+    await expect(service.startListeners('seller')).rejects.toThrow('module natif absent');
+    expect(removed.sort()).toEqual(['received', 'response']);
+    expect(listeners.token).toBeUndefined();
   });
 });
