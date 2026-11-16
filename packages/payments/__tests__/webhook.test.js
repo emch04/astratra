@@ -305,3 +305,15 @@ describe('wiring', () => {
     expect(() => createWebhookHandler({ verify: () => {} })).toThrow(/events/);
   });
 });
+
+describe('createWebhookHandler: an event log it cannot rely on is refused', () => {
+  test('claim() without release() is refused: a failed event could never be retried', () => {
+    expect(() => createWebhookHandler({ verify: verifier(), secret: 'whsec_test', events: { x: async () => {} }, eventLog: { claim: async () => true } }))
+      .toThrow(/claim\(\) also needs release\(\)/);
+  });
+
+  test('a log with neither claim() nor the legacy seen() and record() is refused', () => {
+    expect(() => createWebhookHandler({ verify: verifier(), secret: 'whsec_test', events: { x: async () => {} }, eventLog: { seen: async () => false } }))
+      .toThrow(/needs claim\(\) and release\(\)/);
+  });
+});
