@@ -1,6 +1,11 @@
 const rateLimit = require('express-rate-limit');
 
-jest.mock('express-rate-limit', () => jest.fn((options) => options));
+jest.mock('express-rate-limit', () => {
+  const limiter = jest.fn((options) => options);
+  // La vraie fonction : c'est elle qui regroupe les adresses IPv6 par bloc.
+  limiter.ipKeyGenerator = jest.requireActual('express-rate-limit').ipKeyGenerator;
+  return limiter;
+});
 
 const { createAccountLimiter, createApiLimiter, createLoginLimiter } = require('../src');
 
@@ -57,6 +62,18 @@ describe('rateLimiters', () => {
     expect(limiter.keyGenerator(from('/big', '1.1.1.1'))).toBe('big:1.1.1.1');
     expect(limiter.keyGenerator(from('/small', '1.1.1.1'))).toBe('other:1.1.1.1');
     expect(limiter.keyGenerator(from('/big', '2.2.2.2'))).toBe('big:2.2.2.2');
+  });
+
+  test('createApiLimiter with an area counts a whole IPv6 block, not each address of it', () => {
+    const limiter = createApiLimiter({ area: () => ({ name: 'zone' }) });
+    const key = (ip) => limiter.keyGenerator({ path: '/', ip });
+    // Changer d'adresse dans son propre bloc /56 ne donne pas un compteur neuf.
+    expect(key('2001:db8:1:2::1')).toBe(key('2001:db8:1:3::99'));
+    expect(key('2001:db8:1:2::1')).toBe('zone:2001:db8:1::/56');
+    // Un autre bloc garde le sien.
+    expect(key('2001:db8:2::1')).not.toBe(key('2001:db8:1:2::1'));
+    // IPv4, même écrite en IPv6, reste l'adresse exacte.
+    expect(key('::ffff:1.1.1.1')).toBe('zone:1.1.1.1');
   });
 
   test('createApiLimiter without an area keeps one counter, and the default key', () => {
