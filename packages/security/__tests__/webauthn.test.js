@@ -252,3 +252,110 @@ describe('createMemoryWebauthnStore', () => {
     expect(await service.hasCredentials('u2')).toBe(true);
   });
 });
+
+describe('webauthn: what is refused', () => {
+  const ORIGIN = { origin: 'https://app.example.com', rpID: 'app.example.com' };
+  const credential = (userId, credentialID) => ({ userId, credentialID, publicKey: Buffer.from('public-key').toString('base64url'), counter: 1, transports: ['internal'] });
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    createStoreState = { credentials: [], challenges: [], recoveryHashes: new Map() };
+    process.env.WEBAUTHN_ALLOWED_ORIGINS = 'https://app.example.com';
+    delete process.env.CLIENT_URL;
+  });
+
+  test('registration without a pending challenge is refused, and nothing is saved', async () => {
+    const store = createStore();
+    const service = createWebauthnService(store, { recoveryCodeSecret: 'pepper' });
+    await expect(service.verifyRegistration('u1', { id: 'credential-1' })).rejects.toMatchObject({ statusCode: 400 });
+    expect(simpleWebauthn.verifyRegistrationResponse).not.toHaveBeenCalled();
+    expect(store.saveCredential).not.toHaveBeenCalled();
+  });
+
+  test('a registration challenge serves once: replaying the same answer is refused', async () => {
+    const store = createStore();
+    const service = createWebauthnService(store, { recoveryCodeSecret: 'pepper' });
+    await store.saveChallenge('u1', 'registration-challenge', 'registration', ORIGIN);
+    await service.verifyRegistration('u1', { id: 'credential-1' });
+    await expect(service.verifyRegistration('u1', { id: 'credential-1' })).rejects.toMatchObject({ statusCode: 400 });
+    expect(store.saveCredential).toHaveBeenCalledTimes(1);
+  });
+
+  test('an expired registration challenge is refused before any verification', async () => {
+    const store = createStore();
+    const service = createWebauthnService(store, { recoveryCodeSecret: 'pepper' });
+    await store.saveChallenge('u1', 'registration-challenge', 'registration', { ...ORIGIN, expiresAt: new Date(Date.now() - 1000) });
+    await expect(service.verifyRegistration('u1', { id: 'credential-1' })).rejects.toMatchObject({ statusCode: 400 });
+    expect(simpleWebauthn.verifyRegistrationResponse).not.toHaveBeenCalled();
+  });
+
+  test('a registration the authenticator library does not verify saves no credential and gives no recovery codes', async () => {
+    const store = createStore();
+    const service = createWebauthnService(store, { recoveryCodeSecret: 'pepper' });
+    simpleWebauthn.verifyRegistrationResponse.mockResolvedValueOnce({ verified: false });
+    await store.saveChallenge('u1', 'registration-challenge', 'registration', ORIGIN);
+    await expect(service.verifyRegistration('u1', { id: 'credential-1' })).rejects.toMatchObject({ statusCode: 400 });
+    expect(store.saveCredential).not.toHaveBeenCalled();
+    expect(store.saveRecoveryCodes).not.toHaveBeenCalled();
+  });
+
+  test('sign-in options are refused to an account with no passkey', async () => {
+    const store = createStore();
+    const service = createWebauthnService(store);
+    await expect(service.getAuthenticationOptions({ headers: { origin: 'https://app.example.com' } }, 'u1')).rejects.toMatchObject({ statusCode: 400 });
+    expect(store.saveChallenge).not.toHaveBeenCalled();
+  });
+
+  test('an unknown credential is a 401, never verified', async () => {
+    const store = createStore();
+    const service = createWebauthnService(store);
+    await store.saveChallenge('u1', 'authentication-challenge', 'authentication', ORIGIN);
+    await expect(service.verifyAuthentication('u1', { id: 'inconnue' })).rejects.toMatchObject({ statusCode: 401 });
+    expect(simpleWebauthn.verifyAuthenticationResponse).not.toHaveBeenCalled();
+  });
+
+  test('a sign-in the library does not verify is a 401 and leaves the counter untouched', async () => {
+    const store = createStore();
+    createStoreState.credentials.push(credential('u1', 'credential-1'));
+    const service = createWebauthnService(store);
+    simpleWebauthn.verifyAuthenticationResponse.mockResolvedValueOnce({ verified: false });
+    await store.saveChallenge('u1', 'authentication-challenge', 'authentication', ORIGIN);
+    await expect(service.verifyAuthentication('u1', { id: 'credential-1' })).rejects.toMatchObject({ statusCode: 401 });
+    expect(store.updateCredentialCounter).not.toHaveBeenCalled();
+  });
+
+  test('a sign-in without a pending challenge is refused, and an authentication challenge does not open registration', async () => {
+    const store = createStore();
+    createStoreState.credentials.push(credential('u1', 'credential-1'));
+    const service = createWebauthnService(store, { recoveryCodeSecret: 'pepper' });
+    await expect(service.verifyAuthentication('u1', { id: 'credential-1' })).rejects.toMatchObject({ statusCode: 400 });
+    await store.saveChallenge('u1', 'authentication-challenge', 'authentication', ORIGIN);
+    await expect(service.verifyRegistration('u1', { id: 'credential-9' })).rejects.toMatchObject({ statusCode: 400 });
+  });
+
+  test('a recovery code is refused when wrong, for another account, or once used', async () => {
+    const store = createStore();
+    const service = createWebauthnService(store, { recoveryCodeSecret: 'pepper' });
+    const codes = await service.generateRecoveryCodes('u1');
+    expect(await service.verifyRecoveryCode('u1', '0000-0000')).toBe(false);
+    expect(await service.verifyRecoveryCode('u2', codes[0])).toBe(false);
+    expect(await service.verifyRecoveryCode('u1', codes[0])).toBe(true);
+    expect(await service.verifyRecoveryCode('u1', codes[0])).toBe(false);
+  });
+
+  test('recovery codes refuse to work without a secret, or with a store that cannot keep them', async () => {
+    const store = createStore();
+    await expect(createWebauthnService(store).generateRecoveryCodes('u1')).rejects.toThrow(/recoveryCodeSecret/);
+    await expect(createWebauthnService(store).verifyRecoveryCode('u1', 'abcd-ef01')).rejects.toThrow(/recoveryCodeSecret/);
+    const withoutRecovery = { ...store, saveRecoveryCodes: undefined };
+    await expect(createWebauthnService(withoutRecovery, { recoveryCodeSecret: 'pepper' }).generateRecoveryCodes('u1')).rejects.toThrow(/store\.saveRecoveryCodes/);
+  });
+
+  test('the service is not built on a store missing a method', () => {
+    const store = createStore();
+    expect(() => createWebauthnService(undefined)).toThrow(/createWebauthnService requires store\./);
+    for (const method of ['getCredentialsForUser', 'saveCredential', 'getCredentialById', 'updateCredentialCounter', 'saveChallenge', 'consumeChallenge']) {
+      expect(() => createWebauthnService({ ...store, [method]: undefined })).toThrow(`store.${method}`);
+    }
+  });
+});
