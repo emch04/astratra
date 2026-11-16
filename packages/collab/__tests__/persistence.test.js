@@ -69,3 +69,48 @@ describe.each(Object.keys(moteurs))('persistance %s', (nom) => {
 test('postgres refuse un nom de table qui ouvrirait une injection', () => {
   expect(() => createPostgresPersistence({ pool: { query: async () => ({ rows: [] }) }, documentsTable: 'x; DROP TABLE y' })).toThrow(TypeError);
 });
+
+describe('persistance : ce qui est refusé', () => {
+  const { createPostgresPersistence, createMongoPersistence } = require('../src');
+  const { createCollabProvider } = require('../src');
+
+  test('sans pool ni base, aucune persistance n’est construite', () => {
+    expect(() => createPostgresPersistence({})).toThrow(/pool\.query/);
+    expect(() => createPostgresPersistence({ pool: {} })).toThrow(/pool\.query/);
+    expect(() => createMongoPersistence({})).toThrow(/db\.collection/);
+    expect(() => createMongoPersistence({ db: {} })).toThrow(/db\.collection/);
+  });
+
+  test('un état lu en base qui n’est pas binaire est refusé, jamais appliqué au document', async () => {
+    const pool = { query: async (sql) => (/^\s*SELECT/i.test(sql) ? { rows: [{ state: 'pas du binaire' }] } : { rows: [] }) };
+    await expect(createPostgresPersistence({ pool }).load('doc')).rejects.toThrow('État binaire illisible.');
+  });
+
+  test('une création de tables qui échoue n’est pas mémorisée : l’appel suivant réessaie', async () => {
+    let echecs = 1;
+    const pool = { query: async (sql) => { if (/CREATE TABLE/.test(sql) && echecs > 0) { echecs -= 1; throw new Error('base indisponible'); } return { rows: [] }; } };
+    const persistence = createPostgresPersistence({ pool });
+    await expect(persistence.load('doc')).rejects.toThrow('base indisponible');
+    await expect(persistence.load('doc')).resolves.toBeNull();
+  });
+
+  test('un index Mongo qui échoue n’est pas mémorisé : rien n’est enregistré, et l’enregistrement suivant réessaie', async () => {
+    let echecs = 1;
+    const inserts = [];
+    const collection = {
+      createIndex: async () => { if (echecs > 0) { echecs -= 1; throw new Error('index refusé'); } return 'ok'; },
+      insertOne: async (doc) => { inserts.push(doc._id); }
+    };
+    const persistence = createMongoPersistence({ db: { collection: () => collection } });
+    const version = { id: 'v1', kind: 'manual', size: 1, createdAt: new Date().toISOString(), state: new Uint8Array([1]) };
+    await expect(persistence.saveVersion('doc', version)).rejects.toThrow('index refusé');
+    expect(inserts).toEqual([]);
+    await persistence.saveVersion('doc', version);
+    expect(inserts).toEqual(['v1']);
+  });
+
+  test('un client sans adresse ou sans nom de document n’est pas construit', () => {
+    expect(() => createCollabProvider({ name: 'doc' })).toThrow(/url/);
+    expect(() => createCollabProvider({ url: 'ws://127.0.0.1:1' })).toThrow(/name/);
+  });
+});
