@@ -227,7 +227,7 @@ function createChanges(ctx) {
     if (!state.candidate) return pick(state.stable, 'stable', 'no_candidate');
     if ((await haltState(at.organisationId)).halted) return pick(state.stable, 'stable', 'halted');
     const context = { targetingKey: input.targetingKey, attributes: input.attributes };
-    let served = false;
+    let served;
     if (ctx.flags) {
       try { served = (await ctx.flags.resolveBoolean(flagKeyOf(at.organisationId, at.kind, at.id), false, context))?.value === true; } catch (_error) { served = false; }
     } else served = servesCandidate(state.rollout, seedOf(at.organisationId, at.kind, at.id, state.candidate), context);

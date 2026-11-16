@@ -25,7 +25,7 @@ async function demarrerServeur(options = {}) {
 async function attendre(condition, { delai = 5000, pas = 10 } = {}) {
   const debut = Date.now();
   for (;;) {
-    let ok = false;
+    let ok;
     try {
       ok = await condition();
     } catch {

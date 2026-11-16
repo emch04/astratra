@@ -134,7 +134,6 @@ async function runAgentLoop({
       if (typeof confirmTool === 'function') approved = await confirmTool(toolCall, ctx);
       else if (pendingActions && typeof pendingActions.propose === 'function') {
         const proposed = await pendingActions.propose({ action: tool.name, payload: toolCall.params, description: `Appel ${tool.name} (${tool.risk || 'UNKNOWN'})`, proposedBy: ctx.userId, tenant: ctx.tenantId });
-        approved = false;
         messages.push({ role: 'assistant', content: response }, { role: 'tool', content: `<tool_result name="${tool.name}">${JSON.stringify({ pending: true, actionId: proposed.action.id })}</tool_result>` });
         continue;
       } else approved = false;

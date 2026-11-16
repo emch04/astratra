@@ -32,8 +32,8 @@ function createPiperHttpProvider(options = {}) {
   try {
     const parsed = new URL(baseUrl);
     if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') throw new Error('protocol');
-  } catch (_error) {
-    throw new TypeError('createPiperHttpProvider: url must be an http(s) address.');
+  } catch (error) {
+    throw new TypeError('createPiperHttpProvider: url must be an http(s) address.', { cause: error });
   }
   const fetchImpl = options.fetch || globalThis.fetch;
   if (typeof fetchImpl !== 'function') throw new TypeError('createPiperHttpProvider: fetch is required.');

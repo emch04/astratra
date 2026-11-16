@@ -23,7 +23,7 @@ function createFeedbackRouter(options = {}) {
   if (typeof identify !== 'function' || typeof resolveRun !== 'function') throw new Error('createFeedbackRouter requires identify and resolveRun.');
   let express = options.express;
   if (!express) {
-    try { express = require('express'); } catch (_error) { throw new Error('createFeedbackRouter needs express: install it or pass options.express.'); }
+    try { express = require('express'); } catch (error) { throw new Error('createFeedbackRouter needs express: install it or pass options.express.', { cause: error }); }
   }
   const router = express.Router();
   router.use(express.json({ limit: options.maxBodyBytes ?? 8192, strict: true }));

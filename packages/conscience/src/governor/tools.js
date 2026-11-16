@@ -223,7 +223,7 @@ function createToolPolicy(options = {}) {
     /* Content read from outside could carry a hidden instruction: a person looks first. */
     if ((run.untrusted || call.untrusted === true) && untrustedLevels.includes(tool.level)) return pending(TOOL_REASONS.UNTRUSTED);
     if (tool.level === TOOL_LEVELS.CONTROLLED && tool.overThreshold) {
-      let over = false;
+      let over;
       // May be async (a cap read from the database). A failure or a timeout puts the call in front of a person.
       try { over = (await tool.overThreshold(input, settings, { organisationId, actor: actorOf(call.actor) })) === true; } catch (_error) { over = true; }
       if (over) return pending(TOOL_REASONS.THRESHOLD);

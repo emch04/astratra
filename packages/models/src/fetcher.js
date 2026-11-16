@@ -108,7 +108,7 @@ function checkModels(options = {}) {
 function endpointOf(value) {
   const raw = String(value || DEFAULT_ENDPOINT).replace(/\/+$/, '');
   let url;
-  try { url = new URL(raw); } catch (_error) { throw new TypeError('endpoint: an absolute URL is required.'); }
+  try { url = new URL(raw); } catch (error) { throw new TypeError('endpoint: an absolute URL is required.', { cause: error }); }
   if (url.protocol !== 'https:' && !(url.protocol === 'http:' && LOOPBACK.has(url.hostname))) {
     throw new TypeError('endpoint: https is required (http only for a loopback address).');
   }

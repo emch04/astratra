@@ -300,7 +300,7 @@ function createCredentialVault(options = {}) {
    * it. A screenshot of this screen must compromise nothing.
    */
   async function status() {
-    let rows = [];
+    let rows;
     try {
       rows = await store.findAll(scope || undefined, { strict });
       if (!Array.isArray(rows) || rows.some(row => !row || typeof row.key !== 'string' || typeof row.value !== 'string' || (scope && !sameScope(row, scope)))) throw new Error();
