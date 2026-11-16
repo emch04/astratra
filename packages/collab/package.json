@@ -54,8 +54,8 @@
   "devDependencies": {
     "jest": "30.4.2",
     "jsdom": "^30.0.1",
-    "mongodb-memory-server": "^10.2.0",
-    "mongoose": "^8.17.0",
+    "mongodb-memory-server": "^11.3.0",
+    "mongoose": "^9.12.1",
     "pg": "^8.13.1",
     "pg-mem": "^3.0.5",
     "ws": "^8.22.0"

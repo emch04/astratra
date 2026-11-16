@@ -30,7 +30,8 @@ let mongo;
 let connexion;
 beforeAll(async () => {
   mongo = await MongoMemoryServer.create();
-  connexion = await mongoose.createConnection(mongo.getUri()).asPromise();
+  // Le pilote MongoDB 7 charge « os » par un import() que Jest refuse : on le lui donne.
+  connexion = await mongoose.createConnection(mongo.getUri(), { runtimeAdapters: { os: require('os') } }).asPromise();
 }, 180000);
 afterAll(async () => {
   await connexion?.close();
