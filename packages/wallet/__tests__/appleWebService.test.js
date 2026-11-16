@@ -62,3 +62,56 @@ test('503 tant qu’Apple Wallet n’est pas configuré ; les journaux sont rela
   await request(serveur).post('/wallet/apple/v1/log').send({ logs: ['erreur appareil'] });
   expect(logs).toEqual(['Apple Wallet: erreur appareil']);
 });
+
+describe('ce que le service web refuse', () => {
+  function appAvec(pass) {
+    const serveur = express();
+    serveur.use(express.json());
+    serveur.use('/wallet/apple', createAppleWebServiceRouter({
+      resolveConfig: async () => ({ passTypeIdentifier: PASS_TYPE }),
+      findPass: async () => pass,
+      buildPass: async () => Buffer.from('pkpass'),
+      registrations: createMemoryRegistrationStore(),
+      logger: { warn() {} }
+    }));
+    return serveur;
+  }
+
+  test('une carte enregistrée sans jeton ne s’ouvre avec aucun en-tête, pas même « ApplePass undefined »', async () => {
+    for (const authenticationToken of [undefined, null, '']) {
+      const serveur = appAvec({ authenticationToken, updatedAt: '2026-09-22T10:00:00Z' });
+      for (const header of [undefined, 'ApplePass undefined', 'ApplePass null', 'ApplePass ', 'ApplePass']) {
+        const req = request(serveur).get(`/wallet/apple/v1/passes/${PASS_TYPE}/C-1`);
+        const res = await (header === undefined ? req : req.set({ Authorization: header }));
+        expect(res.status).toBe(401);
+      }
+    }
+  });
+
+  test('un jeton proche du bon ne passe pas : préfixe, autre casse, espace en trop', async () => {
+    const { serveur } = app();
+    for (const header of [`ApplePass ${JETON.slice(0, -1)}`, `ApplePass ${JETON}x`, `applepass ${JETON}`, `ApplePass  ${JETON}`, `Bearer ${JETON}`, JETON]) {
+      expect((await request(serveur).get(`/wallet/apple/v1/passes/${PASS_TYPE}/C-1`).set({ Authorization: header })).status).toBe(401);
+    }
+  });
+
+  test('une inscription authentifiée sans jeton de notification est refusée, et rien n’est inscrit', async () => {
+    const { serveur, registrations } = app();
+    const auth = { Authorization: `ApplePass ${JETON}` };
+    for (const body of [{}, { pushToken: '' }, { pushToken: 42 }, { pushToken: ['t'] }]) {
+      expect((await request(serveur).post(inscription).set(auth).send(body)).status).toBe(400);
+    }
+    expect(await registrations.listForDevice('d1', PASS_TYPE)).toEqual([]);
+  });
+
+  test('le journal public ne laisse ni forger de lignes, ni l’inonder', async () => {
+    const { serveur, logs } = app();
+    await request(serveur).post('/wallet/apple/v1/log').send({ logs: ['ligne\nAUDIT: connexion admin réussie\r\nautre', ...Array.from({ length: 200 }, (_, i) => `m${i}`), 'x'.repeat(5000)] });
+    expect(logs.length).toBeLessThanOrEqual(20);
+    for (const ligne of logs) {
+      expect(ligne).not.toMatch(/[\r\n]/);
+      expect(ligne.length).toBeLessThanOrEqual(600);
+    }
+    expect(logs[0]).toBe('Apple Wallet: ligne AUDIT: connexion admin réussie autre');
+  });
+});

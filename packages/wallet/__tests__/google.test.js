@@ -57,3 +57,29 @@ test('les identifiants sont nettoyés, les types inconnus refusés', () => {
   expect(() => createGoogleWallet({ issuerId: '1', credentials, kind: 'avion' })).toThrow(/inconnu/);
   expect(signSaveJwt({}, credentials).split('.')).toHaveLength(3);
 });
+
+describe('ce que Google refuse', () => {
+  test('une erreur de Google autre que 404 remonte telle quelle, sans tentative de création', async () => {
+    const appels = [];
+    const request = async (options) => { appels.push(options.method); const e = new Error('refusé'); e.response = { status: 403 }; throw e; };
+    const wallet = createGoogleWallet({ issuerId: '3388', credentials, request });
+    await expect(wallet.upsertObject({ id: wallet.objectId('C-1'), classId: '3388.fidelite' })).rejects.toThrow('refusé');
+    expect(appels).toEqual(['PATCH']);
+  });
+
+  test('une classe qui n’a pas pu être créée n’est pas tenue pour prête : l’appel suivant réessaie', async () => {
+    let panne = true;
+    const appels = [];
+    const request = async (options) => {
+      appels.push(options.method);
+      if (panne) { const e = new Error('réseau'); e.response = { status: 503 }; throw e; }
+      return { data: options.data };
+    };
+    const wallet = createGoogleWallet({ issuerId: '3388', credentials, request });
+    const definition = { id: wallet.classId('fidelite'), issuerName: 'Salon', programName: 'Fidélité' };
+    await expect(wallet.ensureClass(definition)).rejects.toThrow('réseau');
+    panne = false;
+    await wallet.ensureClass(definition);
+    expect(appels).toEqual(['PATCH', 'PATCH']);
+  });
+});
