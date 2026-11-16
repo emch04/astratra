@@ -77,3 +77,11 @@ describe('plan catalog', () => {
     expect(() => build({ fallbackPlan: 'ghost' })).toThrow(/not one of the declared plans/);
   });
 });
+
+describe('plan catalog: what is refused', () => {
+  const { createPlanCatalog: make } = require('../src');
+  test('an upgrade path that starts or ends at an unknown plan is refused', () => {
+    expect(() => make({ plans: { free: [], pro: [] }, upgradePath: { gold: 'pro' } })).toThrow(/unknown plan "gold"/);
+    expect(() => make({ plans: { free: [], pro: [] }, upgradePath: { free: 'gold' } })).toThrow(/unknown plan "gold"/);
+  });
+});

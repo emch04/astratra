@@ -211,3 +211,35 @@ describe('wiring', () => {
     expect(() => createInvitations({ store, roles: ['x'] })).toThrow(/createAccount/);
   });
 });
+
+describe('what an invitation refuses', () => {
+  test('a link whose expiry is missing or unreadable in the store is expired, never open for good', async () => {
+    for (const expiresAt of [null, undefined, 'n’importe quoi', '']) {
+      const { invitations, store, accounts } = build();
+      const { invitation, token } = await invitations.invite({ email: 'paul@ecole.cd', role: 'teacher', invitedBy: 'director-1' });
+      await store.update(invitation.id, { expiresAt });
+      await expect(invitations.verify(token)).rejects.toThrow(/expired/);
+      await expect(invitations.accept(token, { name: 'Paul' })).rejects.toThrow(InvitationError);
+      expect(accounts).toHaveLength(0);
+    }
+  });
+
+  test('a revocation must say who revoked, and a closed invitation cannot be revoked again', async () => {
+    const { invitations } = build();
+    const { invitation } = await invitations.invite({ email: 'eve@ecole.cd', role: 'teacher', invitedBy: 'director-1' });
+    await expect(invitations.revoke(invitation.id)).rejects.toThrow(/who revoked/);
+    await expect(invitations.revoke(invitation.id, { revokedBy: null })).rejects.toThrow(/who revoked/);
+    await invitations.revoke(invitation.id, { revokedBy: 'director-1' });
+    await expect(invitations.revoke(invitation.id, { revokedBy: 'director-1' })).rejects.toMatchObject({ statusCode: 409 });
+  });
+
+  test('listing needs a store that can list', async () => {
+    const store = createMemoryInvitationStore();
+    const { invitations } = build({ store: { ...store, list: undefined } });
+    await expect(invitations.list()).rejects.toThrow(/options\.store\.list/);
+  });
+
+  test('the memory store does not update a row that does not exist', async () => {
+    expect(await createMemoryInvitationStore().update('inconnue', { status: 'used' })).toBeNull();
+  });
+});

@@ -138,7 +138,9 @@ function createInvitations(options = {}) {
          is information an attacker probing tokens has no business getting. */
       throw new InvitationError('This link is no longer valid. It may already have been used.');
     }
-    if (new Date(invitation.expiresAt).getTime() < now()) {
+    /* Une échéance absente ou illisible ne laisse pas le lien ouvert pour toujours. */
+    const expiresAt = invitation.expiresAt ? new Date(invitation.expiresAt).getTime() : NaN;
+    if (!Number.isFinite(expiresAt) || expiresAt < now()) {
       await store.update(invitation.id, { status: EXPIRED });
       throw new InvitationError('This invitation link has expired.');
     }

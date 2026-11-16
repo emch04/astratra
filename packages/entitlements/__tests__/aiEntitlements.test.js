@@ -80,3 +80,112 @@ describe('droits IA', () => {
     expect(await service.decide(token, 'tiny', 2)).toMatchObject({ allowed: true });
   });
 });
+
+describe('droits IA : ce qui est refusé', () => {
+  test('un jeton vide, absent ou qui n’est pas du texte ne résout rien', async () => {
+    const { service } = setup(); await service.issueKey('compte');
+    for (const token of [undefined, null, '', 42, {}]) {
+      expect(await service.resolve(token)).toBeNull();
+      expect(await service.decide(token, 'tiny')).toEqual({ allowed: false, reason: 'invalid_key' });
+      expect(await service.execute(token, 'tiny', 0)).toEqual({ allowed: false, reason: 'invalid_key' });
+    }
+  });
+
+  test('la clé d’un compte disparu ne donne aucun droit', async () => {
+    let exists = true;
+    const service = createAIEntitlements({ catalog, plans: modelPlans, resolveAccount: async () => (exists ? { plan: 'pro' } : null) });
+    const { token } = await service.issueKey('compte');
+    exists = false;
+    expect(await service.resolve(token)).toBeNull();
+    expect(await service.decide(token, 'tiny')).toEqual({ allowed: false, reason: 'account_not_found' });
+    const invoke = jest.fn();
+    expect(await service.execute(token, 'tiny', 0, [], invoke)).toEqual({ allowed: false, reason: 'account_not_found' });
+    expect(invoke).not.toHaveBeenCalled();
+  });
+
+  test('un modèle hors de tout groupe est refusé, même pour le plan le plus large', async () => {
+    const { service, setPlan } = setup(); setPlan('pro');
+    const { token } = await service.issueKey('compte');
+    expect(await service.decide(token, 'modele-inconnu')).toMatchObject({ allowed: false, reason: 'model_not_allowed' });
+  });
+
+  test('un coût ou un nombre de jetons estimé négatif ou illisible est une erreur, pas une autorisation', async () => {
+    const { service } = setup(); const { token } = await service.issueKey('compte');
+    for (const cost of [-1, NaN, Infinity]) await expect(service.decide(token, 'tiny', cost)).rejects.toThrow(/coût estimé/);
+    for (const tokens of [-1, NaN]) await expect(service.decide(token, 'tiny', 0, tokens)).rejects.toThrow(/jetons estimé/);
+  });
+
+  test('pas de clé sans compte, et une clé révoquée ne se révoque pas deux fois', async () => {
+    const { service } = setup();
+    await expect(service.issueKey(undefined)).rejects.toThrow(/compte est requis/);
+    await expect(service.issueKey(null)).rejects.toThrow(/compte est requis/);
+    const { id } = await service.issueKey('compte');
+    expect(await service.revoke(id)).toBe(true);
+    expect(await service.revoke(id)).toBe(false);
+    expect(await service.revoke('inconnue')).toBe(false);
+  });
+
+  test('un appel qui échoue, sans modèle de secours, est refusé comme un échec d’appel et ne coûte rien', async () => {
+    const { service, setPlan } = setup(); setPlan('pro');
+    const { token } = await service.issueKey('compte');
+    const error = new Error('fournisseur en panne');
+    const result = await service.execute(token, 'large', 1, [], async () => { throw error; });
+    expect(result).toEqual({ allowed: false, reason: 'call_failed', error });
+    /* La réservation a été rendue : le budget du jour est intact. */
+    expect(await service.decide(token, 'large', 10)).toMatchObject({ allowed: true });
+  });
+
+  test('un coût réel illisible renvoyé par l’appel est refusé', async () => {
+    const { service, setPlan } = setup(); setPlan('pro');
+    const { token } = await service.issueKey('compte');
+    for (const cost of [undefined, -1, NaN]) {
+      const result = await service.execute(token, 'large', 1, [], async (model) => ({ model, cost }));
+      expect(result).toMatchObject({ allowed: false, reason: 'call_failed' });
+    }
+  });
+
+  test('le service n’est pas construit sans catalogue de plans ni moyen de trouver le compte', () => {
+    expect(() => createAIEntitlements({ resolveAccount: async () => null })).toThrow(/catalogue de plans/);
+    expect(() => createAIEntitlements({ catalog })).toThrow(/resolveAccount/);
+  });
+});
+
+describe('magasin mémoire des droits IA : ce qui est refusé', () => {
+  const { createMemoryAIEntitlementsStore } = require('../src');
+  test('deux clés de même identifiant ou de même empreinte, une réservation rejouée ou réglée deux fois', async () => {
+    const store = createMemoryAIEntitlementsStore();
+    await store.createKey({ id: 'k1', fingerprint: 'f1' });
+    await expect(store.createKey({ id: 'k1', fingerprint: 'f2' })).rejects.toThrow(/déjà existante/);
+    await expect(store.createKey({ id: 'k2', fingerprint: 'f1' })).rejects.toThrow(/déjà existante/);
+    await store.reserve({ id: 'r1', keyId: 'k1', windows: ['day:2026-01-01'], amount: 1 });
+    await expect(store.reserve({ id: 'r1', keyId: 'k1', windows: ['day:2026-01-01'], amount: 1 })).rejects.toThrow(/déjà existante/);
+    await store.settle('r1', 1);
+    await expect(store.settle('r1', 1)).rejects.toThrow(/déjà réglée/);
+    await expect(store.settle('inconnue', 1)).rejects.toThrow(/inconnue/);
+  });
+});
+
+describe('droits IA : la réservation tranche en dernier', () => {
+  const { createMemoryAIEntitlementsStore } = require('../src');
+  test('quand le magasin refuse la réservation (un autre appel a pris le budget entre-temps), rien n’est appelé', async () => {
+    for (const [code, expected] of [['AI_BUDGET', { reason: 'budget' }], ['AI_QUOTA', { reason: 'quota', quota: 'requestsPerMinute' }]]) {
+      const store = createMemoryAIEntitlementsStore();
+      store.reserve = async () => { const error = new Error('pris'); error.code = code; if (code === 'AI_QUOTA') error.quota = 'requestsPerMinute'; throw error; };
+      const service = createAIEntitlements({ catalog, plans: modelPlans, store, resolveAccount: async () => ({ plan: 'pro' }) });
+      const { token } = await service.issueKey('compte');
+      const invoke = jest.fn();
+      expect(await service.execute(token, 'large', 1, [], invoke)).toEqual({ allowed: false, ...expected });
+      expect(invoke).not.toHaveBeenCalled();
+    }
+  });
+
+  test('une autre panne du magasin pendant la réservation remonte telle quelle, sans appeler le modèle', async () => {
+    const store = createMemoryAIEntitlementsStore();
+    store.reserve = async () => { throw new Error('base indisponible'); };
+    const service = createAIEntitlements({ catalog, plans: modelPlans, store, resolveAccount: async () => ({ plan: 'pro' }) });
+    const { token } = await service.issueKey('compte');
+    const invoke = jest.fn();
+    await expect(service.execute(token, 'large', 1, [], invoke)).rejects.toThrow('base indisponible');
+    expect(invoke).not.toHaveBeenCalled();
+  });
+});

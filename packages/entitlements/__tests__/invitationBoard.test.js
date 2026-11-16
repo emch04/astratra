@@ -167,3 +167,10 @@ describe('delivery', () => {
     expect(board.looksLikeEmail(null)).toBe(false);
   });
 });
+
+describe('hoursLeft: what is refused', () => {
+  test('an unreadable expiry gives no hours at all, never a number', () => {
+    expect(board.hoursLeft(invite({ expiresAt: 'demain' }), NOW)).toBeNull();
+    expect(board.hoursLeft(invite({ expiresAt: undefined }), NOW)).toBeNull();
+  });
+});
