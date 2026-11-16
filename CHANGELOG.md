@@ -6,7 +6,7 @@ Chaque package Astratra est versionné indépendamment.
 ## Non publié — Node 22 au minimum, intégration continue réparée
 
 ### Changé
-- Tous les paquets demandent Node 22 ou plus (`engines.node: ">=22"`, au lieu de `>=20`, `>=20.3`, `>=20.19` et, pour `@astratra/centrale`, `>=18`). Node 20 est en fin de vie depuis avril 2026 et ne reçoit plus de correctifs de sécurité. Sous Node 20, la plupart des paquets se chargent encore, mais deux choses n'y marchaient déjà plus : l'évaluation de `@astratra/tooling` (promptfoo exige Node 22.22) et le client de `@astratra/collab` utilisé dans Node (WebSocket n'y existe qu'à partir de Node 22). `@astratra/centrale-cli` (`>=24`) et `@astratra/testkit` (`>=22.22`) gardent leur minimum plus élevé.
+- Tous les paquets demandent Node 22 ou plus (`engines.node: ">=22"`, au lieu de `>=20`, `>=20.3`, `>=20.19` et, pour `@astratra/centrale`, `>=18`). Node 20 est en fin de vie depuis avril 2026 et ne reçoit plus de correctifs de sécurité. Sous Node 20, la plupart des paquets se chargent encore, mais deux choses n'y marchaient déjà plus : l'évaluation de `@astratra/tooling` (promptfoo exige Node 22.22) et le client de `@astratra/collab` utilisé dans Node (WebSocket n'y existe qu'à partir de Node 22). `@astratra/centrale-cli` passe aussi de `>=24` à `>=22` : le paquet publié est du JavaScript compilé, et Node 24 ne servait qu'à exécuter son TypeScript dans le dépôt, ce que Node 22.18 fait aussi. `@astratra/testkit` garde `>=22.22`.
 - Intégration continue : matrice 22.x et 24.x, `fail-fast: false`, et `npm test --workspaces` sans `-- --runInBand`, que les paquets en `node --test` lisaient comme un nom de fichier.
 
 ### Corrigé
