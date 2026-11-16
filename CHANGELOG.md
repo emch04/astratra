@@ -3,13 +3,16 @@
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Chaque package Astratra est versionné indépendamment.
 
-## Non publié — Node 22 au minimum, intégration continue réparée
+## Non publié — Node 22 au minimum, Express 5 accepté, intégration continue réparée
 
 ### Changé
 - Tous les paquets demandent Node 22 ou plus (`engines.node: ">=22"`, au lieu de `>=20`, `>=20.3` et `>=20.19`). Node 20 est en fin de vie depuis avril 2026 et ne reçoit plus de correctifs de sécurité. Sous Node 20, la plupart des paquets se chargent encore, mais deux choses n'y marchaient déjà plus : l'évaluation de `@astratra/tooling` (promptfoo exige Node 22.22) et le client de `@astratra/collab` utilisé dans Node (WebSocket n'y existe qu'à partir de Node 22).18 fait aussi. `@astratra/testkit` garde `>=22.22`.
 - Intégration continue : matrice 22.x et 24.x, `fail-fast: false`, et `npm test --workspaces` sans `-- --runInBand`, que les paquets en `node --test` lisaient comme un nom de fichier.
+- Express 5 accepté en plus d'Express 4 : `@astratra/credentials`, `@astratra/saas-kit` et `@astratra/wallet` dépendent d'`express` `^4.18.3 || ^5.0.0` (les dépendances d'appairage `>=4` d'`@astratra/agent` et `@astratra/core` l'acceptaient déjà). Le dépôt s'installe avec Express 5 ; un travail de l'intégration continue rejoue les tests des paquets concernés avec Express 4.
 
 ### Corrigé
+- `@astratra/security`, `createMongoSanitizeMiddleware` sous Express 5 : Express 5 relit `req.query` depuis l'adresse à chaque accès, et le nettoyage fait en place était perdu ; avec l'analyseur de requêtes étendu, `?date[$gt]=…` atteignait la route. L'objet nettoyé devient la valeur de `req.query`. Sous Express 4, rien ne change.
+- `@astratra/security`, `createWafMiddleware` et `createAccountLimiter` : sous Express 5, `req.body` reste `undefined` pour une requête sans corps, et chaque GET déclenchait l'avertissement « monté avant express.json() ». Il ne part plus que si la requête annonce un corps (`content-length` non nul ou `transfer-encoding`).
 - `create-astratra-app` : le projet créé demande `@astratra/ai` ^1.15.0 et `@astratra/security` ^1.14.0, les versions publiées.
 
 ## 2026-11-06 — `@astratra/web-search` 1.0.0, `@astratra/ai` 1.15.0 : une recherche web où chaque fait reste attaché à sa page

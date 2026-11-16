@@ -785,9 +785,14 @@ test('mongoSanitize is on by default: strips a $ operator from req.query (bracke
     }
   });
 
-  const response = await request(app, 'GET', '/api/echo?date[$gt]=x&nom=Jo');
+  const response = await request(app, 'GET', '/api/echo?date[$gt]=x&nom=Jo&a.b=1');
 
-  assert.deepEqual(response.body.data, { date: {}, nom: 'Jo' });
+  /* Express 4 lit « date[$gt] » comme un objet ({ date: { $gt } }), que le
+     nettoyeur vide ; Express 5 en fait par défaut une clé plate, inoffensive.
+     Dans les deux cas, aucun opérateur $ ni clé à point n'atteint la route. */
+  const extended = Number(require('express/package.json').version.split('.')[0]) < 5;
+  assert.deepEqual(response.body.data, extended ? { date: {}, nom: 'Jo' } : { 'date[$gt]': 'x', nom: 'Jo' });
+  assert.doesNotMatch(JSON.stringify(response.body.data), /"\$|"a\.b"/);
 });
 
 test('options.mongoSanitize: false disables the sanitizer entirely', async () => {

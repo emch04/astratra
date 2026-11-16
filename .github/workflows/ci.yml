@@ -60,3 +60,32 @@ jobs:
 
       - name: Install every packed public package in a clean project
         run: npm run verify:packages
+
+  # Les paquets acceptent Express 4 et 5 ; le dépôt s'installe avec Express 5.
+  # Ce travail rejoue, avec Express 4, les tests des paquets qui le touchent.
+  express-4:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Use Node.js 22
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22.x
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Switch to Express 4
+        run: |
+          npm install --no-save express@4
+          node -e "const v=require('express/package.json').version; if (!v.startsWith('4.')) { console.error('Express ' + v); process.exit(1); } console.log('Express ' + v)"
+
+      - name: Run the Express-related test suites
+        run: >-
+          npm test
+          --workspace @astratra/agent --workspace @astratra/core
+          --workspace @astratra/credentials --workspace @astratra/entitlements --workspace @astratra/i18n-server
+          --workspace @astratra/payments --workspace @astratra/saas-kit --workspace @astratra/security
+          --workspace @astratra/wallet --workspace @astratra/dashboard-ui-example

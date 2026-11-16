@@ -1,4 +1,5 @@
 const { createLogger } = require('@astratra/core');
+const { bodyLeftUnparsed } = require('./requestBody');
 
 const logger = createLogger('waf');
 
@@ -36,13 +37,13 @@ const createWafMiddleware = (options = {}) => {
   let warnedUnparsedBody = false;
 
   return (req, res, next) => {
-    // req.body est `undefined` seulement si aucun body-parser (express.json,
-    // express.urlencoded...) n'a tourné avant ce middleware — un body-parser
-    // monté en amont assigne toujours au moins `{}`, même sur une requête
-    // sans corps. Sans cette détection, ce middleware inspectait silencieusement
+    // Un corps envoyé mais laissé à `undefined` signifie qu'aucun body-parser
+    // (express.json, express.urlencoded...) n'a tourné avant ce middleware.
+    // Express 5 laisse aussi req.body à `undefined` quand la requête n'a pas
+    // de corps : seul un corps annoncé (voir requestBody.js) compte. Sans cette détection, ce middleware inspectait silencieusement
     // une chaîne vide à la place du corps de la requête : aucune erreur,
     // aucun log, juste une protection qui ne protégeait rien.
-    if (req.body === undefined && !warnedUnparsedBody) {
+    if (bodyLeftUnparsed(req) && !warnedUnparsedBody) {
       warnedUnparsedBody = true;
       logger.warn(
         'req.body est undefined — createWafMiddleware() doit être monté APRÈS ' +
