@@ -179,7 +179,7 @@ function createMongoUsersStore(options = {}) {
 
       try {
         const user = await User.findByIdAndUpdate(id, { $set: data }, {
-          new: true,
+          returnDocument: 'after',
           runValidators: false
         }).lean();
         return stripMongoFields(user);
@@ -224,7 +224,7 @@ function createMongoSettingsStore(options = {}) {
       const setting = await Setting.findOneAndUpdate(
         { key },
         { $set: { key, value } },
-        { upsert: true, new: true, setDefaultsOnInsert: true }
+        { upsert: true, returnDocument: 'after', setDefaultsOnInsert: true }
       ).lean();
       return setting.value;
     },
