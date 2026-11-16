@@ -313,7 +313,11 @@ personnalisée passait `req.query.date` tel quel dans un filtre Mongoose, et
 `?date[$gt]=` (notation crochet du parseur `qs` d'Express) devenait un
 opérateur Mongo choisi par l'appelant plutôt qu'une simple chaîne — la
 « Validation des entrées » ci-dessus ne protège que les routes intégrées,
-pas le code que tu ajoutes toi-même.
+pas le code que tu ajoutes toi-même. Express 4 et Express 5 sont acceptés :
+avec Express 5, l'analyseur de requêtes par défaut (`simple`) laisse
+`?date[$gt]=` en clé plate, inoffensive ; si tu actives
+`app.set('query parser', 'extended')`, le nettoyage s'applique comme sous
+Express 4.
 
 ```js
 createSaasApp({

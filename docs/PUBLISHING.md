@@ -15,6 +15,9 @@ Depuis le 1er octobre 2026, tous les paquets sont en 1.x ou plus.
 - Rupture (signature changée, export retiré, comportement par défaut
   modifié) : version majeure (`1.2.3` → `2.0.0`), décrite sous « Rupture »
   dans `CHANGELOG.md`.
+- Relever le minimum de Node (`engines.node`) quand l'ancienne version est en
+  fin de vie : version mineure, pas majeure (décidé le 16 novembre 2026 pour
+  Node 20 → 22).
 - Un paquet dont le contenu publié ne change pas garde sa version. Pour savoir
   si un paquet a changé depuis sa publication, comparer
   `npm pack --dry-run --json` (champ `shasum`) à `npm view <nom> dist.shasum`.
@@ -39,6 +42,18 @@ Depuis le 1er octobre 2026, tous les paquets sont en 1.x ou plus.
 
 ```bash
 npm test && npm run lint && npm run typecheck && npm run verify:packages
+```
+
+   Puis les tests des paquets liés à Express avec Express 4, comme le travail
+   `express-4` de la CI (le dépôt s'installe avec Express 5) :
+
+```bash
+npm install --no-save express@4
+npm test --workspace @astratra/agent --workspace @astratra/centrale --workspace @astratra/core \
+  --workspace @astratra/credentials --workspace @astratra/entitlements --workspace @astratra/i18n-server \
+  --workspace @astratra/payments --workspace @astratra/saas-kit --workspace @astratra/security \
+  --workspace @astratra/wallet --workspace @astratra/dashboard-ui-example
+npm ci
 ```
 
 6. Contrôler chaque archive qui partira :

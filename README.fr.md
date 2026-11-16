@@ -66,6 +66,10 @@ application Astratra, écrite comme des phrases.
 ## Prérequis
 
 - Node.js 22 ou plus récent (la CI tourne sur 22.x et 24.x).
+- Express 4 ou 5, pour les paquets qui montent des routes ou des middlewares
+  (`@astratra/saas-kit`, `@astratra/credentials`, `@astratra/wallet`,
+  `@astratra/agent`, `@astratra/security`). Le dépôt s'installe avec Express 5 ;
+  la CI rejoue aussi leurs tests avec Express 4.
 - npm workspaces : la racine du dépôt est un espace de travail npm.
 - Docker, seulement pour `@astratra/testkit` (conteneurs MongoDB ou PostgreSQL
   jetables).

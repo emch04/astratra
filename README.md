@@ -61,6 +61,10 @@ Humalis app is therefore an Astratra app, written as sentences.
 ## Requirements
 
 - Node.js 22 or later (CI runs on 22.x and 24.x).
+- Express 4 or 5, for the packages that mount routes or middleware
+  (`@astratra/saas-kit`, `@astratra/credentials`, `@astratra/wallet`,
+  `@astratra/agent`, `@astratra/security`). The repository installs Express 5;
+  CI also runs their tests with Express 4.
 - npm workspaces: the repository root is an npm workspace.
 - Docker, only for `@astratra/testkit` (throwaway MongoDB or PostgreSQL
   containers).
