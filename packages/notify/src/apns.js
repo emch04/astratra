@@ -90,11 +90,15 @@ function createApnsTransport(options = {}) {
   let session = null;
   function connection() {
     if (session && !session.closed && !session.destroyed) return session;
-    session = http2.connect(url);
-    session.on('error', () => { /* surfaced on the request; the next send reconnects */ });
-    session.on('goaway', () => { session.close(); });
-    session.unref?.();
-    return session;
+    /* Chaque écouteur vise SA connexion : la variable partagée vaut null après
+       close(), ou désigne déjà la suivante après une reconnexion. Un GOAWAY
+       tardif levait alors une exception hors de toute requête. */
+    const current = http2.connect(url);
+    current.on('error', () => { /* surfaced on the request; the next send reconnects */ });
+    current.on('goaway', () => { if (!current.closed && !current.destroyed) current.close(); });
+    current.unref?.();
+    session = current;
+    return current;
   }
 
   async function transport(subscription, payload) {
