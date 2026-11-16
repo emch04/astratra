@@ -78,6 +78,15 @@ suite('moteur du navigateur (vrai Chromium)', () => {
     expect(page.removed.overlays).toBe(2);
   });
 
+  test('masque aussi un bandeau de consentement non fixe et une boîte de dialogue ouverte, garde le contenu', async () => {
+    const page = await open('/consentement');
+    expect(page.text).toContain('Le contenu de la démarche.');
+    expect(page.text).not.toContain('Ce site utilise des cookies');
+    expect(page.text).not.toContain('Fenêtre de bienvenue');
+    expect(page.text).toContain('Notre politique de cookies en détail.');
+    expect(page.removed.overlays).toBeGreaterThanOrEqual(2);
+  });
+
   test('retire le texte caché qui donne des ordres, et les liens cachés', async () => {
     const page = await open('/cache');
     expect(page.text).toContain('Contenu visible.');

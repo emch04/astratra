@@ -31,7 +31,7 @@ function readRenderedPage(limits) {
   };
 
   /* 1. Surcouches fixes : grandes, ou nommées comme un bandeau / une fenêtre. */
-  const overlayWords = /(cookie|consent|gdpr|rgpd|cmp|onetrust|didomi|tarteaucitron|newsletter|subscribe|abonn|paywall|modal|popup|pop-up|overlay|lightbox|interstitial|dialog)/i;
+  const overlayWords = /(cookie|consent|gdpr|rgpd|cmp|onetrust|didomi|tarteaucitron|axeptio|orejime|klaro|cookiebot|cookieyes|iubenda|complianz|cmplz|osano|trustarc|termly|usercentrics|newsletter|subscribe|abonn|paywall|modal|popup|pop-up|overlay|lightbox|interstitial|dialog)/i;
   const all = Array.from(document.body ? document.body.querySelectorAll('*') : []).slice(0, MAX_ELEMENTS);
   for (const element of all) {
     const style = window.getComputedStyle(element);
@@ -46,6 +46,24 @@ function readRenderedPage(limits) {
       hide(element);
       overlays += 1;
     }
+  }
+  /* Bandeaux de consentement qui ne sont pas fixes (en tête de page, boîte <dialog>) : nommés comme tels, et courts. */
+  const consentWords = /(cookie|consent|gdpr|rgpd|onetrust|didomi|tarteaucitron|axeptio|orejime|klaro|cookiebot|cookieyes|iubenda|complianz|cmplz|osano|trustarc|termly|usercentrics|sp_message|qc-cmp)/i;
+  for (const element of all) {
+    if (element.hasAttribute('data-astratra-hidden') || element.closest('[data-astratra-hidden]')) continue;
+    const label = `${element.id} ${typeof element.className === 'string' ? element.className : ''} ${element.getAttribute('aria-label') || ''}`;
+    if (!consentWords.test(label)) continue;
+    if (element.matches('main, article, body, html') || element.querySelector('main, article')) continue;
+    if ((element.textContent || '').length > 3000) continue;
+    /* Un bandeau propose un choix ; une section qui parle des cookies, non. */
+    if (!element.querySelector('button, [role="button"], input[type="button"], input[type="submit"]')) continue;
+    hide(element);
+    overlays += 1;
+  }
+  for (const dialog of Array.from(document.querySelectorAll('dialog[open], [role="dialog"][aria-modal="true"], [role="alertdialog"]'))) {
+    if (dialog.closest('[data-astratra-hidden]')) continue;
+    hide(dialog);
+    overlays += 1;
   }
   for (const root of [document.documentElement, document.body]) {
     if (!root) continue;
