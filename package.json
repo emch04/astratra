@@ -22,7 +22,7 @@
     "mongodb": "^6.0.0",
     "redis": "^6.3.1",
     "typescript": "^7.0.2",
-    "ws": "^8.22.0"
+    "ws": "^8.23.0"
   },
   "overrides": {
     "passkit-generator": {
