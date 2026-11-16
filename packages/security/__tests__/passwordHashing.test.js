@@ -90,3 +90,22 @@ describe('isStrongPassword', () => {
     expect(isStrongPassword('Ab1!Ab1!Ab1!', { minLength: 12 })).toBe(true);
   });
 });
+
+describe('verifyPasswordHash refuses a forged hash before scrypt allocates for it', () => {
+  const forged = (cost, blockSize, parallelization, key = 'AAAA') => ['scrypt', cost, blockSize, parallelization, 'AAAA', key].join('$');
+
+  test.each([
+    ['a block size of 0', forged('16384', '0', '1')],
+    ['a block size above 64', forged('16384', '65', '1')],
+    ['a block size that is not a number', forged('16384', 'huit', '1')],
+    ['a parallelization of 0', forged('16384', '8', '0')],
+    ['a parallelization above 16', forged('16384', '8', '17')],
+    ['a negative cost', forged('-1', '8', '1')],
+    ['an empty key', forged('16384', '8', '1', '')],
+    ['a key longer than 256 bytes', forged('16384', '8', '1', Buffer.alloc(257, 1).toString('base64url'))],
+    ['a missing field', ['scrypt', '16384', '8', '1', 'AAAA'].join('$')],
+    ['another algorithm', ['argon2', '16384', '8', '1', 'AAAA', 'AAAA'].join('$')]
+  ])('%s', async (_label, hash) => {
+    await expect(verifyPasswordHash('anything', hash)).resolves.toBe(false);
+  });
+});

@@ -282,3 +282,82 @@ describe('the route', () => {
     expect(res.body).toEqual({ success: false, code: 'FILE_LINK_INVALID' });
   });
 });
+
+describe('what is refused', () => {
+  function route(overrides = {}) {
+    const { links } = setup();
+    const seen = { loadFile: 0, authenticate: 0 };
+    const handler = createPrivateFileHandler({
+      links,
+      authenticate: (req, res, next) => { seen.authenticate += 1; req.user = ALICE; return next(); },
+      loadFile: async () => { seen.loadFile += 1; return { id: FILE, owner: 'alice', sharedWith: [] }; },
+      canRead: async () => true,
+      loadReader: async (id) => (id === 'alice' ? ALICE : null),
+      send: async (_file, _req, res) => res.status(200).json({ ok: true }),
+      ...overrides
+    });
+    const call = async ({ kind = 'messages', id = FILE, query = {} } = {}) => {
+      const res = {
+        statusCode: 200, body: null,
+        setHeader() {},
+        status(code) { this.statusCode = code; return this; },
+        json(body) { this.body = body; return this; }
+      };
+      await handler({ params: { kind, id }, query, headers: {} }, res, (error) => { throw error; });
+      return res;
+    };
+    return { links, call, seen };
+  }
+
+  test('a kind or file id that is not a plain token is a 404, before any lookup or sign-in', async () => {
+    const { call, seen } = route();
+    for (const [kind, id] of [['../secret', FILE], ['messages', '../../etc/passwd'], ['messages', ''], ['', FILE], ['k'.repeat(41), FILE], ['messages', 'f'.repeat(129)], ['messages', 'a b']]) {
+      const res = await call({ kind, id });
+      expect(res.statusCode).toBe(404);
+      expect(res.body).toEqual({ success: false, code: 'FILE_UNAVAILABLE' });
+    }
+    expect(seen).toEqual({ loadFile: 0, authenticate: 0 });
+  });
+
+  test('a valid pass for an account that no longer loads is a 401, and the file is never read', async () => {
+    const { links, call, seen } = route({ loadReader: async () => null });
+    const ticket = links.sign({ kind: 'messages', fileId: FILE, accountId: 'alice', version: 3 }).ticket;
+    const res = await call({ query: { ticket } });
+    expect(res.statusCode).toBe(401);
+    expect(res.body.code).toBe('FILE_LINK_INVALID');
+    expect(seen.loadFile).toBe(0);
+  });
+
+  test('a pass check that crashes is a 401, never a 500 and never a served file', async () => {
+    const { links, call, seen } = route({ loadReader: async () => { throw new Error('base indisponible'); } });
+    const ticket = links.sign({ kind: 'messages', fileId: FILE, accountId: 'alice', version: 3 }).ticket;
+    const res = await call({ query: { ticket } });
+    expect(res.statusCode).toBe(401);
+    expect(seen.loadFile).toBe(0);
+  });
+
+  test('a pass signed for another file does not open this one', async () => {
+    const { links, call, seen } = route();
+    const ticket = links.sign({ kind: 'messages', fileId: 'autrefichier0001', accountId: 'alice', version: 3 }).ticket;
+    expect((await call({ query: { ticket } })).statusCode).toBe(401);
+    expect(seen.loadFile).toBe(0);
+  });
+
+  test('the handler cannot be built without every piece it relies on', () => {
+    const { links } = setup();
+    const full = { links, authenticate() {}, loadFile() {}, canRead() {}, loadReader() {}, send() {} };
+    for (const name of ['authenticate', 'loadFile', 'canRead', 'loadReader', 'send']) {
+      expect(() => createPrivateFileHandler({ ...full, [name]: undefined })).toThrow(`options.${name}`);
+    }
+    expect(() => createPrivateFileHandler({ ...full, links: undefined })).toThrow('options.links');
+    expect(() => createPrivateFileHandler({ ...full, links: {} })).toThrow('options.links');
+  });
+
+  test('no pass is signed without a reader, and no address is rewritten without links', () => {
+    const { links } = setup();
+    expect(() => links.sign({ kind: 'messages', fileId: FILE })).toThrow(/accountId/);
+    expect(() => links.sign({ kind: 'messages', fileId: FILE, accountId: '' })).toThrow(/accountId/);
+    expect(() => serializeForReader({ file: FILE }, { reader: ALICE, kind: 'messages' })).toThrow(/options\.links/);
+    expect(() => serializeForBroadcast({ file: FILE }, { kind: 'messages' })).toThrow(/options\.links/);
+  });
+});
