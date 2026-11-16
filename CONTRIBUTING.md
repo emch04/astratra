@@ -7,7 +7,7 @@ request. The detailed publishing procedure is in
 
 ## Prerequisites
 
-- Node.js 20 or later. Continuous integration runs on 20.x and 22.x.
+- Node.js 22 or later. Continuous integration runs on 22.x and 24.x.
 - npm (the repository is an npm workspace; use the `package-lock.json` as is).
 - Docker, only if you work on `@astratra/testkit`, which starts throwaway
   database containers.

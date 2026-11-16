@@ -2,7 +2,7 @@
   "name": "@astratra/live",
   "version": "1.0.0",
   "description": "Injected real-time voice call sessions and client protocol helpers.",
-  "engines": { "node": ">=20" },
+  "engines": { "node": ">=22" },
   "main": "src/index.js",
   "types": "src/index.d.ts",
   "type": "commonjs",

@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "Appointment slot engine without a database: weekly availability per resource, exceptions and public holidays, time zones and daylight saving, service duration, buffers, minimum notice, horizon, capacity, and atomic booking through an injected store (book fails on conflict), cancel and reschedule.",
   "engines": {
-    "node": ">=20"
+    "node": ">=22"
   },
   "main": "src/index.js",
   "types": "src/index.d.ts",

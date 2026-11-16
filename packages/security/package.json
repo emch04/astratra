@@ -3,7 +3,7 @@
   "version": "1.14.0",
   "description": "Generic authentication and security middleware for Astratra workspaces.",
   "engines": {
-    "node": ">=20"
+    "node": ">=22"
   },
   "main": "src/index.js",
   "types": "src/index.d.ts",

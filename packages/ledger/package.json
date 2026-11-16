@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "Moteur de comptabilité en partie double : écritures équilibrées et immuables, numérotation sans trou, clôture, lettrage, rapprochement bancaire, états SYSCOHADA, plans OHADA (SYSCOHADA, SYSCEBNL) et TVA RDC.",
   "engines": {
-    "node": ">=20"
+    "node": ">=22"
   },
   "main": "src/index.js",
   "types": "src/index.d.ts",

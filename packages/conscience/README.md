@@ -5,7 +5,7 @@
 A documented memory of an AI agent's decisions, kept under a deterministic
 governor. The agent records what it decided, why, with which versions and what
 it expected; outcomes, human corrections and lessons are attached later, with
-their evidence, and nothing is ever silently overwritten. Node >= 20,
+their evidence, and nothing is ever silently overwritten. Node >= 22,
 CommonJS, MIT.
 
 "Conscience" and "autoconscience" name software functions: a record of

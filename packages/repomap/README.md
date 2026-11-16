@@ -10,7 +10,7 @@ L'analyse syntaxique utilise `web-tree-sitter` et les grammaires WASM JavaScript
 npm install @astratra/repomap
 ```
 
-Node 20 ou plus récent.
+Node 22 ou plus récent.
 
 ## Exemple
 

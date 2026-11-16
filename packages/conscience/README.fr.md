@@ -6,7 +6,7 @@ Une mémoire documentée des décisions d'un agent IA, tenue sous un gouverneur
 déterministe. L'agent enregistre ce qu'il a décidé, pourquoi, avec quelles
 versions et ce qu'il attendait ; les résultats, les corrections humaines et les
 leçons s'y rattachent ensuite, avec leurs preuves, et rien n'est jamais écrasé
-en silence. Node >= 20, CommonJS, MIT.
+en silence. Node >= 22, CommonJS, MIT.
 
 « Conscience » et « autoconscience » désignent des fonctions logicielles : un
 registre des décisions puis, plus tard, un moteur de réflexion. Elles

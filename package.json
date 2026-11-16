@@ -4,7 +4,7 @@
   "version": "0.0.0",
   "description": "Astratra: a framework and a set of SDKs for building apps with AI built in.",
   "engines": {
-    "node": ">=20"
+    "node": ">=22"
   },
   "workspaces": [
     "packages/*",

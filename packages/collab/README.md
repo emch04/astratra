@@ -25,8 +25,8 @@ Aucune extension Tiptap payante (« Pro ») n'est utilisée.
 npm install @astratra/collab
 ```
 
-Node 20.19 ou plus récent (le Markdown passe par `marked`, publié en module
-ES uniquement, que Node charge depuis `require` à partir de cette version).
+Node 22 ou plus récent (le Markdown passe par `marked`, publié en module
+ES uniquement, que Node charge depuis `require`).
 
 ## Serveur
 
