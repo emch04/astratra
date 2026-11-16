@@ -33,7 +33,7 @@
     "access": "public"
   },
   "dependencies": {
-    "@babel/plugin-transform-modules-commonjs": "^7.28.6",
+    "@babel/plugin-transform-modules-commonjs": "^8.1.2",
     "@faker-js/faker": "^10.6.0"
   },
   "peerDependencies": {
