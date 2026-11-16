@@ -256,7 +256,12 @@ function shadowContract(label, makeStores, options = {}) {
     await stage(ctx);
     const shadow = await runner(ctx, { deadlineMs: 50, masker: () => new Promise(() => {}) });
     const started = Date.now();
-    const result = await shadow.observe({ request: request(1), stableResult: stableAnswer(1) }).done;
+    /* Le délai d'abandon est un minuteur détaché (unref) : il ne retient pas un
+       serveur qui s'arrête. Ici rien d'autre ne garde la boucle vivante, et le
+       lanceur de tests de Node 22 conclurait avant lui : un minuteur ordinaire
+       la tient le temps de l'attente. */
+    const keepAlive = setTimeout(() => {}, 1500);
+    const result = await shadow.observe({ request: request(1), stableResult: stableAnswer(1) }).done.finally(() => clearTimeout(keepAlive));
     assert.deepEqual(result, { status: 'timeout', reason: 'deadline' });
     assert.ok(Date.now() - started < 1500);
     assert.equal((await ctx.stores.shadowStore.listShadowRuns({ organisationId: ORG })).length, 0);
