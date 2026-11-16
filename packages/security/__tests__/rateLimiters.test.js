@@ -128,11 +128,23 @@ describe('rateLimiters', () => {
       process.env.NODE_ENV = 'development'; // le logger est un no-op en 'test'
 
       const limiter = createAccountLimiter({});
-      const req = { ip: '203.0.113.12', body: undefined };
+      const req = { ip: '203.0.113.12', body: undefined, headers: { 'content-length': '48' } };
 
       expect(limiter.keyGenerator(req)).toBe('unknown');
       expect(warnSpy).toHaveBeenCalledTimes(1);
       expect(warnSpy.mock.calls[0][0]).toMatch(/express\.json|unknown/i);
+
+      warnSpy.mockRestore();
+    });
+
+    test('une requête sans corps (Express 5 laisse req.body à undefined) ne fait pas avertir', () => {
+      jest.resetModules();
+      const { createAccountLimiter: fresh } = require('../src');
+      const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+      process.env.NODE_ENV = 'development';
+
+      expect(fresh({}).keyGenerator({ ip: '203.0.113.14', body: undefined, headers: {} })).toBe('unknown');
+      expect(warnSpy).not.toHaveBeenCalled();
 
       warnSpy.mockRestore();
     });

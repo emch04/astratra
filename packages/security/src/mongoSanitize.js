@@ -35,6 +35,21 @@ function stripDangerousKeys(value, replaceWith) {
 
 const DEFAULT_TARGETS = ['body', 'query', 'params'];
 
+/* Express 5 définit req.query par un lecteur (getter) qui relit l'adresse à
+   chaque accès : nettoyer l'objet rendu une première fois ne servait à rien,
+   le suivant revenait intact (« ?date[$gt]= » atteignait la route). L'objet
+   nettoyé devient donc la valeur propre de req.query. Rien à faire quand la
+   propriété est déjà une simple valeur (Express 4, req.body, req.params). */
+function keepCleaned(req, target, value) {
+  const own = Object.getOwnPropertyDescriptor(req, target);
+  if (own && 'value' in own) return;
+  try {
+    Object.defineProperty(req, target, { value, writable: true, configurable: true, enumerable: true });
+  } catch (_error) {
+    /* Propriété verrouillée : l'objet a au moins été nettoyé en place. */
+  }
+}
+
 /**
  * Strips Mongo operator injection out of req.body/req.query/req.params
  * before it reaches a database call — see stripDangerousKeys() for the bug
@@ -52,8 +67,10 @@ const createMongoSanitizeMiddleware = (options = {}) => {
 
   return (req, res, next) => {
     for (const target of targets) {
-      if (req[target] && typeof req[target] === 'object') {
-        stripDangerousKeys(req[target], replaceWith);
+      const value = req[target];
+      if (value && typeof value === 'object') {
+        stripDangerousKeys(value, replaceWith);
+        keepCleaned(req, target, value);
       }
     }
     return next();

@@ -54,7 +54,7 @@ describe('waf', () => {
       const originalEnv = process.env.NODE_ENV;
       process.env.NODE_ENV = 'development'; // le logger est un no-op en 'test'
 
-      const req = { path: '/contact', query: {}, body: undefined };
+      const req = { path: '/contact', query: {}, body: undefined, headers: { 'content-length': '42' } };
       const next = jest.fn();
 
       createWafMiddleware()(req, createRes(), next);
@@ -74,10 +74,26 @@ describe('waf', () => {
 
       const middleware = createWafMiddleware();
       for (let i = 0; i < 5; i++) {
-        middleware({ path: '/x', query: {}, body: undefined }, createRes(), jest.fn());
+        middleware({ path: '/x', query: {}, body: undefined, headers: { 'transfer-encoding': 'chunked' } }, createRes(), jest.fn());
       }
 
       expect(warnSpy).toHaveBeenCalledTimes(1);
+
+      process.env.NODE_ENV = originalEnv;
+      warnSpy.mockRestore();
+    });
+
+    test('une requete sans corps (Express 5 laisse alors req.body a undefined) ne declenche aucun avertissement', () => {
+      const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+      const originalEnv = process.env.NODE_ENV;
+      process.env.NODE_ENV = 'development';
+
+      const middleware = createWafMiddleware();
+      for (const headers of [undefined, {}, { 'content-length': '0' }]) {
+        middleware({ path: '/x', query: {}, body: undefined, headers }, createRes(), jest.fn());
+      }
+
+      expect(warnSpy).not.toHaveBeenCalled();
 
       process.env.NODE_ENV = originalEnv;
       warnSpy.mockRestore();
@@ -95,5 +111,50 @@ describe('waf', () => {
       process.env.NODE_ENV = originalEnv;
       warnSpy.mockRestore();
     });
+  });
+});
+
+describe('createWafMiddleware with a real Express app', () => {
+  const express = require('express');
+  const request = require('supertest');
+  const version = require('express/package.json').version;
+
+  test(`Express ${version}: mounted after express.json(), it warns for nothing, GET or POST, and still blocks an injected body`, async () => {
+    const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    const originalEnv = process.env.NODE_ENV;
+    process.env.NODE_ENV = 'development';
+    try {
+      const app = express();
+      app.use(express.json());
+      app.use(createWafMiddleware());
+      app.all('/x', (req, res) => res.json({ ok: true }));
+      expect((await request(app).get('/x')).status).toBe(200);
+      expect((await request(app).post('/x').send({ nom: 'Jo' })).status).toBe(200);
+      expect((await request(app).post('/x').send({ nom: "' OR 1=1 --" })).status).toBe(403);
+      expect(warnSpy).not.toHaveBeenCalled();
+    } finally {
+      process.env.NODE_ENV = originalEnv;
+      warnSpy.mockRestore();
+    }
+  });
+
+  test(`Express ${version}: mounted BEFORE express.json(), a request with a body warns once`, async () => {
+    const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    const originalEnv = process.env.NODE_ENV;
+    process.env.NODE_ENV = 'development';
+    try {
+      const app = express();
+      app.use(createWafMiddleware());
+      app.use(express.json());
+      app.all('/x', (req, res) => res.json({ ok: true }));
+      await request(app).get('/x');
+      expect(warnSpy).not.toHaveBeenCalled();
+      await request(app).post('/x').send({ nom: 'Jo' });
+      await request(app).post('/x').send({ nom: 'Jo' });
+      expect(warnSpy).toHaveBeenCalledTimes(1);
+    } finally {
+      process.env.NODE_ENV = originalEnv;
+      warnSpy.mockRestore();
+    }
   });
 });

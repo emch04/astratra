@@ -1,5 +1,6 @@
 const rateLimit = require('express-rate-limit');
 const { createLogger } = require('@astratra/core');
+const { bodyLeftUnparsed } = require('./requestBody');
 
 const logger = createLogger('rate-limiters');
 
@@ -237,7 +238,7 @@ const defaultAccountKeyGenerator = (req) => {
   // un attaquant peut essayer des mots de passe sur des comptes DIFFÉRENTS
   // sans jamais être freiné par compte, et des utilisateurs légitimes sans
   // rapport entre eux peuvent se faire bloquer les uns par les autres.
-  if (req.body === undefined && !warnedUnparsedBody) {
+  if (bodyLeftUnparsed(req) && !warnedUnparsedBody) {
     warnedUnparsedBody = true;
     logger.warn(
       'req.body est undefined dans createAccountLimiter() — à monter APRÈS ' +
