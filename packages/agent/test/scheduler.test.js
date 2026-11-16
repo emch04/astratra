@@ -1,5 +1,5 @@
 'use strict';
-const { test } = require('node:test');
+const { test, after } = require('node:test');
 const assert = require('node:assert/strict');
 const { createScheduler, createMemoryLock, createMemoryScheduleStore, SchedulerError, nextRun, zonedTime } = require('../src');
 
@@ -7,6 +7,11 @@ const PARIS = 'Europe/Paris';
 const at = (iso) => Date.parse(iso);
 const iso = (ms) => new Date(ms).toISOString();
 const tick = (ms = 5) => new Promise((resolve) => setTimeout(resolve, ms));
+/* Le planificateur détache ses minuteurs (unref) pour ne pas retenir un serveur
+   qui s'arrête. Pendant ces tests, rien d'autre ne garde la boucle vivante : le
+   lanceur de Node 22 concluait parfois avant qu'un arrêt ne soit vu. */
+const keepAlive = setInterval(() => {}, 60_000);
+after(() => clearInterval(keepAlive));
 function clock(start) { let t = at(start); const now = () => t; now.set = (iso2) => { t = at(iso2); }; now.add = (ms) => { t += ms; }; return now; }
 
 test('daily schedule follows the wall clock across the autumn and spring time changes', () => {
