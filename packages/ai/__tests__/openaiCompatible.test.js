@@ -241,7 +241,7 @@ describe('thought signatures (Gemini 3)', () => {
       { choices: [{ delta: {}, finish_reason: 'tool_calls' }] }
     ];
     const body = chunks.map((chunk) => `data: ${JSON.stringify(chunk)}\n\n`).join('') + 'data: [DONE]\n\n';
-    const fetch = async () => new Response(body, { status: 200, headers: { 'content-type': 'text/event-stream' } });
+    const fetch = async () => new globalThis.Response(body, { status: 200, headers: { 'content-type': 'text/event-stream' } });
     const answer = await askChatModel({ url: 'https://gateway.test/v1/chat/completions', key: KEY, model: 'auto' }, { messages: [{ role: 'user', text: 'x' }] }, { fetch, onText: () => {} });
     expect(answer.toolCalls).toEqual([{ id: 'c1', name: 'stock', args: {}, signature: 'sig-S' }]);
   });
