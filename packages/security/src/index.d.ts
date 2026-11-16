@@ -211,7 +211,8 @@ export interface RevocationStore {
   revoke(jti: string, expiresAt: number): Awaitable<void>;
   isRevoked(jti?: string): Awaitable<boolean>;
   revokeAllForUser?(userId: string, revokedBeforeMs: number): Awaitable<void>;
-  isRevokedForUser?(userId: string, issuedAtSeconds: number): Awaitable<boolean>;
+  /** issuedAtSeconds is undefined for a token without iat: after logout-all, answer true (revoked). */
+  isRevokedForUser?(userId: string, issuedAtSeconds: number | undefined): Awaitable<boolean>;
 }
 
 export function createMemoryRevocationStore(): RevocationStore;

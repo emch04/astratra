@@ -91,7 +91,7 @@ const createAuthMiddleware = (options = {}) => {
         if (
           decoded &&
           decoded.id !== undefined &&
-          decoded.iat !== undefined &&
+          // Même sans iat : un jeton sans date ne doit pas échapper à « déconnecter partout ».
           typeof options.revocationStore.isRevokedForUser === 'function'
         ) {
           const revokedByUser = await options.revocationStore.isRevokedForUser(decoded.id, decoded.iat);
