@@ -242,3 +242,45 @@ describe('jwtAuth', () => {
     });
   });
 });
+
+describe('jwtAuth: logout-all cannot be dodged by a token without issue time', () => {
+  test('a token signed without iat is still checked against logout-all, and refused', async () => {
+    const { createMemoryRevocationStore } = require('../src');
+    const revocationStore = createMemoryRevocationStore();
+    await revocationStore.revokeAllForUser('u1', Date.now());
+    const token = jwt.sign({ id: 'u1' }, 'secret', { noTimestamp: true, expiresIn: '1h' });
+    expect(jwt.decode(token).iat).toBeUndefined();
+    const res = createRes();
+    const next = jest.fn();
+
+    await createAuthMiddleware({ secret: 'secret', revocationStore })(
+      { cookies: {}, headers: { authorization: `Bearer ${token}` } },
+      res,
+      next
+    );
+
+    expect(res.status).toHaveBeenCalledWith(401);
+    expect(next).not.toHaveBeenCalled();
+  });
+
+  test('the same token passes for a user who never logged out everywhere', async () => {
+    const { createMemoryRevocationStore } = require('../src');
+    const revocationStore = createMemoryRevocationStore();
+    const token = jwt.sign({ id: 'u2' }, 'secret', { noTimestamp: true, expiresIn: '1h' });
+    const next = jest.fn();
+    await createAuthMiddleware({ secret: 'secret', revocationStore })(
+      { cookies: {}, headers: { authorization: `Bearer ${token}` } },
+      createRes(),
+      next
+    );
+    expect(next).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('jwtAuth: configuration that is refused', () => {
+  test('the middleware is not built without a secret', () => {
+    expect(() => createAuthMiddleware({})).toThrow(/options\.secret/);
+    expect(() => createAuthMiddleware({ secret: '' })).toThrow(/options\.secret/);
+    expect(() => createAuthMiddleware()).toThrow(/options\.secret/);
+  });
+});

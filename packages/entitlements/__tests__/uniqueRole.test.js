@@ -270,3 +270,14 @@ describe('the sentinel removes the intruders, and them only', () => {
     expect(alerts[0].kind).toBe('anchor_missing');
   });
 });
+
+describe('unique role: checks that need a store refuse to run without one', () => {
+  test('every check that reads the holders names the missing method', async () => {
+    const guard = createUniqueRole({ role: 'super_admin' });
+    await expect(guard.assertCanCreate({ role: 'super_admin' })).rejects.toThrow(/options\.store\.findHolders/);
+    await expect(guard.sweep()).rejects.toThrow(/options\.store\.findHolders/);
+    const reading = createUniqueRole({ role: 'super_admin', store: { findHolders: async () => [] } });
+    await expect(reading.sweep()).rejects.toThrow(/options\.store\.remove/);
+    await expect(reading.sweep({ dryRun: true })).resolves.toBeDefined();
+  });
+});

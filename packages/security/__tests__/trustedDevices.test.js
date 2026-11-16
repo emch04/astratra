@@ -235,3 +235,39 @@ describe('revocation', () => {
     expect((await store.all())[0].revokedAt).not.toBeNull();
   });
 });
+
+describe('trusted devices: what is refused', () => {
+  test('enrolment needs an account and a credential stamp', async () => {
+    const { service, store } = setup();
+    const listed = jest.spyOn(store, 'create');
+    await expect(service.enroll({ credentialStamp: 'hash-v1' })).rejects.toThrow(/accountId/);
+    for (const credentialStamp of [undefined, null, '']) {
+      await expect(service.enroll({ accountId: 'alice', credentialStamp })).rejects.toThrow(/credentialStamp/);
+    }
+    expect(listed).not.toHaveBeenCalled();
+  });
+
+  test('an exchange without a way to load the account is a programming error, not a sign-in', async () => {
+    const { service, enroll } = setup();
+    const proof = await enroll();
+    await expect(service.exchange(proof, {})).rejects.toThrow(/loadAccount/);
+  });
+
+  test('removing a device needs both the account and the device id', async () => {
+    const { service, enroll } = setup();
+    const { id } = await enroll();
+    expect(await service.remove('', id)).toBe(false);
+    expect(await service.remove('alice', '')).toBe(false);
+    expect(await service.remove(undefined, undefined)).toBe(false);
+    expect(await service.list('alice')).toHaveLength(1);
+  });
+
+  test('the service is not built on an incomplete store or a short pepper', () => {
+    const store = createMemoryTrustedDeviceStore();
+    for (const method of ['create', 'findByDeviceId', 'consume', 'revoke', 'listActive']) {
+      expect(() => createTrustedDeviceService({ store: { ...store, [method]: undefined }, pepper: PEPPER })).toThrow(`store.${method}`);
+    }
+    expect(() => createTrustedDeviceService({ store, pepper: 'p'.repeat(31) })).toThrow(/pepper/);
+    expect(() => createTrustedDeviceService({ store })).toThrow(/pepper/);
+  });
+});

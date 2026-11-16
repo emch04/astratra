@@ -109,6 +109,71 @@ describe('createApnsTransport', () => {
     expect(apple.requests).toHaveLength(0);
   });
 
+  test('a key that is not an EC P-256 key is refused at creation', () => {
+    for (const type of ['rsa', 'ed25519']) {
+      const other = generateKeyPairSync(type, type === 'rsa' ? { modulusLength: 2048 } : {}).privateKey.export({ type: 'pkcs8', format: 'pem' }).toString();
+      expect(() => createApnsTransport({ key: other, keyId: 'K', teamId: 'T', topic: 'x' })).toThrow(/EC \(P-256\)/);
+    }
+    expect(() => createApnsTransport({ key: 'pas une clé', keyId: 'K', teamId: 'T', topic: 'x' })).toThrow();
+  });
+
+  test('a provider token Apple calls invalid is dropped: the next send signs a fresh one', async () => {
+    let first = true;
+    apple = await fakeApple(() => { if (first) { first = false; return { status: 403, reason: 'InvalidProviderToken' }; } return { status: 200 }; });
+    const transport = createApnsTransport({ key: KEY, keyId: 'K', teamId: 'T', topic: 'x', url: apple.url, now: () => 1_700_000_000_000 });
+    await expect(transport(TOKEN, { title: 'x' })).rejects.toMatchObject({ statusCode: 403, reason: 'InvalidProviderToken' });
+    await expect(transport(TOKEN, { title: 'x' })).resolves.toEqual({ status: 200 });
+    transport.close();
+    const [a, b] = apple.requests.map((r) => r.headers.authorization);
+    expect(a).not.toBe(b);
+    expect(jwtValid(b)).not.toBeNull();
+  });
+
+  test('a 410 without a reason is still a device gone', async () => {
+    apple = await fakeApple(() => ({ status: 410 }));
+    const transport = createApnsTransport({ key: KEY, keyId: 'K', teamId: 'T', topic: 'x', url: apple.url });
+    await expect(transport(TOKEN, { title: 'x' })).rejects.toMatchObject({ statusCode: 410, reason: 'Unregistered' });
+    transport.close();
+  });
+
+  test('a gateway that never answers is a failure after the timeout, not a hang', async () => {
+    const server = http2.createServer();
+    const sessions = new Set();
+    server.on('session', (s) => sessions.add(s));
+    server.on('stream', () => { /* jamais de réponse */ });
+    await new Promise((ok) => server.listen(0, '127.0.0.1', ok));
+    const transport = createApnsTransport({ key: KEY, keyId: 'K', teamId: 'T', topic: 'x', url: `http://127.0.0.1:${server.address().port}`, timeoutMs: 100 });
+    await expect(transport(TOKEN, { title: 'x' })).rejects.toMatchObject({ statusCode: 0 });
+    transport.close();
+    await new Promise((ok) => { for (const s of sessions) s.destroy(); server.close(ok); });
+  });
+
+  test('a GOAWAY that arrives while a send is pending, after close(), throws nothing and the next send works', async () => {
+    const server = http2.createServer();
+    const sessions = new Set();
+    const pending = [];
+    server.on('session', (s) => sessions.add(s));
+    server.on('stream', (stream) => {
+      /* La première requête reste en suspens ; les suivantes sont servies. */
+      if (pending.length === 0) { pending.push(stream); return; }
+      stream.respond({ ':status': 200 }); stream.end('');
+    });
+    await new Promise((ok) => server.listen(0, '127.0.0.1', ok));
+    const url = `http://127.0.0.1:${server.address().port}`;
+    const transport = createApnsTransport({ key: KEY, keyId: 'K', teamId: 'T', topic: 'x', url, timeoutMs: 2000 });
+    const first = transport(TOKEN, { title: 'x' }).catch((error) => error);
+    while (pending.length === 0) await new Promise((ok) => setTimeout(ok, 5));
+    const old = [...sessions];
+    transport.close();
+    for (const s of old) s.goaway();
+    await new Promise((ok) => setTimeout(ok, 50));
+    await expect(transport(TOKEN, { title: 'x' })).resolves.toEqual({ status: 200 });
+    transport.close();
+    for (const s of sessions) s.destroy();
+    await first;
+    await new Promise((ok) => server.close(ok));
+  });
+
   test('a key stored on one line (vault, .env) is accepted; a missing setting fails at creation', () => {
     const oneLine = KEY.replace(/\n/g, ' ');
     expect(() => createApnsTransport({ key: oneLine, keyId: 'K', teamId: 'T', topic: 'x' })).not.toThrow();

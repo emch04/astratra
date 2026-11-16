@@ -152,3 +152,67 @@ describe('createIdTokenVerifier', () => {
     await expect(verifyApple(google.sign({ aud: 'com.example.app' }))).rejects.toBeInstanceOf(IdTokenError);
   });
 });
+
+describe('createIdTokenVerifier : ce qui est refusé', () => {
+  const codeOf = (promise) => promise.then(() => 'ok', (e) => (e instanceof IdTokenError ? e.code : `autre : ${e.message}`));
+
+  test('un jeton pour une autre application (audience) ou d’un autre émetteur est invalide', async () => {
+    const p = fakeProvider();
+    const verify = build(p);
+    expect(await codeOf(verify(p.sign({ aud: 'client-pirate' })))).toBe('invalid');
+    expect(await codeOf(verify(p.sign({ aud: 'client-a', iss: 'https://faux-emetteur.test' })))).toBe('invalid');
+  });
+
+  test('un jeton signé par une autre clé, sous le kid du fournisseur, est invalide', async () => {
+    const p = fakeProvider();
+    const verify = build(p);
+    const intrus = crypto.generateKeyPairSync('rsa', { modulusLength: 2048 });
+    expect(await codeOf(verify(p.sign({ aud: 'client-a' }, { key: intrus.privateKey, kid: 'k1' })))).toBe('invalid');
+  });
+
+  test('un jeton sans sujet est invalide', async () => {
+    const p = fakeProvider();
+    const verify = build(p);
+    expect(await codeOf(verify(p.sign({ aud: 'client-a', sub: '' })))).toBe('invalid');
+  });
+
+  test('un kid que le fournisseur ne publie pas donne unknown_key', async () => {
+    const p = fakeProvider();
+    const verify = build(p);
+    const autre = fakeProvider({ issuer: p.issuer, kid: 'k-inconnu' });
+    expect(await codeOf(verify(autre.sign({ aud: 'client-a' })))).toBe('unknown_key');
+  });
+
+  test('ce qui n’a pas la forme d’un jeton RS256 est malformé, avant tout appel au fournisseur', async () => {
+    const p = fakeProvider();
+    const verify = build(p);
+    const rs512 = jwt.sign({ iss: p.issuer, sub: 's', aud: 'client-a' }, crypto.generateKeyPairSync('rsa', { modulusLength: 2048 }).privateKey, { algorithm: 'RS512', keyid: 'k1' });
+    const sansKid = jwt.sign({ iss: p.issuer, sub: 's', aud: 'client-a' }, crypto.generateKeyPairSync('rsa', { modulusLength: 2048 }).privateKey, { algorithm: 'RS256' });
+    for (const token of [undefined, '', 42, 'pas.un.jeton', 'a'.repeat(16 * 1024 + 1), rs512, sansKid]) {
+      expect(await codeOf(verify(token))).toBe('malformed');
+    }
+    expect(p.calls).toHaveLength(0);
+  });
+
+  test('un fournisseur qui répond une erreur HTTP donne keys_unavailable', async () => {
+    const p = fakeProvider();
+    const verify = build(p, { fetch: async () => ({ ok: false, status: 500, json: async () => ({}) }) });
+    expect(await codeOf(verify(p.sign({ aud: 'client-a' })))).toBe('keys_unavailable');
+  });
+
+  test('les clés qui ne sont pas des clés RSA de signature sont ignorées', async () => {
+    const p = fakeProvider();
+    const jwks = (await (await p.fetch()).json()).keys;
+    const verify = build(p, {
+      fetch: async () => ({ ok: true, json: async () => ({ keys: [{ ...jwks[0], use: 'enc' }, { ...jwks[0], kty: 'EC' }] }) })
+    });
+    expect(await codeOf(verify(p.sign({ aud: 'client-a' })))).toBe('unknown_key');
+    /* Une clé RSA sans rapport publiée sous le même kid ne valide rien. */
+    const autre = build(p, { fetch: async () => ({ ok: true, json: async () => ({ keys: [{ kid: 'k1', kty: 'RSA', n: 'illisible', e: 'AQAB' }] }) }) });
+    expect(await codeOf(autre(p.sign({ aud: 'client-a' })))).toBe('invalid');
+  });
+
+  test('sans fonction fetch, le vérificateur n’est pas construit', () => {
+    expect(() => createIdTokenVerifier({ jwksUrl: 'https://issuer.test/keys', issuers: ['i'], audiences: ['a'], fetch: 'pas une fonction' })).toThrow(/fetch/);
+  });
+});

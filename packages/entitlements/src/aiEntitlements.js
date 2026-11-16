@@ -107,7 +107,8 @@ function createAIEntitlements(options = {}) {
     const key = await resolveKey(token); if (!key) return { allowed: false, reason: 'invalid_key' };
     const reservationId = () => random(16).toString('hex');
     let lastDenial = null;
-    for (const requested of [model, ...fallback]) {
+    const candidates = [model, ...fallback];
+    for (const [index, requested] of candidates.entries()) {
       const rights = await rightsFor(key); if (!rights) return { allowed: false, reason: 'account_not_found' };
       const target = rights.aliases[requested] || requested;
       const targetEstimate = typeof estimatedCost === 'function' ? estimatedCost(target) : estimatedCost;
@@ -121,7 +122,11 @@ function createAIEntitlements(options = {}) {
         if (!result || !Number.isFinite(result.cost) || result.cost < 0) throw new Error('Le coût réel retourné est invalide.');
         await store.settle(rid, result.cost, result.tokens || 0, result.provider || null);
         return { allowed: true, requested: model, model: target, provider: result.provider, cost: result.cost, tokens: result.tokens || 0, result };
-      } catch (error) { await store.settle(rid, 0, 0); if (requested === fallback[fallback.length - 1]) return { allowed: false, reason: 'call_failed', error }; }
+      } catch (error) {
+        await store.settle(rid, 0, 0);
+        // Le dernier candidat a échoué : c’est un échec d’appel, avec ou sans modèles de secours.
+        if (index === candidates.length - 1) return { allowed: false, reason: 'call_failed', error };
+      }
     }
     return { allowed: false, reason: lastDenial?.reason || 'no_eligible_fallback', ...(lastDenial?.quota ? { quota: lastDenial.quota } : {}), ...(lastDenial?.budget ? { budget: lastDenial.budget } : {}) };
   }

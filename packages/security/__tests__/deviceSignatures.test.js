@@ -143,3 +143,101 @@ describe('device signatures', () => {
     expect(stranger.body).toBe(again.body);
   });
 });
+
+describe('device signatures: what is refused', () => {
+  test('a device id that is missing or not of the expected shape is an unknown device, before any store lookup', async () => {
+    const { verifier, me } = await enrolled();
+    for (const id of [undefined, '', 'court', '../../etc/passwd', 'a'.repeat(129), 'iphone test 0001']) {
+      const req = me.request();
+      req.headers['x-device-id'] = id;
+      expect(await code(verifier.verify(req))).toBe('unknown_device');
+    }
+  });
+
+  test('a nonce that is too short, too long or carries other characters is refused, even correctly signed', async () => {
+    const { verifier, me } = await enrolled();
+    for (const nonce of ['court', 'n'.repeat(129), 'nonce avec espaces 123', 'nonce/../../123456']) {
+      expect(await code(verifier.verify(me.request({ nonce })))).toBe('bad_nonce');
+    }
+  });
+
+  test('the biometric key cannot be used by a phone enrolled without one', async () => {
+    const store = createMemoryDeviceStore();
+    const verifier = createDeviceSignatureVerifier({ store });
+    const me = phone('iphone-sans-bio-06');
+    const req = me.request({ method: 'POST', path: '/appareil', body: '{}' });
+    await verifier.enroll(req, { id: me.id, publicKey: me.publicKey });
+    expect(await code(verifier.verify(me.request({ key: 'biometric' })))).toBe('biometric_required');
+  });
+
+  test('an empty, missing or all-zero signature is a bad signature', async () => {
+    const { verifier, me } = await enrolled();
+    for (const signature of ['', undefined, Buffer.alloc(64).toString('base64'), 'pas-du-base64!!']) {
+      const req = me.request();
+      req.headers['x-device-signature'] = signature;
+      expect(await code(verifier.verify(req))).toBe('bad_signature');
+    }
+  });
+
+  test('enrolment refuses a missing or malformed id, and an id other than the one that signed', async () => {
+    const store = createMemoryDeviceStore();
+    const verifier = createDeviceSignatureVerifier({ store });
+    const me = phone('iphone-inscrit-07');
+    const req = me.request({ method: 'POST', path: '/appareil', body: '{}' });
+    expect(await code(verifier.enroll(req, null))).toBe('bad_request');
+    expect(await code(verifier.enroll(req, { id: 'x', publicKey: me.publicKey }))).toBe('bad_request');
+    expect(await code(verifier.enroll(req, { id: 'iphone-autre-0008', publicKey: me.publicKey }))).toBe('bad_request');
+    expect(await store.countDevices()).toBe(0);
+  });
+
+  test('enrolment refuses an empty or unreadable public key', async () => {
+    const store = createMemoryDeviceStore();
+    const verifier = createDeviceSignatureVerifier({ store });
+    const me = phone('iphone-cle-vide-9');
+    for (const publicKey of [undefined, '', '   ', Buffer.from('pas une clé').toString('base64'), '-----BEGIN PUBLIC KEY-----\nabc\n-----END PUBLIC KEY-----']) {
+      const req = me.request({ method: 'POST', path: '/appareil', body: '{}' });
+      expect(await code(verifier.enroll(req, { id: me.id, publicKey }))).toBe('bad_key');
+    }
+  });
+
+  test('enrolment with a biometric key needs that key to have signed too', async () => {
+    const store = createMemoryDeviceStore();
+    const verifier = createDeviceSignatureVerifier({ store });
+    const me = phone('iphone-bio-faux-10');
+    const req = me.request({ method: 'POST', path: '/appareil', body: '{}' });
+    const forged = Buffer.alloc(70, 2).toString('base64');
+    expect(await code(verifier.enroll(req, { id: me.id, publicKey: me.publicKey, biometricPublicKey: me.biometricPublicKey, biometricSignature: forged }))).toBe('bad_signature');
+    expect(await code(verifier.enroll(me.request({ method: 'POST', path: '/appareil' }), { id: me.id, publicKey: me.publicKey, biometricPublicKey: me.biometricPublicKey }))).toBe('bad_signature');
+    expect(await store.countDevices()).toBe(0);
+  });
+
+  test('the same device cannot enrol twice', async () => {
+    const { verifier, me } = await enrolled();
+    const req = me.request({ method: 'POST', path: '/appareil', body: '{}' });
+    expect(await code(verifier.enroll(req, { id: me.id, publicKey: me.publicKey }))).toBe('exists');
+  });
+
+  test('two phones racing for the last place: the one counted over the cap is revoked at once', async () => {
+    const store = createMemoryDeviceStore();
+    const realCount = store.countDevices;
+    let calls = 0;
+    /* The first count is read before the other phone lands: both see a free place. */
+    store.countDevices = async () => { calls += 1; return calls === 1 ? 0 : realCount(); };
+    await store.addDevice({ id: 'iphone-premier-11', publicKey: 'x', revokedAt: null });
+    const verifier = createDeviceSignatureVerifier({ store, maxDevices: 1 });
+    const late = phone('iphone-second-0012');
+    const req = late.request({ method: 'POST', path: '/appareil', body: '{}' });
+    expect(await code(verifier.enroll(req, { id: late.id, publicKey: late.publicKey }))).toBe('closed');
+    expect((await store.getDevice(late.id)).revokedAt).toEqual(expect.any(Number));
+    expect(await code(verifier.verify(late.request()))).toBe('revoked');
+  });
+
+  test('a store missing any method is refused when the verifier is built', () => {
+    const full = createMemoryDeviceStore();
+    expect(() => createDeviceSignatureVerifier({})).toThrow(/options\.store\.getDevice/);
+    for (const method of ['getDevice', 'countDevices', 'addDevice', 'revokeDevice', 'spendNonce']) {
+      const store = { ...full, [method]: undefined };
+      expect(() => createDeviceSignatureVerifier({ store })).toThrow(`options.store.${method}`);
+    }
+  });
+});
