@@ -39,9 +39,16 @@ function createRouteGuard(options = {}) {
 
   /** @param {readonly string[]|string|null|undefined} route segments, or a path. */
   function segmentsOf(route) {
-    if (Array.isArray(route)) return route;
-    if (typeof route === 'string') return route.split('/').filter(Boolean);
-    return [];
+    const raw = Array.isArray(route) ? route : typeof route === 'string' ? route.split('/') : [];
+    /* « home/../dashboard » mène au tableau de bord : on résout « . » et « .. »
+       avant de lire le premier segment, sinon il passerait pour public. */
+    const resolved = [];
+    for (const segment of raw) {
+      if (!segment || segment === '.') continue;
+      if (segment === '..') resolved.pop();
+      else resolved.push(segment);
+    }
+    return resolved;
   }
 
   function isPublicRoute(route) {
