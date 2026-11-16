@@ -158,7 +158,7 @@ est dans [CHANGELOG.md](CHANGELOG.md).
 | [`@astratra/srs`](packages/srs/README.md) | 1.1.0 | Répétition espacée sur FSRS : cartes, notation, échéances, file du jour, statistiques |
 | [`@astratra/fhir`](packages/fhir/README.md) | 1.1.0 | Aides FHIR R4 sur les types officiels Medplum : validation minimale, références, constructeurs |
 | [`@astratra/loyalty`](packages/loyalty/README.md) | 1.1.0 | Cartes à tampons et cartes à quota mensuel, calculées sans base de données |
-| [`@astratra/wallet`](packages/wallet/README.md) | 1.1.0 | Cartes Apple Wallet et Google Wallet tenues à jour : signature, service web, lien d'ajout, retrait |
+| [`@astratra/wallet`](packages/wallet/README.md) | 1.2.0 | Cartes Apple Wallet et Google Wallet tenues à jour : signature, service web, lien d'ajout, retrait |
 | [`@astratra/pdf`](packages/pdf/README.md) | 1.1.0 | Primitives de mise en page PDFKit : texte qui tient dans sa case, tableaux paginés, planches de cartes avec QR vectoriel |
 | [`@astratra/closure`](packages/closure/README.md) | 1.1.0 | Liste de clôture de période à points bloquants et reconnus, archive sans aucun identifiant |
 | [`@astratra/notify`](packages/notify/README.md) | 1.2.0 | Messages sortants : e-mail, SMS, push ; transport injecté, protégé contre l'injection d'en-têtes, ne lève jamais |

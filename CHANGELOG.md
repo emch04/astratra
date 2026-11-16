@@ -3,6 +3,17 @@
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Chaque package Astratra est versionné indépendamment.
 
+## 2026-11-16 — `@astratra/wallet` fabrique ses cartes Apple sans passkit-generator
+
+### Versions
+`@astratra/wallet` 1.2.0.
+
+### Changé
+- `@astratra/wallet` fabrique lui-même le `.pkpass` : `pass.json`, `manifest.json` (SHA-1 de chaque fichier), signature CMS détachée (SHA-256, certificat de l'émetteur et intermédiaire WWDR joints) et archive ZIP sans compression, avec le seul module `crypto` de Node. `passkit-generator` est retiré, et avec lui `joi` (épinglé à une version vulnérable), `node-forge` et `do-not-zip`. La surcharge `joi` que le README demandait d'ajouter devient inutile. L'API ne change pas : pour la même carte, le `pass.json` est identique à celui de passkit-generator (seul disparaît `additionalInfoFields`, vide, propre aux billets d'événement), et openssl accepte la signature.
+- `createApplePasses` lit la clé privée et la compare au certificat dès sa création : une clé qui ne va pas, une phrase secrète fausse ou un intermédiaire illisible échouent tout de suite, et non à la première carte. Une phrase secrète `null` (clé en clair lue depuis une base) reste acceptée, et un `wwdr` absent, `null` ou vide prend celui d'Apple.
+- `build` refuse, avec une `TypeError` qui dit quoi corriger, ce qu'Apple Wallet refuserait sans explication : deux champs avec la même clé (passkit-generator ignorait le second), une carte sans `icon.png` (passkit-generator avertissait seulement), un jeton de moins de 16 caractères avec un service web, une couleur hors du format `rgb(r, g, b)`, un format de code-barres inconnu, un nom d'image qui sort de la carte ou prend la place d'un fichier fabriqué.
+- Types : `webServiceURL` et `authenticationToken` deviennent facultatifs (carte fixe, sans service web, où le jeton n'est pas écrit) ; `barcode.format` n'accepte plus que les quatre formats d'Apple.
+
 ## 2026-11-16 — Node 22 au minimum, Express 5 accepté, tests négatifs, intégration continue réparée
 
 ### Versions

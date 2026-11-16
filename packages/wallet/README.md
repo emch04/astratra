@@ -14,7 +14,11 @@ le contenu vient de toi.
 - **La signature Apple** : `.pkpass` signé avec ton certificat Pass Type ID.
   L'identifiant de carte et l'équipe sont **lus dans le certificat**, et le
   certificat intermédiaire WWDR G4 d'Apple est fourni : deux champs à saisir au
-  lieu de cinq.
+  lieu de cinq. Le paquet fabrique la carte lui-même (`pass.json`, manifeste,
+  signature CMS, archive) avec le seul module `crypto` de Node : aucune
+  dépendance tierce à surveiller.
+- **Les cartes qu'Apple refuserait sans rien dire** : refusées dès la
+  fabrication, avec un message qui dit quoi corriger (voir plus bas).
 - **Les mises à jour Apple** : le service web du protocole Apple (inscription
   des appareils, cartes changées, dernière version, désinscription) et la
   notification push vide qui déclenche le rafraîchissement. Les jetons morts
@@ -52,6 +56,25 @@ const pkpass = passes.build({
   images: { 'strip.png': bandeDuMoment }                   // propre à cette carte
 });
 ```
+
+Sans `webServiceURL`, la carte est **fixe** : Apple ne viendra jamais la
+mettre à jour, et `authenticationToken` n'est pas écrit (une carte de visite,
+par exemple). Avec un `webServiceURL`, le jeton est obligatoire.
+
+Avant de signer, `build` refuse (avec une `TypeError` qui dit quoi corriger)
+ce qu'Apple Wallet refuserait sans explication :
+
+- deux champs avec la même clé (`key`), recto et dos confondus ;
+- une carte sans `icon.png` (commune ou propre à la carte) ;
+- un jeton de moins de 16 caractères quand il y a un service web ;
+- une couleur qui n'est pas au format `rgb(r, g, b)` ;
+- un format de code-barres autre que `PKBarcodeFormatQR` (par défaut),
+  `PKBarcodeFormatPDF417`, `PKBarcodeFormatAztec` ou `PKBarcodeFormatCode128` ;
+- un nom d'image qui sort de la carte (`..`, chemin absolu) ou qui prend la
+  place d'un fichier fabriqué (`pass.json`, `manifest.json`, `signature`).
+
+Une clé privée qui ne correspond pas au certificat, ou une phrase secrète
+fausse, est refusée dès `createApplePasses`, et non à la première carte.
 
 Le service web, monté sous le `webServiceURL` :
 
@@ -152,15 +175,3 @@ redémarrage.
 - **Badges** : dans un e-mail ou une page, utilise les badges officiels
   (« Ajouter à l'app Cartes Apple », « Ajouter au Google Wallet »), téléchargés
   depuis les kits de marque d'Apple et de Google.
-- **Fixe `joi` dans ton projet** : `passkit-generator` 3.7.0 (dernière version)
-  épingle exactement `joi` 17.13.4. Toutes les versions jusqu'à 17.13.8 ont
-  des failles connues (pollution de prototype, expression régulière lente) ;
-  17.13.9 les corrige. npm n'applique que les `overrides` du projet racine,
-  pas ceux d'un paquet installé : ajoute-les dans le `package.json` de ton
-  application. Avec cette surcharge, `npm audit` ne signale plus rien et
-  `@astratra/wallet` fonctionne normalement. Elle devient inutile dès que
-  `passkit-generator` met `joi` à jour de lui-même.
-
-  ```json
-  { "overrides": { "passkit-generator": { "joi": "17.13.9" } } }
-  ```

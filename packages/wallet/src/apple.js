@@ -1,8 +1,14 @@
 const http2 = require('node:http2');
-const { PKPass } = require('passkit-generator');
 const { APPLE_WWDR_G4, readPassCertificate } = require('./credentials');
+const { fabriquerPkpass, preparerSignataire } = require('./pkpass/pkpass');
 
 const APNS_PRODUCTION = 'https://api.push.apple.com';
+
+/* Un QR code quand le format n'est pas dit ; ce qui n'est pas un objet est
+   laissé tel quel, pour être refusé avec un message clair. */
+function avecFormatParDefaut(code) {
+  return typeof code === 'object' ? { ...code, format: code.format || 'PKBarcodeFormatQR' } : code;
+}
 
 /**
  * Fabrique de cartes Apple Wallet (storeCard par défaut), signées avec le
@@ -12,20 +18,25 @@ const APNS_PRODUCTION = 'https://api.push.apple.com';
  * (couleurs, logo) est celui de l'émetteur ; le contenu (champs, bande, QR)
  * change d'une carte à l'autre.
  *
+ * Le .pkpass est fabriqué par le paquet lui-même (pass.json, manifest,
+ * signature CMS, ZIP), sans autre dépendance que Node.
+ *
  * @param {object} options
  * @param {string} options.certificate   certificat Pass Type ID (PEM).
  * @param {string} options.privateKey    clé privée associée (PEM).
  * @param {string} [options.passphrase]
  * @param {string} [options.wwdr]        certificat intermédiaire ; WWDR G4 par défaut.
- * @param {string} options.webServiceURL base du service web de mise à jour (…/v1 ajouté par Apple).
+ * @param {string} [options.webServiceURL] base du service web de mise à jour (…/v1 ajouté par Apple) ;
+ *        sans elle, la carte est fixe.
  * @param {string} options.organizationName
  * @param {string} options.description
- * @param {Record<string, Buffer>} options.images  images communes : icon.png, icon@2x.png, logo.png…
- * @param {{foregroundColor?: string, backgroundColor?: string, labelColor?: string}} [options.colors]
+ * @param {Record<string, Buffer>} options.images  images communes : icon.png (obligatoire), icon@2x.png, logo.png…
+ * @param {{foregroundColor?: string, backgroundColor?: string, labelColor?: string}} [options.colors]  au format rgb(r, g, b).
  * @param {'storeCard'|'generic'|'coupon'|'eventTicket'} [options.type='storeCard']
+ * @param {string} [options.logoText]
  */
 function createApplePasses({
-  certificate, privateKey, passphrase, wwdr = APPLE_WWDR_G4, webServiceURL,
+  certificate, privateKey, passphrase, wwdr, webServiceURL,
   organizationName, description, images = {}, colors = {}, type = 'storeCard', logoText
 }) {
   const lu = readPassCertificate(certificate);
@@ -33,12 +44,16 @@ function createApplePasses({
     throw new Error('Certificat Pass Type ID illisible ou incomplet.');
   }
   const { passTypeIdentifier, teamIdentifier } = lu;
+  /* Absent, null ou vide (un champ de réglage laissé blanc) : celui d'Apple. */
+  const signataire = preparerSignataire({ certificate, privateKey, passphrase, wwdr: wwdr || APPLE_WWDR_G4 });
 
   /**
    * @param {object} card
    * @param {string} card.serialNumber
-   * @param {string} card.authenticationToken au moins 16 caractères (exigence Apple).
-   * @param {Array<object>} [card.headerFields] … et primaryFields, secondaryFields, auxiliaryFields, backFields
+   * @param {string} [card.authenticationToken] au moins 16 caractères (exigence Apple) ;
+   *        obligatoire avec un webServiceURL, ignoré sans.
+   * @param {Array<object>} [card.headerFields] … et primaryFields, secondaryFields, auxiliaryFields, backFields ;
+   *        chaque clé (key) est unique sur toute la carte.
    * @param {{message: string, altText?: string, format?: string}} [card.barcode]
    * @param {Record<string, Buffer>} [card.images] images propres à cette carte (strip.png…), prioritaires.
    * @param {boolean} [card.voided] carte annulée : Apple Wallet la grise et la
@@ -47,36 +62,26 @@ function createApplePasses({
    * @returns {Buffer} le .pkpass
    */
   function build(card) {
-    const pass = new PKPass(
-      { ...images, ...(card.images || {}) },
-      { wwdr, signerCert: certificate, signerKey: privateKey, signerKeyPassphrase: passphrase },
-      {
-        formatVersion: 1,
+    return fabriquerPkpass({
+      pass: {
+        type,
         passTypeIdentifier,
         teamIdentifier,
         serialNumber: card.serialNumber,
         organizationName,
         description,
-        ...(logoText ? { logoText } : {}),
-        ...colors,
+        /* Un logoText vide n'est pas écrit, comme avant. */
+        logoText: logoText || undefined,
+        colors: colors || {},
         webServiceURL,
         authenticationToken: card.authenticationToken,
-        ...(card.voided ? { voided: true } : {})
-      }
-    );
-    pass.type = type;
-    for (const zone of ['headerFields', 'primaryFields', 'secondaryFields', 'auxiliaryFields', 'backFields']) {
-      for (const field of card[zone] || []) pass[zone].push(field);
-    }
-    if (card.barcode) {
-      pass.setBarcodes({
-        format: card.barcode.format || 'PKBarcodeFormatQR',
-        message: card.barcode.message,
-        messageEncoding: 'utf-8',
-        ...(card.barcode.altText ? { altText: card.barcode.altText } : {})
-      });
-    }
-    return pass.getAsBuffer();
+        voided: Boolean(card.voided),
+        fields: card,
+        ...(card.barcode ? { barcode: avecFormatParDefaut(card.barcode) } : {})
+      },
+      fichiers: { ...images, ...(card.images || {}) },
+      signataire
+    });
   }
 
   return { passTypeIdentifier, teamIdentifier, expiresAt: lu.expiresAt, build };

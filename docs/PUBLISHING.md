@@ -79,8 +79,9 @@ npm pack --dry-run --workspace @astratra/<nom>
    développement des paquets (Expo pour `@astratra/native-ui`, promptfoo pour
    `@astratra/tooling`) : elles appartiennent au projet de l'utilisateur, qui
    les met à jour lui-même. Une dépendance tierce qui fige une version
-   vulnérable (comme `passkit-generator`, qui fige `joi`) se signale en amont,
-   avec la surcharge (`overrides`) qu'une application peut ajouter en attendant.
+   vulnérable (une version exacte d'une autre dépendance, par exemple) se
+   signale en amont, avec la surcharge (`overrides`) qu'une application peut
+   ajouter en attendant.
 
 ## Ordre de publication
 

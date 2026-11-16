@@ -38,14 +38,19 @@ export interface PassField {
 
 export interface PassContent {
   serialNumber: string;
-  /** At least 16 characters (Apple requirement). */
-  authenticationToken: string;
+  /** At least 16 characters (Apple requirement). Required with a webServiceURL; not written without one. */
+  authenticationToken?: string;
   headerFields?: PassField[];
   primaryFields?: PassField[];
   secondaryFields?: PassField[];
   auxiliaryFields?: PassField[];
   backFields?: PassField[];
-  barcode?: { message: string; altText?: string; format?: string };
+  /** QR code unless another format is given. */
+  barcode?: {
+    message: string;
+    altText?: string;
+    format?: 'PKBarcodeFormatQR' | 'PKBarcodeFormatPDF417' | 'PKBarcodeFormatAztec' | 'PKBarcodeFormatCode128';
+  };
   images?: Record<string, Buffer>;
   /** Voided card: Apple Wallet greys it out. The only way for an issuer to retire a card already added. */
   voided?: boolean;
@@ -56,10 +61,13 @@ export interface ApplePassesOptions {
   privateKey: string;
   passphrase?: string;
   wwdr?: string;
-  webServiceURL: string;
+  /** Base of the update web service (Apple adds /v1). Without it, the card is fixed: never updated. */
+  webServiceURL?: string;
   organizationName: string;
   description: string;
+  /** Shared images; icon.png is required (here or in each card's images). */
   images?: Record<string, Buffer>;
+  /** Each colour as rgb(r, g, b). */
   colors?: { foregroundColor?: string; backgroundColor?: string; labelColor?: string };
   type?: 'storeCard' | 'generic' | 'coupon' | 'eventTicket';
   logoText?: string;

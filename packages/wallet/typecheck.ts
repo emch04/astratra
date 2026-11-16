@@ -16,6 +16,8 @@ const passes = createApplePasses({
 });
 const card: PassContent = { serialNumber: 'C-1', authenticationToken: 'jeton-assez-long-123', barcode: { message: 'C-1' } };
 const buffer: Buffer = passes.build(card);
+const fixe = createApplePasses({ certificate: pem, privateKey: key, organizationName: 'Salon', description: 'Carte de visite' });
+const carteFixe: Buffer = fixe.build({ serialNumber: 'S-1', barcode: { message: 'https://example.com', format: 'PKBarcodeFormatAztec' } });
 const registrations: RegistrationStore = createMemoryRegistrationStore();
 const router = createAppleWebServiceRouter({
   resolveConfig: async () => ({ passTypeIdentifier: passes.passTypeIdentifier }),
@@ -28,4 +30,4 @@ const link: string = google.saveLink([{ id: google.objectId('C-1'), classId: goo
 const hex: string = toHexField(pem);
 const back: string | undefined = fromHexField(hex);
 
-export { check, googleCheck, info, router, link, back };
+export { check, googleCheck, info, router, link, back, carteFixe };
