@@ -20,6 +20,14 @@ const DEFAULT_ACCOUNT_MESSAGE = {
 
 const getIp = (req) => req.ip || req.connection?.remoteAddress || '';
 
+// Une adresse IPv6 compte pour tout son bloc /56, comme la clé par défaut
+// d'express-rate-limit 8 : sinon chacun change d'adresse dans son bloc et
+// repart avec un compteur neuf. IPv4 reste l'adresse exacte.
+const clientKey = (req) => {
+  const ip = getIp(req);
+  return typeof rateLimit.ipKeyGenerator === 'function' && ip ? rateLimit.ipKeyGenerator(ip) : ip;
+};
+
 const skipLocalhost = (req) => {
   const ip = getIp(req);
   return ip === '::1' || ip === '127.0.0.1' || ip.includes('localhost');
@@ -187,7 +195,7 @@ const createApiLimiter = (options = {}) => {
   return rateLimit(withOptionalStore({
     windowMs: options.windowMs || 15 * 60 * 1000,
     max: area ? (req) => area(req)?.max || fallback : fallback,
-    ...(area ? { keyGenerator: (req) => `${area(req)?.name || 'default'}:${getIp(req)}` } : {}),
+    ...(area ? { keyGenerator: (req) => `${area(req)?.name || 'default'}:${clientKey(req)}` } : {}),
     skip: options.skip ?? defaultApiSkip(),
     standardHeaders: options.standardHeaders ?? true,
     legacyHeaders: options.legacyHeaders ?? false,
