@@ -3,7 +3,7 @@
   "version": "1.6.2",
   "description": "Generic audit, test, deploy and app-publishing tooling for Astratra workspaces.",
   "engines": {
-    "node": ">=20"
+    "node": ">=22"
   },
   "main": "src/index.js",
   "types": "src/index.d.ts",

@@ -1,6 +1,6 @@
 # @astratra/rag
 
-CommonJS retrieval primitives for Node 20+. Providers, fetch, masking, persistence, clocks, timers, locks, logging, and model loaders are injected. The package has no database or model dependency.
+CommonJS retrieval primitives for Node 22+. Providers, fetch, masking, persistence, clocks, timers, locks, logging, and model loaders are injected. The package has no database or model dependency.
 
 ## Documents and chunks
 

@@ -4,7 +4,7 @@ What an AI assistant remembers about each person it talks to — kept, found,
 corrected, taken back and erased — with the storage, the embeddings, the model
 and every word shown to a person supplied by you.
 
-No runtime dependency. CommonJS, Node 20+.
+No runtime dependency. CommonJS, Node 22+.
 
 ```bash
 npm install @astratra/memory

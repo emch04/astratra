@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "Primitives React génériques pour sessions, permissions et appels API Astratra.",
   "engines": {
-    "node": ">=20"
+    "node": ">=22"
   },
   "type": "module",
   "main": "src/index.js",

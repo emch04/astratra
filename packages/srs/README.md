@@ -12,7 +12,7 @@ de mémoire, meilleur que SM-2) fourni par [`ts-fsrs`](https://github.com/open-s
 npm install @astratra/srs
 ```
 
-Node 20 ou plus récent.
+Node 22 ou plus récent.
 
 ## Exemple
 

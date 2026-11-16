@@ -8,7 +8,7 @@ L'outil en ligne de commande d'un tableau de bord de surveillance auto-hébergé
 npm install --save-dev @astratra/centrale-cli
 ```
 
-Node 24 ou plus récent. La commande `centrale` est alors disponible via `npx centrale`.
+Node 22 ou plus récent. La commande `centrale` est alors disponible via `npx centrale`.
 
 ## Commandes
 
@@ -72,7 +72,7 @@ import { injecterDossier, envoyerCartes, declarerDeploiement } from '@astratra/c
 
 `extraireTables(chemin, { racine })` rend les tables de symboles d'une archive ou d'un dSYM, `envoyerSymboles(connexion, tables, { version })` les envoie. `envoyerCartes(connexion, { dossier, version })` et `declarerDeploiement(connexion, { version, commit, depot?, environnement? })` prennent une `connexion` `{ adresse, jeton }`. `injecterDossier(dossier)` rend la liste des fichiers traités.
 
-Le paquet est écrit en TypeScript à syntaxe effaçable (Node 24 l'exécute directement dans le dépôt) ; il sera compilé en JavaScript au moment de sa publication, comme `@astratra/centrale`.
+Le paquet est écrit en TypeScript à syntaxe effaçable (Node 22.18 ou plus l'exécute directement dans le dépôt) ; il est compilé en JavaScript au moment de sa publication, comme `@astratra/centrale`.
 
 ## Ce que l'outil ne fait pas
 
