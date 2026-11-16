@@ -71,8 +71,16 @@ npm pack --dry-run --workspace @astratra/<nom>
    Dépendances MIT, Apache 2.0 ou BSD seulement ; LGPL uniquement comme
    fichier de données séparé et mentionné ; rien de GPL, AGPL, BSL, ELv2 ou
    FSL.
-8. `npm audit --omit=dev` à la racine : aucune vulnérabilité haute ou
-   critique dans les dépendances de production.
+8. Aucune vulnérabilité haute ou critique dans ce que chaque paquet publié
+   installe chez l'utilisateur. `npm audit --omit=dev` à la racine, puis, pour
+   chaque alerte haute ou critique, `npm explain <dépendance>` : elle bloque la
+   publication seulement si elle arrive par les `dependencies` d'un paquet
+   publié. À la racine, l'audit compte aussi les dépendances d'appairage et de
+   développement des paquets (Expo pour `@astratra/native-ui`, promptfoo pour
+   `@astratra/tooling`) : elles appartiennent au projet de l'utilisateur, qui
+   les met à jour lui-même. Une dépendance tierce qui fige une version
+   vulnérable (comme `passkit-generator`, qui fige `joi`) se signale en amont,
+   avec la surcharge (`overrides`) qu'une application peut ajouter en attendant.
 
 ## Ordre de publication
 
