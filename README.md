@@ -138,7 +138,7 @@ package is in [CHANGELOG.md](CHANGELOG.md).
 | [`@astratra/live`](packages/live/README.md) | 1.1.0 | Real-time voice call sessions and client protocol helpers |
 | [`@astratra/app-guide`](packages/app-guide/README.md) | 1.1.0 | Role-aware in-app guide generated from the screen configuration, with coverage checks |
 | [`@astratra/repomap`](packages/repomap/README.md) | 1.1.0 | Weighted symbol map of a repository, for exploring code within a token budget |
-| [`@astratra/web-search`](packages/web-search/README.md) | 1.1.0 | Web search for agents: several engines with fallback, rank fusion without content mixing (one entry = one page = one site), verbatim passages, SSRF-safe page reading, tool definitions and an MCP server |
+| [`@astratra/web-search`](packages/web-search/README.md) | 1.1.0 | Web search for agents: several engines with fallback, rank fusion without content mixing (one entry = one page = one site), verbatim passages, SSRF-safe page reading, an isolated integrated browser (JavaScript pages, links, site search), tool definitions and an MCP server |
 
 ### Business logic
 

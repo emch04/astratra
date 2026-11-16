@@ -139,6 +139,12 @@ async function startTrapSite() {
       res.end(Buffer.alloc(2_000_000));
       return;
     }
+    if (url.pathname === '/entetes') {
+      res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
+      const lines = Object.entries(req.headers).map(([name, value]) => `${name}=${String(value).replace(/[<>&]/g, '')}`);
+      res.end(`<!doctype html><html><body><pre>${lines.join('\n')}</pre></body></html>`);
+      return;
+    }
     if (url.pathname === '/resultats' || url.pathname === '/chercher') {
       const query = url.searchParams.get('q') || url.searchParams.get('mots') || '';
       res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
@@ -204,13 +210,16 @@ function localFetchRobots(port) {
   });
 }
 
+/** Vrai si Playwright est là et que son Chromium sans fenêtre démarre (essai réel, dans un processus à part). */
 function playwrightReady() {
   try {
-    const { chromium } = require('playwright');
-    return fs.existsSync(chromium.executablePath());
+    require.resolve('playwright');
   } catch (_error) {
     return false;
   }
+  const { spawnSync } = require('child_process');
+  const probe = spawnSync(process.execPath, ['-e', "require('playwright').chromium.launch({ chromiumSandbox: true }).then((b) => b.close()).then(() => process.exit(0), () => process.exit(1))"], { timeout: 60_000, stdio: 'ignore' });
+  return probe.status === 0;
 }
 
 module.exports = { startTrapSite, fakeResolve, localFetchRobots, playwrightReady, hasOpenssl, WORDS };

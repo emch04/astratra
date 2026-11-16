@@ -179,27 +179,34 @@ async function startEgressProxy(options = {}) {
     sockets.add(upstream);
     stats.tunnels += 1;
     stats.open += 1;
-    upstream.setTimeout(idleMs, () => upstream.destroy());
-    client.setTimeout(idleMs, () => client.destroy());
-    const done = () => {
+    upstream.setTimeout(idleMs, () => {
       upstream.destroy();
       client.destroy();
-    };
+    });
+    client.setTimeout(idleMs, () => {
+      client.destroy();
+      upstream.destroy();
+    });
+    let connected = false;
     upstream.on('connect', () => {
+      connected = true;
       client.write('HTTP/1.1 200 Connection Established\r\n\r\n');
       if (head?.length) upstream.write(head);
+      /* pipe() ferme chaque côté quand l'autre a fini : rien de ce qui est déjà reçu n'est perdu. */
       upstream.pipe(client);
       client.pipe(upstream);
     });
     upstream.on('error', () => {
-      if (!client.destroyed) client.end('HTTP/1.1 502 Bad Gateway\r\nConnection: close\r\n\r\n');
+      if (!connected && !client.destroyed) client.end('HTTP/1.1 502 Bad Gateway\r\nConnection: close\r\n\r\n');
+      else client.destroy();
     });
     upstream.on('close', () => {
       sockets.delete(upstream);
       stats.open -= 1;
-      done();
+      if (!client.destroyed && !client.writableEnded) client.end();
     });
-    client.on('close', done);
+    client.on('error', () => upstream.destroy());
+    client.on('close', () => upstream.destroy());
   });
   server.on('clientError', (_error, socket) => socket.destroy());
 

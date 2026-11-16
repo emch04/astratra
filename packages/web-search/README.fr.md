@@ -9,7 +9,9 @@ site, avec son adresse exacte, son domaine, sa date quand on la connaît,
 l'extrait d'**un seul** moteur pour **cette** page et, quand la page est lue,
 des passages cités mot pour mot avec leur position. Les pages sont lues sans
 ouvrir de porte vers votre réseau interne (SSRF), et tout ce qu'un modèle lit
-du web lui est présenté comme des données, pas comme des instructions.
+du web lui est présenté comme des données, pas comme des instructions. Un
+navigateur intégré, facultatif et isolé, lit les pages construites en
+JavaScript, parcourt les liens d'un site et utilise sa recherche interne.
 
 [English version](README.md)
 
@@ -175,6 +177,178 @@ avec leur adresse, leur site, leur date, leur extrait et leurs passages mot
 pour mot, **dans** un cadre de données non fiables dont la marque aléatoire ne
 peut pas être refermée par la page. Le texte entier ne dépasse jamais `maxChars`.
 
+## Navigateur intégré (lecture seule)
+
+Une page construite en JavaScript (React, Vue…) ne donne presque rien à la
+lecture simple. Le navigateur intégré l'ouvre dans un vrai Chromium sans
+fenêtre, attend qu'elle se pose et lit ce qu'une personne voit. Il permet aussi
+de **parcourir** un site (liens numérotés), d'utiliser **sa recherche
+interne** sans cliquer ni taper, et de prendre une **capture d'écran** sur
+demande. Il ne modifie rien sur le web : ni clic qui envoie quelque chose, ni
+formulaire autre qu'une recherche en GET, ni connexion, ni achat.
+
+```js
+const { createWebSearch, createBrowserClient } = require('@astratra/web-search');
+
+const ws = createWebSearch({
+  providers: [/* … */],
+  browser: createBrowserClient({ baseUrl: 'http://127.0.0.1:5008', tokenFile: '/etc/astratra/browser-token' })
+});
+
+await ws.read(url);                              // lecture simple, puis le navigateur sous 200 mots
+const page = await ws.browse(url, { query });    // texte rendu, liens [L1]…, passages
+await ws.browse(page.links[0].url);              // suivre un lien
+await ws.searchSite('https://docs.python.org/3/', 'asyncio');  // recherche interne du site
+await ws.browse(url, { screenshot: true });      // page.screenshot : PNG 1280 × 800 au plus
+```
+
+- `reading.browser` : `'fallback'` (défaut avec un navigateur : sous
+  `reading.minWords`, 200 mots, la lecture simple passe la main),
+  `'always'` ou `'never'`. `page.via` dit qui a lu (`fetch` ou `browser`).
+- Deux outils s'ajoutent quand `browser` est donné, dans `toolDefinitions`
+  (`{ browser: true }`), `nativeTools`, `registryTools` et le serveur MCP :
+  `browse_page` `{ url, query?, quotes?, screenshot? }` et `search_site`
+  `{ url, query }`. Mêmes règles que `read_page` : https seulement, texte
+  dans le cadre des données non fiables (liens compris), sources
+  `kind: 'web'`, risque `LOW`, genre `read`, `external: true`.
+- Capture d'écran : seulement pour un modèle qui lit les images
+  (`nativeTools(ws, { screenshots: true })` rend `images`, le serveur MCP
+  `createMcpServer(ws, { screenshots: true })` un contenu image) ; refusée
+  sinon. `registryTools` rend du texte seulement.
+- `allowDomains: ['example.com']` (option de `createWebSearch`) limite les
+  pages lues et ouvertes à ces sites ; `ranking.blockDomains` est refusé pour
+  toutes les lectures (et pour les redirections, dans le navigateur).
+- Recherche interne : la description OpenSearch du site, sinon un formulaire
+  `GET` à un seul champ texte de recherche ; l'adresse de résultats est
+  calculée puis ouverte, sur le même site. Les moteurs de recherche (Google,
+  Bing…) sont refusés : ils s'interrogent par leur API, avec `web_search`.
+
+### Le service `astratra-web-browser`
+
+En production, un seul Chromium tourne sur le serveur, partagé par toutes les
+applications, dans un service à part livré par le paquet. Il écoute
+`127.0.0.1:5008` (jamais l'extérieur), demande un jeton `Authorization:
+Bearer` relu dans un fichier à chaque requête, et sert `POST /v1/open`,
+`POST /v1/site-search` et `GET /health`. Chaque requête ouvre un contexte neuf
+(ni cookies, ni stockage, ni cache), une seule page, détruit à la fin ; deux
+pages au plus en même temps (`--max-contexts`), puis une attente bornée, puis
+`503 busy`.
+
+Installation sur un serveur Linux (Ubuntu 24, en root) :
+
+```bash
+npm install @astratra/web-search playwright
+PLAYWRIGHT_BROWSERS_PATH=/opt/ms-playwright npx playwright install --with-deps chromium-headless-shell
+npx astratra-web-browser setup --out ./navigateur --node "$(command -v node)" \
+  --token-file /etc/astratra/browser-token --browsers-path /opt/ms-playwright --dns 127.0.0.53
+```
+
+`setup` écrit l'unité systemd, les règles nftables, le profil AppArmor et
+`INSTALL.md` (création de l'utilisateur `navigateur`, du jeton avec
+`astratra-web-browser token`, chargement du pare-feu et du profil, démarrage).
+`--dns` donne le résolveur de la machine (`/etc/resolv.conf`). Pour le
+développement, `createLocalBrowser()` fait tourner le même moteur dans le
+processus (il faut `playwright`), ou `astratra-web-browser serve
+--token-file … --unsafe-no-firewall` lance le service sur un poste sans
+pare-feu.
+
+`createBrowserPm2App` existe aussi, mais pm2 ne donne aucune des protections
+de systemd (utilisateur à part, système en lecture seule, mémoire bornée) :
+le pare-feu reste obligatoire, et pm2 doit tourner sous l'utilisateur du
+service.
+
+### Isolement
+
+Chaque protection tient si une autre cède :
+
+- **Utilisateur et processus** : utilisateur système `navigateur`, unité
+  systemd durcie (`ProtectSystem=strict`, `ProtectHome`, `PrivateTmp`,
+  `NoNewPrivileges`, `MemoryMax=2G`, `CPUQuota=200%`, jeton par
+  `LoadCredential`, seuls les espaces de noms dont Chromium a besoin). Le
+  service refuse de tourner en root.
+- **Cloisonnement de Chromium** actif : un lancement sans lui est refusé
+  (`--no-sandbox` interdit). Sur Ubuntu 23.10 et suivants, le profil AppArmor
+  de `setup` lui permet de créer ses espaces de noms.
+- **Relais de sortie** : Chromium n'ouvre aucune connexion lui-même, tout
+  passe par un relais du service (boucle locale comprise). Le relais résout
+  chaque nom, refuse toute adresse non publique (mêmes plages que
+  `isPublicAddress`) et se connecte à l'adresse vérifiée : redirections,
+  WebSocket, images, `fetch` des scripts et DNS rebinding sont couverts.
+  WebRTC est coupé.
+- **Pare-feu système, obligatoire** : les règles nftables refusent à
+  l'utilisateur `navigateur` toute sortie vers une adresse non publique, sauf
+  le résolveur DNS et le relais.
+- **Contrôle au démarrage** : le service tente de joindre la boucle locale,
+  une adresse privée de la machine et `169.254.169.254` ; si l'une répond, il
+  refuse de démarrer (`isolation_failed`). `/health` donne le résultat.
+- **Page** : ni téléchargement, ni `file://`, ni service worker, ni
+  permission, ni fenêtre surgissante (fermée), ni boîte de dialogue (refusée).
+  15 s par page, 25 s par requête, 5 redirections, 10 Mo de ressources (les
+  requêtes suivantes sont coupées), 2 Mo de texte.
+
+### Ce que lit le modèle
+
+Le texte **visible** seulement : les éléments cachés (`display`,
+`visibility`, `opacity`, hors de l'écran, d'un pixel, découpés, police nulle,
+couleur transparente ou égale au fond, `aria-hidden`) sont retirés avant la
+lecture, car un texte caché est l'arme classique pour glisser un ordre à une
+IA. Les bandeaux de cookies, fenêtres d'abonnement et boîtes modales sont
+masqués **sans cliquer**. Les liens (https, 50 au plus, ceux du même site
+d'abord) sont numérotés dans le cadre.
+
+Ces protections sont pour l'IA ce que l'isolement est pour le serveur : à
+passer aussi par les gardes de `@astratra/ai`, qui cherchent les injections
+de consignes avec le modèle de garde de `@astratra/models` et refusent toute
+action après un soupçon :
+
+```js
+const { createGuards } = require('@astratra/ai/guards');
+const guards = createGuards({ models });          // client de @astratra/models
+const run = guards.newRun({ mode: 'action' });
+const browse = nativeTools(ws).find((tool) => tool.name === 'browse_page');
+const { data } = await browse.run({ url });
+const checked = await guards.toolResult(data, run, { tool: 'browse_page', external: true });
+// checked.suspected → plus aucune action sans l'accord d'une personne :
+await guards.beforeAction({ name: 'send_email' }, run);   // { decision: 'block', reason: 'confirmation_required' }
+```
+
+### Identité de l'agent
+
+- `User-Agent` honnête : `Mozilla/5.0 (compatible; AstratraWebBrowser/<version>; +<infoUrl>)`.
+  `--info-url` donne la page qui explique l'agent (par défaut, la page GitHub
+  du paquet). Aucune imitation d'un humain, aucun module « furtif » : un site
+  qui refuse les agents est refusé.
+- `robots.txt` est respecté pour chaque page ouverte par le navigateur (jeton
+  `AstratraWebBrowser`, sinon `*`, cache d'une heure ; un `robots.txt` en
+  panne vaut refus) : une page interdite rend `WEB_BROWSE_ROBOTS_DISALLOWED`.
+  La cible d'une redirection est vérifiée à l'arrivée : la requête est partie,
+  mais la page n'est pas rendue.
+- **Web Bot Auth** (facultatif) : `astratra-web-browser keygen --out cle.pem
+  --directory annuaire.json` crée une clé Ed25519 et l'annuaire à publier à
+  `/.well-known/http-message-signatures-directory` de votre domaine ; avec
+  `--signing-key-file` et `--signature-agent https://votre-domaine`, chaque
+  requête est signée (RFC 9421 : `Signature`, `Signature-Input`,
+  `Signature-Agent`).
+
+### Erreurs
+
+| Code | Quand |
+|---|---|
+| `WEB_BROWSE_ROBOTS_DISALLOWED` | `robots.txt` interdit la page (ou la cible d'une redirection) |
+| `WEB_READ_BLOCKED_ADDRESS` | la page ou une redirection vise une adresse non publique |
+| `WEB_READ_BLOCKED_DOMAIN` | site bloqué (`blockDomains`) ou hors de `allowDomains` |
+| `WEB_BROWSE_NO_SITE_SEARCH` | ni OpenSearch ni formulaire GET de recherche |
+| `WEB_BROWSE_REFUSED` | page de recherche d'un moteur (utiliser `web_search`) |
+| `WEB_BROWSE_BUSY` | le service est plein ; réessayer |
+| `WEB_BROWSE_TIMEOUT` | la page a dépassé son délai |
+| `WEB_BROWSER_UNAVAILABLE` | service arrêté, disjoncteur ouvert, ou `browser` absent |
+| `WEB_READ_BAD_STATUS`, `WEB_READ_UNSUPPORTED_TYPE`, `WEB_READ_TOO_MANY_REDIRECTS`, `WEB_BROWSE_FAILED` | comme pour `read_page` |
+
+Le client ne lève jamais : `open` et `siteSearch` rendent `{ ok: true,
+result }` (`result.status` : `ok`, `robots_disallowed`, `blocked`…) ou
+`{ ok: false, code, retryable }`. Délai de 30 s, nouvel essai sur panne réseau
+ou service plein, disjoncteur (trois pannes de suite : 30 s de refus rapides).
+
 ## Évaluation
 
 `runEvaluation({ cases, search, recorder, readText })` vérifie, pour chaque
@@ -198,9 +372,12 @@ SERPER_API_KEY=… BRAVE_SEARCH_API_KEY=… npm run eval:live -w @astratra/web-s
 ## Ce qu'il ne fait pas
 
 - Il n'écrit pas de réponse. Il donne des pages ; le modèle répond et cite.
-- Il n'exécute pas le JavaScript des pages : une page entièrement construite
-  dans le navigateur donne peu de texte. Branchez votre `extract`, ou lisez ces
-  pages autrement.
+- Sans navigateur intégré, il n'exécute pas le JavaScript des pages : une page
+  entièrement construite dans le navigateur donne peu de texte (voir
+  [Navigateur intégré](#navigateur-intégré-lecture-seule)).
+- Le navigateur intégré ne fait que lire : il ne clique pas, ne remplit aucun
+  formulaire (sauf une recherche en GET, par son adresse), ne se connecte pas,
+  n'achète rien. Ni JSON ni PDF.
 - Il ne lit ni les PDF ni les images.
 - Il ne contourne ni les murs payants, ni les règles des robots, ni les
   conditions des moteurs. Vérifiez les conditions de chaque moteur utilisé,
@@ -218,4 +395,7 @@ npm test -w @astratra/web-search
 
 Les tests n'appellent jamais Internet : les moteurs sont simulés, et les
 lectures de pages passent par un réseau simulé qui utilise le même `lookup`
-que le vrai.
+que le vrai. Les tests du navigateur tournent sur un vrai Chromium contre un
+petit site HTTPS local de pages pièges (texte caché, redirections et
+WebSocket vers l'intérieur, téléchargement, page énorme…) ; ils sont sautés
+sans Playwright ni Chromium.

@@ -3,6 +3,27 @@
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Chaque package Astratra est versionné indépendamment.
 
+## 2026-11-16 — `@astratra/web-search` 1.2.0 (à publier) : un navigateur intégré, en lecture seule
+
+### Versions
+`@astratra/web-search` 1.2.0. Rien n'est encore publié sur npm.
+
+### Ajouté
+- `@astratra/web-search` : un navigateur intégré, premier étage (lecture seule), selon `docs/design/2026-11-16-astratra-web-search-navigateur-design.md`. Un Chromium sans fenêtre lit les pages construites en JavaScript, rend leurs liens numérotés (ceux du même site d'abord), utilise la recherche interne d'un site sans clic ni frappe (description OpenSearch, sinon formulaire GET à un seul champ de recherche) et prend une capture d'écran sur demande (PNG, 1280 × 800 au plus).
+  - `createWebSearch({ browser })` : `ws.browse(url)`, `ws.searchSite(url, query)` ; `ws.read` passe la main au navigateur quand la lecture simple donne moins de 200 mots (`reading.browser` : `fallback`, `always`, `never` ; `reading.minWords`) ; `page.via` dit qui a lu. `allowDomains` limite les pages lues et ouvertes.
+  - Deux outils, présents seulement avec un navigateur : `browse_page` et `search_site`, dans `toolDefinitions(format, { browser, screenshots })`, `nativeTools`, `registryTools` et le serveur MCP (`WEB_BROWSER_URL` et `WEB_BROWSER_TOKEN_FILE` pour `astratra-web-search-mcp`). Texte et liens dans le cadre des données non fiables ; capture rendue en image seulement avec `screenshots: true`.
+  - Le service `astratra-web-browser` (nouvelle commande) : un Chromium partagé sur `127.0.0.1:5008`, jeton relu dans un fichier à chaque requête, contexte neuf par requête, deux pages au plus en parallèle puis `503 busy`. `createBrowserClient` (sans dépendance : délai, nouvel essai, disjoncteur, jamais d'exception) et `createLocalBrowser` (le moteur dans le processus).
+  - Isolement : utilisateur système à part ; unité systemd durcie (`createBrowserSystemdUnit`) ; cloisonnement de Chromium obligatoire ; relais de sortie dans le service, qui résout chaque nom, refuse toute adresse non publique et se connecte à l'adresse vérifiée (redirections, WebSocket et DNS rebinding couverts ; WebRTC coupé) ; règles nftables obligatoires (`createBrowserFirewall`) ; profil AppArmor pour Ubuntu 23.10 et suivants (`createBrowserAppArmorProfile`) ; contrôle au démarrage qui refuse de démarrer si la boucle locale, une adresse privée ou 169.254.169.254 répond (`isolation_failed`, sauf `--unsafe-no-firewall` en développement). `astratra-web-browser setup` écrit ces fichiers et la marche à suivre.
+  - Page : texte visible seulement (texte caché retiré), bandeaux de cookies et fenêtres d'abonnement masqués sans clic, ni téléchargement, ni service worker, ni permission, ni fenêtre surgissante ; 15 s par page, 25 s par requête, 5 redirections, 10 Mo de ressources, 2 Mo de texte.
+  - Identité : `User-Agent` honnête (`AstratraWebBrowser/<version>`, avec la page qui explique l'agent) ; `robots.txt` respecté pour chaque page ouverte (RFC 9309, jeton `AstratraWebBrowser`) ; signature Web Bot Auth facultative (RFC 9421, clé Ed25519 créée par `astratra-web-browser keygen`, annuaire à publier).
+  - Nouveaux codes : `WEB_BROWSE_ROBOTS_DISALLOWED`, `WEB_BROWSE_NO_SITE_SEARCH`, `WEB_BROWSE_REFUSED`, `WEB_BROWSE_BUSY`, `WEB_BROWSE_TIMEOUT`, `WEB_BROWSE_FAILED`, `WEB_BROWSER_UNAVAILABLE`, `WEB_READ_BLOCKED_DOMAIN`.
+  - `playwright` (1.48 ou plus) devient une dépendance d'appairage facultative : une application qui n'utilise que le client ne l'installe pas.
+- `docs/PUBLISHING.md` : mise à jour mensuelle de Chromium (Playwright) pour le navigateur intégré. Chromium des tests : 156.0.8078.4 (Playwright 1.64.1).
+
+### Changé
+- `@astratra/web-search` : `ranking.blockDomains` s'applique aussi à `ws.read` et à `read_page` (`WEB_READ_BLOCKED_DOMAIN`), y compris après une redirection ; avant, un site bloqué n'était retiré que des résultats de recherche.
+- `@astratra/web-search` : une page lue porte `via` (`fetch` ou `browser`) ; `bytes` vaut `null` quand le navigateur l'a lue.
+
 ## 2026-11-16 — `@astratra/wallet` fabrique ses cartes Apple sans passkit-generator
 
 ### Versions

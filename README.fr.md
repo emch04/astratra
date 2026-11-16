@@ -144,7 +144,7 @@ est dans [CHANGELOG.md](CHANGELOG.md).
 | [`@astratra/live`](packages/live/README.md) | 1.1.0 | Sessions d'appel vocal en temps réel et aides au protocole côté client |
 | [`@astratra/app-guide`](packages/app-guide/README.md) | 1.1.0 | Guide d'usage filtré par rôle, généré depuis la configuration des écrans, avec contrôle de couverture |
 | [`@astratra/repomap`](packages/repomap/README.md) | 1.1.0 | Carte pondérée des symboles d'un dépôt, pour explorer du code dans un budget de jetons |
-| [`@astratra/web-search`](packages/web-search/README.md) | 1.1.0 | Recherche web pour les agents : plusieurs moteurs avec repli, fusion des classements sans mélange des contenus (une entrée = une page = un site), passages mot pour mot, lecture des pages protégée contre le SSRF, définitions d'outils et serveur MCP |
+| [`@astratra/web-search`](packages/web-search/README.md) | 1.1.0 | Recherche web pour les agents : plusieurs moteurs avec repli, fusion des classements sans mélange des contenus (une entrée = une page = un site), passages mot pour mot, lecture des pages protégée contre le SSRF, navigateur intégré isolé (pages en JavaScript, liens, recherche interne d'un site), définitions d'outils et serveur MCP |
 
 ### Métier
 

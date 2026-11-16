@@ -233,9 +233,8 @@ function nftAddress(prefix, bits) {
 /**
  * Les règles nftables (à charger par `nft -f`) : l'utilisateur du service ne
  * peut sortir que vers des adresses publiques, son résolveur DNS et son
- * relais de sortie local. Toute autre adresse est jetée en sortie : la
- * connexion échoue tout de suite (EPERM), ce que vérifie le contrôle au
- * démarrage.
+ * relais de sortie local. Toute autre adresse est jetée en sortie (la
+ * connexion n'aboutit jamais), ce que vérifie le contrôle au démarrage.
  * @param {object} [options]
  * @param {string} [options.user]          Défaut "navigateur".
  * @param {number} [options.proxyPort]     Défaut 5009.

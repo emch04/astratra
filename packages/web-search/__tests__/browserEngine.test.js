@@ -231,6 +231,32 @@ suite('moteur du navigateur (vrai Chromium)', () => {
     expect(second.status).toBe('ok');
   });
 
+  test('User-Agent honnête ; avec une clé, chaque requête est signée (Web Bot Auth) et la signature se vérifie', async () => {
+    const plain = await open('/entetes');
+    expect(plain.text).toMatch(/user-agent=Mozilla\/5\.0 \(compatible; AstratraWebBrowser\//);
+    expect(plain.text).not.toContain('signature');
+    const crypto = require('crypto');
+    const { createSigningKey, createRequestSigner, signatureDirectory } = require('../src/browser/webBotAuth');
+    const { privateKeyPem, publicJwk } = createSigningKey();
+    const signed = createBrowserEngine({
+      resolve: fakeResolve, ports: [site.port], connect: toSite, insecureTls: true, fetchRobots: localFetchRobots(site.port), settleMs: 300,
+      signer: createRequestSigner({ privateKey: privateKeyPem, signatureAgent: 'https://agent.example.com' })
+    });
+    try {
+      const page = await signed.open({ url: `${site.origin}/entetes` });
+      const header = (name) => new RegExp(`^${name}=(.*)$`, 'm').exec(page.text)?.[1];
+      expect(header('signature-agent')).toBe('"https://agent.example.com"');
+      const input = header('signature-input');
+      expect(input).toMatch(/tag="web-bot-auth"/);
+      const base = `"@authority": piege.example:${site.port}\n"signature-agent": "https://agent.example.com"\n"@signature-params": ${input.slice('sig1='.length)}`;
+      const signature = Buffer.from(/^sig1=:(.+):$/.exec(header('signature'))[1], 'base64');
+      const key = crypto.createPublicKey({ key: signatureDirectory(publicJwk).keys[0], format: 'jwk' });
+      expect(crypto.verify(null, Buffer.from(base), key, signature)).toBe(true);
+    } finally {
+      await signed.close();
+    }
+  });
+
   test('santé : version de Chromium, cloisonnement, file', async () => {
     const health = await engine.health();
     expect(health.ok).toBe(true);

@@ -1,7 +1,7 @@
 # @astratra/web-search — navigateur intégré : conception
 
 Date : 2026-11-16
-État : conception validée le 16 novembre 2026 (réponses dans « Décisions »). Premier étage en construction ; plan : `docs/plans/2026-11-16-astratra-web-search-navigateur-plan.md`.
+État : conception validée le 16 novembre 2026 (réponses dans « Décisions »). **Premier étage construit et vérifié** (`@astratra/web-search` 1.2.0, non publié) ; plan : `docs/plans/2026-11-16-astratra-web-search-navigateur-plan.md` ; écarts et vérifications : « Construction du premier étage » en fin de document. Étages 2 et 3 non construits.
 
 ## Pourquoi
 
@@ -285,3 +285,63 @@ développement.
 Les noms internes, le découpage des fichiers, l'heuristique exacte du texte
 visible, le format des messages d'erreur (codes comme le reste du pack), et
 la répartition des tests, en restant dans les règles ci-dessus.
+
+## Construction du premier étage (16 novembre 2026)
+
+Construit comme ci-dessus, avec ces écarts, découverts en construisant :
+
+- **Relais de sortie dans le service.** L'interception de Playwright
+  (`route`) ne voit pas les redirections : un premier essai sur vrai Chromium
+  a montré qu'une page redirigée vers `127.0.0.1` l'atteignait. Chromium
+  passe donc par un relais (`--proxy-server`, boucle locale comprise) qui
+  résout chaque nom lui-même, refuse toute adresse non publique et se
+  connecte à l'adresse vérifiée. Il couvre aussi les WebSocket et le DNS
+  rebinding, que le document confiait au seul pare-feu. Le relais écoute sur
+  `127.0.0.1:5009` avec un identifiant tiré au hasard ; le pare-feu permet à
+  l'utilisateur `navigateur` ce seul port local, en plus du résolveur DNS.
+- **robots.txt et redirections.** La page ouverte est vérifiée avant de
+  partir ; la cible d'une redirection, à l'arrivée (la requête est partie,
+  mais la page n'est pas rendue). Un `robots.txt` en panne (5xx, 429, réseau)
+  vaut refus, comme le dit la RFC 9309.
+- **Masquage.** En plus des surcouches fixes : les bandeaux de consentement
+  non fixes nommés comme tels (Orejime, Didomi, OneTrust…) quand ils proposent
+  un bouton, et les boîtes `<dialog>` ouvertes. Une section qui parle des
+  cookies sans proposer de choix reste.
+- **Description OpenSearch** lue par un `fetch` de la page (même contrôle que
+  ses autres requêtes) : ouverte comme une page, elle serait un téléchargement.
+- **`blockDomains`** s'applique désormais aussi à `read_page`
+  (`WEB_READ_BLOCKED_DOMAIN`), et `allowDomains` est une option de
+  `createWebSearch`.
+- **Contrôle au démarrage** : sur Linux, une connexion TCP jetée en sortie par
+  nftables attend son délai (1,5 s) au lieu d'échouer tout de suite ; le
+  résultat est le même (« timeout », pas « reached »).
+
+Vérifié :
+
+- 255 tests du paquet sur le Mac (254 dans une machine Ubuntu 24.04 sous Colima, avant l'ajout du test de signature),
+  dont 27 sur vrai Chromium contre un site local de pages pièges : rien
+  n'atteint le serveur interne (redirection vers une IP ou un nom privé,
+  navigation en JavaScript, image, `fetch`, balise, WebSocket), texte caché
+  retiré, bandeaux masqués, robots.txt, téléchargement, page énorme, budget de
+  ressources, OpenSearch et formulaire, signature Web Bot Auth vérifiée.
+- Lint, types (`typecheck.ts`), archive npm (ni test, ni clé).
+- Sur le Mac, service réel (`--unsafe-no-firewall`) : excalidraw.com (0 mot en
+  lecture simple, 73 avec le navigateur), recherche interne de
+  docs.python.org (OpenSearch), de packaging.python.org et service-public.fr
+  (formulaire), lien suivi, capture ; refus de robots.txt sur les pages de
+  recherche de MDN, Wikipédia et Google ; refus de démarrer sans pare-feu.
+- Sur Ubuntu 24.04 (Colima), installé comme en production (utilisateur
+  `navigateur`, unité systemd, nftables, AppArmor) : refus de démarrer sans
+  pare-feu ; avec pare-feu, « isolation ok » ; cloisonnement de Chromium actif
+  (aucun `--no-sandbox`, espaces de noms séparés, seccomp) ; l'utilisateur
+  `navigateur` ne joint ni la boucle locale, ni l'adresse privée, ni
+  169.254.169.254, ni Docker, ni `[::1]`, mais joint le web public ;
+  redirections publiques vers `127.0.0.1`, `169.254.169.254` et un nom qui
+  résout en `127.0.0.1` refusées par le relais, aucune requête reçue par le
+  serveur interne.
+
+Non vérifié : le VPS lui-même (rien n'y est installé) ; une IA réelle branchée
+de bout en bout (les outils et les gardes sont vérifiés avec un modèle simulé
+et un modèle de garde simulé) ; l'entrée pm2 ; la signature Web Bot Auth
+auprès d'un vrai vérificateur (Cloudflare) : l'annuaire n'est publié nulle
+part.

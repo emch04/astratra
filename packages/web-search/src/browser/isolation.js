@@ -10,7 +10,8 @@
  * Une sonde qui aboutit (connexion, ou refus du port par l'hôte joint) prouve
  * que l'intérieur est joignable : le service refuse de démarrer
  * (`isolation_failed`). Le pare-feu du pack jette ces paquets à la sortie : la
- * connexion échoue tout de suite (EPERM).
+ * connexion échoue (EPERM, ou délai dépassé : sur Linux, une demande TCP jetée
+ * en sortie attend son délai).
  */
 
 const net = require('net');

@@ -236,13 +236,14 @@ describe('relais de sortie', () => {
   const tunnel = (host, { auth = true } = {}) => new Promise((resolve) => {
     const headers = auth ? { 'proxy-authorization': `Basic ${Buffer.from(`${proxy.username}:${proxy.password}`).toString('base64')}` } : {};
     const req = http.request({ host: '127.0.0.1', port: proxy.port, method: 'CONNECT', path: host, headers });
-    req.on('connect', (res, socket) => {
+    req.on('connect', (res, socket, head) => {
       if (res.statusCode !== 200) {
         socket.destroy();
         resolve({ status: res.statusCode, body: '' });
         return;
       }
-      let body = '';
+      /* Ce qui suit la réponse dans le même paquet arrive dans head. */
+      let body = head ? head.toString() : '';
       socket.on('data', (chunk) => { body += chunk; });
       socket.on('end', () => resolve({ status: res.statusCode, body }));
       socket.on('error', () => resolve({ status: res.statusCode, body }));

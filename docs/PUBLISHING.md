@@ -190,6 +190,24 @@ pas. Une fausse clé de test s'écrit donc en morceaux assemblés à l'exécutio
 (voir `packages/privacy/__tests__/dlp.test.js`), jamais en entier : écrite
 telle quelle, elle bloque le push.
 
+## Chromium du navigateur intégré : chaque mois
+
+Le service `astratra-web-browser` de `@astratra/web-search` ouvre des pages
+du web dans Chromium : un Chromium en retard est une faille ouverte. Une fois
+par mois (et dès qu'une faille critique de Chromium est annoncée) :
+
+1. Monter `playwright` dans les `devDependencies` de `@astratra/web-search`
+   à la dernière version, `npm install` à la racine, puis
+   `npm test -w @astratra/web-search` : les tests du navigateur tournent sur
+   le Chromium de cette version.
+2. Sur chaque serveur où tourne le service : `npm install playwright@<version>`
+   dans son dossier, `PLAYWRIGHT_BROWSERS_PATH=… npx playwright install
+   chromium-headless-shell`, relancer `astratra-web-browser setup` si le chemin
+   du binaire a changé (profil AppArmor), puis
+   `systemctl restart astratra-web-browser` et vérifier `/health`
+   (version de Chromium, `isolation.ok`).
+3. Noter la version de Chromium dans le `CHANGELOG.md`.
+
 ## Workflow GitHub Actions (non utilisé)
 
 `.github/workflows/publish.yml` publie un workspace avec provenance npm, sans
