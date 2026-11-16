@@ -39,8 +39,11 @@ const createMemoryRevocationStore = () => {
       const revokedBefore = revokedUsers.get(userId);
       if (revokedBefore === undefined) return false;
 
+      // Sans date d'émission lisible, rien ne prouve que le jeton est postérieur
+      // à « déconnecter partout » : il est révoqué.
+      if (issuedAtSeconds === undefined || issuedAtSeconds === null || issuedAtSeconds === '') return true;
       const issuedAtMs = Number(issuedAtSeconds) * 1000;
-      if (!Number.isFinite(issuedAtMs)) return false;
+      if (!Number.isFinite(issuedAtMs)) return true;
 
       return issuedAtMs <= revokedBefore;
     }

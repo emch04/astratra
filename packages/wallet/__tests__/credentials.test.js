@@ -43,3 +43,31 @@ test('un PEM traverse en hexadécimal et revient intact ; le reste est refusé',
   expect(fromHexField('-----BEGIN')).toBe('');
   expect(fromHexField(undefined)).toBeUndefined();
 });
+
+describe('ce que la vérification des clés refuse', () => {
+  test('un certificat illisible, ou qui n’est pas un Pass Type ID, est refusé avant la clé', () => {
+    expect(checkAppleCredentials({ certificate: 'pas un certificat', privateKey: CLE }).reason).toMatch(/pas lisible/);
+    expect(checkAppleCredentials({ certificate: APPLE_WWDR_G4, privateKey: CLE }).reason).toMatch(/pas un certificat Pass Type ID/);
+  });
+
+  test('une clé privée illisible est refusée', () => {
+    for (const privateKey of ['pas une clé', '-----BEGIN PRIVATE KEY-----\nabc\n-----END PRIVATE KEY-----']) {
+      expect(checkAppleCredentials({ certificate: CERT, privateKey }).reason).toMatch(/clé privée n’est pas lisible/);
+    }
+  });
+
+  test('un compte de service Google incomplet ou d’un autre type est refusé', () => {
+    for (const serviceAccount of ['{', '{}', JSON.stringify({ type: 'authorized_user', client_email: 'a@b', private_key: 'k' }), JSON.stringify({ type: 'service_account', client_email: 'a@b' })]) {
+      expect(readGoogleServiceAccount(serviceAccount)).toBeNull();
+      expect(checkGoogleCredentials({ serviceAccount }).ok).toBe(false);
+    }
+  });
+});
+
+describe('inscriptions Apple Wallet', () => {
+  const { createMemoryRegistrationStore } = require('../src');
+  test('désinscrire ce qui n’est pas inscrit ne fait rien', async () => {
+    const store = createMemoryRegistrationStore();
+    expect(await store.unregister({ deviceLibraryIdentifier: 'd1', passTypeIdentifier: 'pass.x', serialNumber: 'C-1' })).toBe(false);
+  });
+});

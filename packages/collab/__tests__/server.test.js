@@ -148,3 +148,42 @@ describe('configuration', () => {
     expect(() => createCollabServer({ authenticate: () => 'write', persistence: { load() {} } })).toThrow(/store/);
   });
 });
+
+describe('ce qui est refusé', () => {
+  test('un accès inconnu rendu par le crochet ne donne aucun droit', async () => {
+    for (const decision of ['admin', { access: 'owner' }, { access: 'WRITE' }]) {
+      const { collab, url } = await serveur({ authenticate: async () => decision });
+      const intrus = await connecter(url, 'doc', 'abc').catch((erreur) => ({ erreur }));
+      if (!intrus.erreur) {
+        expect(intrus.provider.isSynced).toBe(false);
+        intrus.document.getText('t').insert(0, 'intrusion');
+        await pause(150);
+      }
+      expect(await etatServeur(collab, 'doc')).toBe('');
+    }
+  });
+
+  test('un crochet qui ne rend rien, faux ou null refuse la connexion', async () => {
+    for (const decision of [undefined, null, false, '']) {
+      const { url } = await serveur({ authenticate: async () => decision });
+      const refuse = await connecter(url, 'doc', 'abc');
+      expect(refuse.etat.refus).toBe('permission-denied');
+      expect(refuse.provider.isSynced).toBe(false);
+    }
+  });
+
+  test('un message juste au-dessus de la limite, que le serveur WebSocket laisse passer, est refusé avant d’être appliqué', async () => {
+    const { collab, url } = await serveur({ limits: { maxMessageBytes: 1000 } });
+    const a = await connecter(url, 'doc', 'jeton-ecriture');
+    a.document.getText('t').insert(0, 'y'.repeat(1300));
+    await attendre(() => a.etat.limite);
+    expect(a.etat.limite).toBe('message-too-large');
+    expect(await etatServeur(collab, 'doc')).toBe('');
+  });
+
+  test('des limites de taille nulles, négatives ou illisibles sont refusées', () => {
+    for (const limits of [{ maxMessageBytes: 0 }, { maxDocumentBytes: -1 }, { maxMessageBytes: 'beaucoup' }, { maxDocumentBytes: NaN }]) {
+      expect(() => createCollabServer({ authenticate: () => 'write', limits })).toThrow(/positives/);
+    }
+  });
+});

@@ -185,6 +185,62 @@ test.describe('MongoDB', { skip }, () => {
     assert.equal((await doc(ids.p1, base)).price, 1200);
   });
 
+  test('une ligne visée qui porte un type BSON non pris en charge (binaire) est refusée, pas devinée', async () => {
+    await db.collection('products').updateOne({ _id: new mongodb.ObjectId(ids.p4) }, { $set: { label: new mongodb.Binary(Buffer.from('octets')) } });
+    const { governance } = makeMongo();
+    await assert.rejects(governance.propose(proposalInput({ actions: [{ connector: 'shop', resource: 'products', op: 'update', where: { category: 'light' }, set: { stock: 3 } }] })), { code: 'invalid_value' });
+    assert.equal((await doc(ids.p4)).stock, 1);
+  });
+
+  /* Une base dont updateOne se comporte comme lors d'une course ; tout le reste est la vraie base. */
+  function course(base, updateOne) {
+    return new Proxy(base, {
+      get(target, prop) {
+        if (prop !== 'collection') { const v = target[prop]; return typeof v === 'function' ? v.bind(target) : v; }
+        return (name, ...rest) => {
+          const real = target.collection(name, ...rest);
+          return new Proxy(real, { get(c, p) { if (p === 'updateOne') return (...args) => updateOne(name, () => c.updateOne(...args)); const v = c[p]; return typeof v === 'function' ? v.bind(c) : v; } });
+        };
+      }
+    });
+  }
+
+  test('serveur seul : une écriture perdue dans une course (WriteConflict) est « données changées », rien n’est écrit', async () => {
+    const base = clientSeul.db(`gouvernance_seul_${++n}`);
+    await reset(base);
+    let panne = null;
+    const piegee = course(base, (name, real) => (name === 'products' && panne ? Promise.reject(panne) : real()));
+    const { governance, validate } = makeMongo({ base: piegee, cli: null, transactions: false, store: createMongoGovernanceStore(base) });
+    const a = await governance.propose(one(ids.p1, { price: 1200 }));
+    panne = Object.assign(new Error('WriteConflict'), { code: 112 });
+    const out = await governance.applyValidation(validate(a.proposal), { organisationId: 'org-a' });
+    assert.equal(out.code, 'stale_data');
+    assert.equal((await doc(ids.p1, base)).price, 1000);
+  });
+
+  test('serveur seul : une autre panne pendant l’écriture n’exécute rien', async () => {
+    const base = clientSeul.db(`gouvernance_seul_${++n}`);
+    await reset(base);
+    let panne = null;
+    const piegee = course(base, (name, real) => (name === 'products' && panne ? Promise.reject(panne) : real()));
+    const { governance, validate } = makeMongo({ base: piegee, cli: null, transactions: false, store: createMongoGovernanceStore(base) });
+    const a = await governance.propose(one(ids.p1, { price: 1200 }));
+    panne = new Error('réseau coupé');
+    const out = await governance.applyValidation(validate(a.proposal), { organisationId: 'org-a' }).catch((error) => ({ error }));
+    assert.notEqual(out.status, 'executed');
+    assert.equal((await doc(ids.p1, base)).price, 1000);
+  });
+
+  test('le magasin abandonne un changement d’état toujours devancé, au lieu de boucler', async () => {
+    let tentatives = 0;
+    const piegee = course(db, (name, real) => (name === 'products' ? real() : (tentatives += 1, Promise.resolve({ matchedCount: 0 }))));
+    const store = createMongoGovernanceStore(piegee);
+    await store.put({ organisationId: 'org-a', id: 'prop-course', digest: 'd', status: 'awaiting_validation', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() });
+    const moved = await store.transition('org-a', 'prop-course', { from: ['awaiting_validation'], to: 'executing', at: new Date().toISOString() });
+    assert.equal(moved, null);
+    assert.equal(tentatives, 5);
+  });
+
   test('le magasin refuse une autre proposition sous le même identifiant', async () => {
     const store = createMongoGovernanceStore(db);
     const record = { organisationId: 'org-a', id: 'x', digest: 'd1', status: 'ready', idempotencyKey: null, createdAt: '2026-11-03T09:00:00Z', expiresAt: '2026-11-03T21:00:00Z', updatedAt: '2026-11-03T09:00:00Z' };

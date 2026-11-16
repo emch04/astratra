@@ -174,3 +174,44 @@ describe('operator alerts', () => {
     expect(seen[0].level).toBe('WARN');
   });
 });
+
+describe('login devices: what is refused', () => {
+  test('an IPv6 literal that does not parse is "unknown", never a family of its own', () => {
+    for (const ip of ['1::2::3', '2001:db8::zzzz', '1:2:3:4:5:6:7', '2001:db8:1:2:3:4:5:6::', '12345::1', ':::']) {
+      expect(ipFamily(ip)).toBe('unknown');
+    }
+  });
+
+  test('a sign-in without an account id is never recorded and never alerts', async () => {
+    const store = createMemoryLoginDeviceStore();
+    const upsert = jest.spyOn(store, 'upsert');
+    const { t, notify, onError } = tracker({ store });
+    for (const account of [null, {}, { id: '' }]) {
+      expect(await t.record(account, { ip: '203.0.113.7', userAgent: 'x' })).toEqual({ isNew: false, firstDevice: false, notified: false, error: true });
+    }
+    expect(upsert).not.toHaveBeenCalled();
+    expect(notify).not.toHaveBeenCalled();
+    expect(onError).toHaveBeenCalledTimes(3);
+  });
+
+  test('the tracker is not built without a store, a long enough secret, or a way to notify', () => {
+    const store = createMemoryLoginDeviceStore();
+    const notify = async () => {};
+    expect(() => createLoginDeviceTracker({ secret: SECRET, notify })).toThrow(/options\.store/);
+    expect(() => createLoginDeviceTracker({ store: { upsert() {} }, secret: SECRET, notify })).toThrow(/options\.store/);
+    expect(() => createLoginDeviceTracker({ store, secret: 'trop-court', notify })).toThrow(/options\.secret/);
+    expect(() => createLoginDeviceTracker({ store, notify })).toThrow(/options\.secret/);
+    expect(() => createLoginDeviceTracker({ store, secret: SECRET })).toThrow(/options\.notify/);
+  });
+
+  test('changing an e-mail to the same address, in other letters case, warns nobody', async () => {
+    const send = jest.fn(async () => {});
+    const a = createChangeAlerts({ send });
+    expect(await a.alert(ALICE, 'email', { previousEmail: 'Alice@Example.test', newEmail: 'alice@example.test' })).toBe(false);
+    expect(send).not.toHaveBeenCalled();
+  });
+
+  test('change alerts are not built without a way to send them', () => {
+    expect(() => createChangeAlerts({})).toThrow(/options\.send/);
+  });
+});

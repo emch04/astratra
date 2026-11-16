@@ -532,6 +532,23 @@ describe('createPictureFiles', () => {
     expect(await files.original('https://wol.example.org/a.jpg')).toMatch(/\.jpg$/);
   });
 
+  test('an address the sources refuse at download time is never fetched', async () => {
+    const fs = memoryFs({});
+    const base = sources();
+    const files = createPictureFiles({ sources: { ...base, resolve: async () => null }, fs, directory: DIR, now: () => 1000 });
+    await expect(files.original('https://wol.example.org/a.jpg')).rejects.toMatchObject({ code: 'refused', reason: 'address' });
+    expect(fs.calls).toHaveLength(0);
+    expect([...fs.files.keys()]).toEqual([]);
+  });
+
+  test('a failed move leaves no temporary file, and fails unless the picture is already in place', async () => {
+    const fs = memoryFs({ responses: { 'https://wol.example.org/a.jpg': { status: 200, bytes: JPEG_HEAD } } });
+    const failing = { ...fs, moveAsync: async () => { throw new Error('disque plein'); } };
+    const files = createPictureFiles({ sources: sources(), fs: failing, directory: DIR, now: () => 1000 });
+    await expect(files.original('https://wol.example.org/a.jpg')).rejects.toThrow('disque plein');
+    expect([...fs.files.keys()]).toEqual([]);
+  });
+
   test('two calls at once share one download', async () => {
     const { fs, files } = setup({ 'https://wol.example.org/a.jpg': { status: 200, bytes: JPEG_HEAD } });
     const [a, b] = await Promise.all([files.original('https://wol.example.org/a.jpg'), files.original('https://wol.example.org/a.jpg')]);

@@ -101,3 +101,30 @@ describe('cors', () => {
     expect(res.headers['access-control-allow-credentials']).toBeUndefined();
   });
 });
+
+describe('cors: origins that are never reflected', () => {
+  const reflected = (origin, options, env = 'development') => {
+    const res = createRes();
+    const originalEnv = process.env.NODE_ENV;
+    process.env.NODE_ENV = env;
+    try {
+      createCorsMiddleware(options)({ method: 'GET', headers: { origin } }, res, jest.fn());
+    } finally {
+      process.env.NODE_ENV = originalEnv;
+    }
+    return res.headers['access-control-allow-origin'];
+  };
+
+  test('outside production, an origin that is not a URL or only looks local is refused', () => {
+    for (const origin of ['null', 'pas une url', 'http://localhost.evil.example', 'http://127.0.0.1.evil.example', 'https://evil.example/#localhost', 'http://evil.example?h=localhost']) {
+      expect(reflected(origin)).toBeUndefined();
+    }
+  });
+
+  test('an allow-list matches the whole origin, not a prefix or a suffix', () => {
+    const options = { allowedOrigins: ['https://app.example.com'] };
+    for (const origin of ['https://app.example.com.evil.example', 'https://evilapp.example.com', 'http://app.example.com', 'https://app.example.com:8443']) {
+      expect(reflected(origin, options, 'production')).toBeUndefined();
+    }
+  });
+});

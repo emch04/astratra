@@ -1,5 +1,22 @@
+const crypto = require('crypto');
 const express = require('express');
 const { asyncHandler } = require('@astratra/core');
+
+const MAX_LOG_MESSAGES = 20;
+const MAX_LOG_LENGTH = 500;
+
+/* Le jeton de la carte, comparé à temps constant. Une carte sans jeton ne
+   s'ouvre jamais : sans ce garde, « ApplePass undefined » suffisait. */
+function bonJeton(entete, jeton) {
+  if (typeof jeton !== 'string' || !jeton) return false;
+  const attendu = Buffer.from(`ApplePass ${jeton}`);
+  const recu = Buffer.from(String(entete || ''));
+  return recu.length === attendu.length && crypto.timingSafeEqual(recu, attendu);
+}
+
+/* Une ligne de journal venue d'un appareil : sans saut de ligne (pas de
+   fausse ligne forgée), bornée en longueur. */
+const ligneDeJournal = (message) => String(message).replace(/[\p{Cc}\u2028\u2029]+/gu, ' ').replace(/\s+/g, ' ').trim().slice(0, MAX_LOG_LENGTH);
 
 /**
  * Le service web qu'Apple Wallet appelle pour tenir une carte à jour, selon le
@@ -42,7 +59,7 @@ function createAppleWebServiceRouter({ resolveConfig, findPass, buildPass, regis
       res.sendStatus(404);
       return null;
     }
-    if (authentifier && req.get('authorization') !== `ApplePass ${pass.authenticationToken}`) {
+    if (authentifier && !bonJeton(req.get('authorization'), pass.authenticationToken)) {
       res.sendStatus(401);
       return null;
     }
@@ -90,7 +107,9 @@ function createAppleWebServiceRouter({ resolveConfig, findPass, buildPass, regis
   }));
 
   router.post('/v1/log', (req, res) => {
-    for (const message of req.body?.logs || []) logger.warn(`Apple Wallet: ${String(message)}`);
+    /* Route publique (le protocole d'Apple n'y met aucun jeton) : nombre et taille bornés. */
+    const messages = Array.isArray(req.body?.logs) ? req.body.logs.slice(0, MAX_LOG_MESSAGES) : [];
+    for (const message of messages) logger.warn(`Apple Wallet: ${ligneDeJournal(message)}`);
     res.sendStatus(200);
   });
 
