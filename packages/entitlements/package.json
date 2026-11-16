@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "Who may do what: plans and features, billing and status guards, screen/role matrix, fail-closed tenant isolation, and invite-by-link with hashed tokens.",
   "engines": {
-    "node": ">=20"
+    "node": ">=22"
   },
   "main": "src/index.js",
   "types": "src/index.d.ts",

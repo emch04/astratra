@@ -24,7 +24,7 @@ function callSignal(signal, timeoutMs) {
  * @param {number} [io.timeoutMs]
  */
 async function requestJson(provider, { fetch, url, init, secrets, signal, timeoutMs }) {
-  if (typeof fetch !== 'function') throw new Error(`${provider}: no fetch available (Node 20 or io.fetch).`);
+  if (typeof fetch !== 'function') throw new Error(`${provider}: no fetch available (Node 22 or io.fetch).`);
   let response;
   try {
     response = await fetch(url, { ...init, signal: callSignal(signal, timeoutMs) });

@@ -3,7 +3,7 @@
   "version": "1.11.4",
   "description": "CLI generator for new Astratra SaaS applications.",
   "engines": {
-    "node": ">=20"
+    "node": ">=22"
   },
   "type": "module",
   "bin": {

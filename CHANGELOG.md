@@ -3,6 +3,15 @@
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Chaque package Astratra est versionné indépendamment.
 
+## Non publié — Node 22 au minimum, intégration continue réparée
+
+### Changé
+- Tous les paquets demandent Node 22 ou plus (`engines.node: ">=22"`, au lieu de `>=20`, `>=20.3` et `>=20.19`). Node 20 est en fin de vie depuis avril 2026 et ne reçoit plus de correctifs de sécurité. Sous Node 20, la plupart des paquets se chargent encore, mais deux choses n'y marchaient déjà plus : l'évaluation de `@astratra/tooling` (promptfoo exige Node 22.22) et le client de `@astratra/collab` utilisé dans Node (WebSocket n'y existe qu'à partir de Node 22). `@astratra/testkit` (`>=22.22`) gardent leur minimum plus élevé.
+- Intégration continue : matrice 22.x et 24.x, `fail-fast: false`, et `npm test --workspaces` sans `-- --runInBand`, que les paquets en `node --test` lisaient comme un nom de fichier.
+
+### Corrigé
+- `create-astratra-app` : le projet créé demande `@astratra/ai` ^1.15.0 et `@astratra/security` ^1.14.0, les versions publiées.
+
 ## 2026-11-06 — `@astratra/web-search` 1.0.0, `@astratra/ai` 1.15.0 : une recherche web où chaque fait reste attaché à sa page
 
 ### Ajouté

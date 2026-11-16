@@ -8,7 +8,7 @@ Primitives React optionnelles pour une session, des permissions et des appels AP
 npm install @astratra/react react
 ```
 
-React 18 ou plus récent, Node 20 ou plus récent pour l'outillage.
+React 18 ou plus récent, Node 22 ou plus récent pour l'outillage.
 
 ## Exemple
 

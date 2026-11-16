@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "Generate a role-aware mobile app guide from the app's own screen configuration, detect usage questions, look up bounded answers, and test guide coverage without a mobile runtime.",
   "engines": {
-    "node": ">=20"
+    "node": ">=22"
   },
   "main": "src/index.js",
   "types": "src/index.d.ts",

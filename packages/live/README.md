@@ -1,6 +1,6 @@
 # @astratra/live
 
-Composable real-time voice calls for Node 20 or newer. All application state, identity, network transports, models, and user-facing wording are supplied by the host. The client protocol helpers are plain JavaScript for browser and React Native clients.
+Composable real-time voice calls for Node 22 or newer. All application state, identity, network transports, models, and user-facing wording are supplied by the host. The client protocol helpers are plain JavaScript for browser and React Native clients.
 
 ## Installation
 

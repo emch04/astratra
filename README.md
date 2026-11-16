@@ -59,7 +59,7 @@ Humalis app is therefore an Astratra app, written as sentences.
 
 ## Requirements
 
-- Node.js 20 or later (CI runs on 20.x and 22.x).
+- Node.js 22 or later (CI runs on 22.x and 24.x).
 - npm workspaces: the repository root is an npm workspace.
 - Docker, only for `@astratra/testkit` (throwaway MongoDB or PostgreSQL
   containers).
