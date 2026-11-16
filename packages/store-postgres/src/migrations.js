@@ -87,7 +87,7 @@ function createPostgresMigrationRunner(options = {}) {
           applied.push(migration.id);
         } catch (error) {
           await client.query('ROLLBACK');
-          throw new Error(`Migration "${migration.id}" failed and was rolled back: ${error.message}`);
+          throw new Error(`Migration "${migration.id}" failed and was rolled back: ${error.message}`, { cause: error });
         } finally {
           client.release();
         }

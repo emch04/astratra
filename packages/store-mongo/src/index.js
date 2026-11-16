@@ -4,8 +4,8 @@ const DEFAULT_SETTINGS_COLLECTION = 'astratra_settings';
 function loadMongoose() {
   try {
     return require('mongoose');
-  } catch (_error) {
-    throw new Error('@astratra/store-mongo requires mongoose. Install mongoose or pass it from an app that already depends on it.');
+  } catch (error) {
+    throw new Error('@astratra/store-mongo requires mongoose. Install mongoose or pass it from an app that already depends on it.', { cause: error });
   }
 }
 
@@ -179,7 +179,7 @@ function createMongoUsersStore(options = {}) {
 
       try {
         const user = await User.findByIdAndUpdate(id, { $set: data }, {
-          new: true,
+          returnDocument: 'after',
           runValidators: false
         }).lean();
         return stripMongoFields(user);
@@ -224,7 +224,7 @@ function createMongoSettingsStore(options = {}) {
       const setting = await Setting.findOneAndUpdate(
         { key },
         { $set: { key, value } },
-        { upsert: true, new: true, setDefaultsOnInsert: true }
+        { upsert: true, returnDocument: 'after', setDefaultsOnInsert: true }
       ).lean();
       return setting.value;
     },

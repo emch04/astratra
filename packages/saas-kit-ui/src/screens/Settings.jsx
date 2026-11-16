@@ -28,7 +28,7 @@ export default function Settings() {
   async function saveSetting(key) {
     setError('');
     setSuccess('');
-    let value = drafts[key];
+    let value;
     try {
       value = JSON.parse(drafts[key]);
     } catch {

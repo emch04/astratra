@@ -88,8 +88,8 @@ function normaliseBaseUrl(value) {
   let url;
   try {
     url = new URL(raw);
-  } catch (_error) {
-    throw new TypeError('createModelsClient: baseUrl must be an absolute http(s) URL.');
+  } catch (error) {
+    throw new TypeError('createModelsClient: baseUrl must be an absolute http(s) URL.', { cause: error });
   }
   if (url.protocol !== 'http:' && url.protocol !== 'https:') {
     throw new TypeError('createModelsClient: baseUrl must be an absolute http(s) URL.');

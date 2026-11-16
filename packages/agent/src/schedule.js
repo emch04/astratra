@@ -8,7 +8,7 @@ function formatter(timeZone) {
   if (!format) {
     try {
       format = new Intl.DateTimeFormat('en-GB', { timeZone, hourCycle: 'h23', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' });
-    } catch (_error) { throw new Error(`Unknown time zone: ${timeZone}.`); }
+    } catch (error) { throw new Error(`Unknown time zone: ${timeZone}.`, { cause: error }); }
     formats.set(timeZone, format);
   }
   return format;

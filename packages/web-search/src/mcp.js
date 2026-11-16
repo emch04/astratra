@@ -21,8 +21,8 @@ function loadSdk() {
     const { Server } = require('@modelcontextprotocol/sdk/server/index.js');
     const { ListToolsRequestSchema, CallToolRequestSchema } = require('@modelcontextprotocol/sdk/types.js');
     return { Server, ListToolsRequestSchema, CallToolRequestSchema };
-  } catch (_error) {
-    throw new Error('createMcpServer needs @modelcontextprotocol/sdk: npm install @modelcontextprotocol/sdk');
+  } catch (error) {
+    throw new Error('createMcpServer needs @modelcontextprotocol/sdk: npm install @modelcontextprotocol/sdk', { cause: error });
   }
 }
 

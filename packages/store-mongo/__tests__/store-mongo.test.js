@@ -19,7 +19,8 @@ afterAll(async () => {
 });
 
 beforeEach(async () => {
-  connection = await mongoose.createConnection(server.getUri()).asPromise();
+  // Le pilote MongoDB 7 charge « os » par un import() que Jest refuse : on le lui donne.
+  connection = await mongoose.createConnection(server.getUri(), { runtimeAdapters: { os: require('os') } }).asPromise();
 });
 
 afterEach(async () => {
@@ -128,6 +129,8 @@ test('findById and update return null for missing or invalid ids', async () => {
 test('stores can manage their own connection when uri is provided', async () => {
   const usersStore = createMongoUsersStore({
     uri: server.getUri(),
+    // Même raison que plus haut : le pilote MongoDB 7 ne peut pas importer « os » sous Jest.
+    connectionOptions: { runtimeAdapters: { os: require('os') } },
     collection: 'managed_users'
   });
 

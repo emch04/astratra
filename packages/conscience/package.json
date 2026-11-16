@@ -32,8 +32,8 @@
     "@astratra/ai": "^1.8.0"
   },
   "devDependencies": {
-    "pg": "^8.13.1",
-    "mongoose": "^8.24.2"
+    "mongoose": "^9.12.1",
+    "pg": "^8.13.1"
   },
   "exports": {
     ".": {

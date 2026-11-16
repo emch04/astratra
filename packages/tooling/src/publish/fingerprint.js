@@ -83,7 +83,7 @@ function loadFingerprintModule(projectDir) {
  * 3. the optional peer `@expo/fingerprint` (`createFingerprintAsync`).
  */
 async function computeFingerprint(projectDir, options = {}) {
-  let hash = '';
+  let hash;
 
   if (typeof options.compute === 'function') {
     hash = extractHash(await options.compute(projectDir));

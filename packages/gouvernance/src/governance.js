@@ -52,7 +52,7 @@ function createDataGovernance(options = {}) {
   const remoteCache = new Map();
   async function currentRules(organisationId) {
     if (typeof options.remoteRules !== 'function') return { rules: localRules, remote: 'none', floor: null };
-    let read = null;
+    let read;
     try {
       const answer = await options.remoteRules({ organisationId, environment });
       read = { version: answer?.version ?? null, rules: normalizeRules(answer?.rules ?? [], 'remote') };
