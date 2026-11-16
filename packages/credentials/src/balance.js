@@ -203,7 +203,7 @@ function createBalanceProbe(options = {}) {
   async function check(key, opts = {}) {
     if (!definitions.has(key)) return null;
 
-    let value = null;
+    let value;
     try {
       value = await readValue(key);
     } catch (_error) {

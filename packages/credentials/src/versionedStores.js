@@ -81,6 +81,8 @@ function createMongoVersionedCredentialStore({ collection, isReady = () => true,
       const next = change(copy(old));
       if (!old) {
         try { await collection.insertOne({ _id: id, revision: 1, ...next }); return next; }
+        // Sans « cause », exprès : l'erreur du pilote peut citer le document, donc une valeur secrète.
+        // eslint-disable-next-line preserve-caught-error
         catch (error) { if (error.code === 11000) continue; throw new Error('Credential store write failed.'); }
       }
       const result = await collection.updateOne({ _id: id, revision: old.revision },

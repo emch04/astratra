@@ -134,6 +134,17 @@ await usersStore.disconnect();
 npm test --workspace @astratra/store-mongo
 ```
 
+Sous Jest, Mongoose 9 (pilote MongoDB 7) ne se connecte pas tel quel : le
+pilote charge `os` par un `import()` que Jest refuse, et le serveur répond
+« Missing required sub-document 'driver' ». Donnez-lui `os` dans les options
+de connexion de vos tests :
+
+```js
+mongoose.createConnection(uri, { runtimeAdapters: { os: require('os') } });
+// ou, quand l'adapter ouvre la connexion lui-même :
+createMongoUsersStore({ uri, connectionOptions: { runtimeAdapters: { os: require('os') } } });
+```
+
 Les tests utilisent `mongodb-memory-server`, donc aucune instance MongoDB
 externe n'est requise. Au premier lancement, le binaire MongoDB peut être
 téléchargé par `mongodb-memory-server`.

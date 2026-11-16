@@ -166,7 +166,7 @@ function createVoiceService(options = {}) {
       return { ...result, audio: Buffer.from(result.audio), cacheKey, cached: false };
     } catch (error) {
       if (error && error.code === 'ABORTED') throw error;
-      throw new Error(`Voice synthesis failed: ${errorMessage(error)}`);
+      throw new Error(`Voice synthesis failed: ${errorMessage(error)}`, { cause: error });
     } finally {
       await Promise.all([
         filesystem.remove(wavPath).catch(() => undefined),
