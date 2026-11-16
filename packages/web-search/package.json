@@ -1,6 +1,6 @@
 {
   "name": "@astratra/web-search",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Web search for AI agents: several engines (Serper, Brave, Tavily, Exa, or the Centrale gateway) with automatic fallback, rank fusion without content mixing (one entry = one page = one site), verbatim passages with their position, SSRF-safe page reading, content framed as data, cache, quotas, cost report, tool definitions and an MCP server.",
   "engines": {
     "node": ">=22"

@@ -1,6 +1,6 @@
 {
   "name": "@astratra/closure",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Closing a period on purpose: a human-owned checklist with blocking and acknowledged items, and an archive that never carries a credential.",
   "engines": { "node": ">=22" },
   "main": "src/index.js",

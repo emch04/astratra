@@ -3,17 +3,29 @@
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Chaque package Astratra est versionné indépendamment.
 
-## Non publié — Node 22 au minimum, Express 5 accepté, intégration continue réparée
+## 2026-11-16 — Node 22 au minimum, Express 5 accepté, tests négatifs, intégration continue réparée
+
+### Versions
+Toutes les briques publiques montent d'une version mineure : `@astratra/agent` 1.4.0, `@astratra/ai` 1.16.0, `@astratra/app-guide` 1.1.0, `@astratra/app-version` 1.1.0, `@astratra/booking` 1.1.0, `@astratra/centrale` 1.12.0, `@astratra/centrale-cli` 1.2.0, `@astratra/client` 1.2.0, `@astratra/closure` 1.1.0, `@astratra/collab` 1.1.0, `@astratra/conscience` 1.5.0, `@astratra/core` 1.2.0, `create-astratra-app` 1.12.0, `@astratra/credentials` 1.2.0, `@astratra/entitlements` 1.1.0, `@astratra/fhir` 1.1.0, `@astratra/flags` 1.1.0, `@astratra/gouvernance` 1.4.0, `@astratra/i18n-server` 1.1.0, `@astratra/ledger` 1.1.0, `@astratra/live` 1.1.0, `@astratra/loyalty` 1.1.0, `@astratra/memory` 2.1.0, `@astratra/models` 1.3.0, `@astratra/native` 1.1.0, `@astratra/native-ui` 1.3.0, `@astratra/notify` 1.2.0, `@astratra/payments` 1.2.0, `@astratra/pdf` 1.1.0, `@astratra/prerender` 1.1.0, `@astratra/privacy` 1.1.0, `@astratra/rag` 1.1.0, `@astratra/react` 1.1.0, `@astratra/repomap` 1.1.0, `@astratra/resilience` 1.2.0, `@astratra/saas-kit` 2.1.0, `@astratra/saas-kit-ui` 1.5.0, `@astratra/security` 1.15.0, `@astratra/shipping` 1.2.0, `@astratra/srs` 1.1.0, `@astratra/store-mongo` 1.2.0, `@astratra/store-postgres` 1.2.0, `@astratra/testkit` 1.2.0, `@astratra/tooling` 1.7.0, `@astratra/voice` 1.2.0, `@astratra/wallet` 1.1.0, `@astratra/web-search` 1.1.0.
 
 ### Changé
 - Tous les paquets demandent Node 22 ou plus (`engines.node: ">=22"`, au lieu de `>=20`, `>=20.3`, `>=20.19` et, pour `@astratra/centrale`, `>=18`). Node 20 est en fin de vie depuis avril 2026 et ne reçoit plus de correctifs de sécurité. Sous Node 20, la plupart des paquets se chargent encore, mais deux choses n'y marchaient déjà plus : l'évaluation de `@astratra/tooling` (promptfoo exige Node 22.22) et le client de `@astratra/collab` utilisé dans Node (WebSocket n'y existe qu'à partir de Node 22). `@astratra/centrale-cli` passe aussi de `>=24` à `>=22` : le paquet publié est du JavaScript compilé, et Node 24 ne servait qu'à exécuter son TypeScript dans le dépôt, ce que Node 22.18 fait aussi. `@astratra/testkit` garde `>=22.22`.
 - Intégration continue : matrice 22.x et 24.x, `fail-fast: false`, et `npm test --workspaces` sans `-- --runInBand`, que les paquets en `node --test` lisaient comme un nom de fichier.
+- Dépendances : `express-rate-limit` 8 pour `@astratra/security` ; en développement et pour les tests, ESLint 10, TypeScript 7, `redis` 6, `rate-limit-redis` 6, Mongoose 9 et `mongodb-memory-server` 11. Les actions GitHub passent sur Node 24 (checkout 7, setup-node 7, codeql-action 4, dependency-review-action 5, gitleaks-action 3).
 - Express 5 accepté en plus d'Express 4 : `@astratra/credentials`, `@astratra/saas-kit` et `@astratra/wallet` dépendent d'`express` `^4.18.3 || ^5.0.0` (les dépendances d'appairage `>=4` d'`@astratra/agent` et `@astratra/core` l'acceptaient déjà). Le dépôt s'installe avec Express 5 ; un travail de l'intégration continue rejoue les tests des paquets concernés avec Express 4.
 
 ### Corrigé
+- `@astratra/security` : après « déconnecter partout », un jeton sans date d'émission (`iat`) restait valable ; il est maintenant révoqué (`jwtAuth` et le magasin de révocation mémoire).
+- `@astratra/security` : `createFieldCipher` acceptait une étiquette d'authentification GCM raccourcie ; il exige maintenant 16 octets d'étiquette et 12 de nonce.
+- `@astratra/entitlements` : une invitation dont l'échéance est absente ou illisible restait acceptable pour toujours ; elle est maintenant expirée.
+- `@astratra/entitlements` : sans modèle de secours, un appel IA échoué répond `call_failed` (et non `no_eligible_fallback`).
+- `@astratra/client` : le garde de route résout `.` et `..` ; `home/../dashboard` ne passe plus pour public.
+- `@astratra/notify` : un GOAWAY d'Apple reçu après `close()` du transport APNs ne lève plus d'exception hors requête.
+- `@astratra/wallet` : une carte Apple Wallet sans jeton d'authentification ne s'ouvre plus avec « ApplePass undefined » (comparaison à temps constant) ; la route publique `/v1/log` garde au plus 20 messages de 500 caractères, sans saut de ligne.
+- `@astratra/security` : avec `express-rate-limit` 8, la clé d'une zone de `createApiLimiter({ area })` compte une adresse IPv6 pour tout son bloc /56.
 - `@astratra/security`, `createMongoSanitizeMiddleware` sous Express 5 : Express 5 relit `req.query` depuis l'adresse à chaque accès, et le nettoyage fait en place était perdu ; avec l'analyseur de requêtes étendu, `?date[$gt]=…` atteignait la route. L'objet nettoyé devient la valeur de `req.query`. Sous Express 4, rien ne change.
 - `@astratra/security`, `createWafMiddleware` et `createAccountLimiter` : sous Express 5, `req.body` reste `undefined` pour une requête sans corps, et chaque GET déclenchait l'avertissement « monté avant express.json() ». Il ne part plus que si la requête annonce un corps (`content-length` non nul ou `transfer-encoding`).
-- `create-astratra-app` : le projet créé demande `@astratra/ai` ^1.15.0 et `@astratra/security` ^1.14.0, les versions publiées.
+- `create-astratra-app` : le projet créé demande les versions de cette publication pour chaque brique (dont `@astratra/ai` ^1.16.0 et `@astratra/security` ^1.15.0) ; il demandait encore `@astratra/ai` et `@astratra/security` ^1.13.0, sans les fonctions des versions suivantes.
 
 ## 2026-11-06 — `@astratra/centrale-cli` 1.1.0 et AstratraCentrale (Swift) : les plantages Apple traduits en fonction, fichier et ligne
 
