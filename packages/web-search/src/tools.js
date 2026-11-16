@@ -1,5 +1,8 @@
 /**
- * Brancher la recherche sur un modèle : deux outils, `web_search` et `read_page`.
+ * Brancher la recherche sur un modèle : deux outils, `web_search` et `read_page`,
+ * plus deux quand le navigateur intégré est branché (`createWebSearch({ browser })`) :
+ * `browse_page` (la page rendue, ses liens numérotés, sa capture sur demande) et
+ * `search_site` (la recherche interne d'un site, sans clic).
  *
  * - `toolDefinitions(format)` : les schémas tels que chaque API les attend
  *   (Anthropic, OpenAI, Mistral, Gemini) ;
@@ -15,7 +18,7 @@
  * modèle et rend le texte cadré.
  */
 
-const { formatForModel, formatPageForModel } = require('./format');
+const { formatForModel, formatPageForModel, formatBrowsedForModel } = require('./format');
 const { WebSearchError, CODES } = require('./errors');
 const { geminiSchema } = require('@astratra/ai');
 
@@ -52,27 +55,74 @@ const READ_SCHEMA = Object.freeze({
   additionalProperties: false
 });
 
+const BROWSE_DESCRIPTION = 'Open one web page (https only) in a real browser, after its JavaScript ran, and return the text a person sees, '
+  + 'its date, verbatim passages and its links numbered [L1], [L2]… (links of the same site first). To follow a link, call browse_page again with its exact url. '
+  + 'Use it for pages that read_page cannot read (built with JavaScript) and to explore a site. Pages refused by their robots.txt are not opened.';
+const SITE_SEARCH_DESCRIPTION = "Search inside one website with the site's own search (its OpenSearch description or its search form), "
+  + 'and return the results page as a browser shows it, with its links numbered. Give any page of the site. Not for general web search: use web_search.';
+
+const BROWSE_SCHEMA = Object.freeze({
+  type: 'object',
+  properties: {
+    url: { type: 'string', description: 'The https address of the page, exactly as given by web_search or by a link [Ln].' },
+    query: { type: 'string', description: 'What you are looking for on the page, to get the best passages.' },
+    quotes: { type: 'array', items: { type: 'string' }, maxItems: 5, description: 'Sentences to look for on the page, word for word.' }
+  },
+  required: ['url'],
+  additionalProperties: false
+});
+const SCREENSHOT_PROPERTY = Object.freeze({ type: 'boolean', description: 'Also return a screenshot of the visible part of the page (1280 × 800 at most). Only when the layout or images matter.' });
+
+const SITE_SEARCH_SCHEMA = Object.freeze({
+  type: 'object',
+  properties: {
+    url: { type: 'string', description: 'The https address of any page of the site to search.' },
+    query: { type: 'string', description: 'What to search for on that site (200 characters at most).' }
+  },
+  required: ['url', 'query'],
+  additionalProperties: false
+});
+
 const TOOLS = [
   { name: 'web_search', description: SEARCH_DESCRIPTION, parameters: SEARCH_SCHEMA },
   { name: 'read_page', description: READ_DESCRIPTION, parameters: READ_SCHEMA }
 ];
+const BROWSER_TOOLS = [
+  { name: 'browse_page', description: BROWSE_DESCRIPTION, parameters: BROWSE_SCHEMA },
+  { name: 'search_site', description: SITE_SEARCH_DESCRIPTION, parameters: SITE_SEARCH_SCHEMA }
+];
+
+/** Les outils offerts : les deux de base, plus ceux du navigateur quand il est là. */
+function toolList({ browser = false, screenshots = false } = {}) {
+  if (!browser) return TOOLS;
+  const browse = screenshots
+    ? { ...BROWSER_TOOLS[0], parameters: { ...BROWSE_SCHEMA, properties: { ...BROWSE_SCHEMA.properties, screenshot: SCREENSHOT_PROPERTY } } }
+    : BROWSER_TOOLS[0];
+  return [...TOOLS, browse, BROWSER_TOOLS[1]];
+}
+
+/** Les options d'outils d'une recherche : le navigateur est offert s'il est branché. */
+const toolOptions = (ws, options = {}) => ({ browser: Boolean(ws?.hasBrowser) && options.browser !== false, screenshots: options.screenshots === true });
 
 /**
  * Les définitions d'outils au format d'une API.
  * @param {'anthropic'|'openai'|'mistral'|'gemini'|'generic'} format
+ * @param {{ browser?: boolean, screenshots?: boolean }} [options]  browser : ajouter browse_page et search_site ;
+ *        screenshots : le modèle lit les images (paramètre screenshot de browse_page).
  */
-function toolDefinitions(format = 'generic') {
+function toolDefinitions(format = 'generic', options = {}) {
   const copy = (value) => JSON.parse(JSON.stringify(value));
+  const offered = toolList(options);
   switch (format) {
     case 'anthropic':
-      return TOOLS.map(({ name, description, parameters }) => ({ name, description, input_schema: copy(parameters) }));
+      return offered.map(({ name, description, parameters }) => ({ name, description, input_schema: copy(parameters) }));
     case 'openai':
     case 'mistral':
-      return TOOLS.map(({ name, description, parameters }) => ({ type: 'function', function: { name, description, parameters: copy(parameters) } }));
+      return offered.map(({ name, description, parameters }) => ({ type: 'function', function: { name, description, parameters: copy(parameters) } }));
     case 'gemini':
-      return [{ functionDeclarations: TOOLS.map(({ name, description, parameters }) => ({ name, description, parameters: geminiSchema(copy(parameters)) })) }];
+      return [{ functionDeclarations: offered.map(({ name, description, parameters }) => ({ name, description, parameters: geminiSchema(copy(parameters)) })) }];
     case 'generic':
-      return TOOLS.map(copy);
+      return offered.map(copy);
     default:
       throw new Error(`Unknown tool format ${format}: anthropic, openai, mistral, gemini or generic.`);
   }
@@ -99,9 +149,10 @@ function searchArgs(args = {}, defaults = {}) {
 
 /**
  * Exécute un outil pour un modèle.
- * @returns {Promise<{ text: string, sources: object[], found: object }>}
+ * `screenshots` : le modèle lit les images ; sans lui, une capture demandée est refusée.
+ * @returns {Promise<{ text: string, sources: object[], images?: object[], found: object }>}
  */
-async function runTool(ws, name, args, { signal, defaults, maxChars } = {}) {
+async function runTool(ws, name, args, { signal, defaults, maxChars, screenshots = false } = {}) {
   if (name === 'web_search') {
     const found = await ws.search(searchArgs(args, defaults), { signal });
     return {
@@ -122,6 +173,20 @@ async function runTool(ws, name, args, { signal, defaults, maxChars } = {}) {
       found: page
     };
   }
+  if (name === 'browse_page' || name === 'search_site') {
+    if (!ws.hasBrowser) throw new WebSearchError(CODES.BAD_REQUEST, `unknown tool ${name}`);
+    if (!args || typeof args.url !== 'string') throw new WebSearchError(CODES.BAD_REQUEST, `${name} needs a url string`);
+    if (args.screenshot === true && !screenshots) throw new WebSearchError(CODES.BAD_REQUEST, 'screenshots are not available for this model');
+    const page = name === 'browse_page'
+      ? await ws.browse(args.url, { screenshot: args.screenshot === true, quotes: strings(args.quotes)?.slice(0, 5), query: typeof args.query === 'string' ? args.query : undefined, signal })
+      : await ws.searchSite(args.url, typeof args.query === 'string' ? args.query : '', { signal });
+    return {
+      text: formatBrowsedForModel(page, { maxChars }),
+      sources: [{ kind: 'web', url: page.finalUrl, title: page.title, domain: page.domain, publishedAt: page.publishedAt, excerpt: page.passages[0]?.text || page.text.slice(0, 300) }],
+      images: page.screenshot ? [{ mediaType: page.screenshot.mediaType, data: page.screenshot.data }] : [],
+      found: page
+    };
+  }
   throw new WebSearchError(CODES.BAD_REQUEST, `unknown tool ${name}`);
 }
 
@@ -132,24 +197,27 @@ async function runTool(ws, name, args, { signal, defaults, maxChars } = {}) {
  */
 function nativeTools(ws, options = {}) {
   const maxChars = options.maxChars ?? 5_000;
-  return TOOLS.map(({ name, description, parameters }) => ({
+  const offered = toolOptions(ws, options);
+  return toolList(offered).map(({ name, description, parameters }) => ({
     name,
     description,
     parameters: JSON.parse(JSON.stringify(parameters)),
     kind: 'read',
     risk: 'LOW',
-    summary: (args = {}) => (name === 'web_search' ? { query: String(args.query ?? '') } : { url: String(args.url ?? '') }),
+    summary: (args = {}) => (name === 'web_search' ? { query: String(args.query ?? '') }
+      : name === 'search_site' ? { url: String(args.url ?? ''), query: String(args.query ?? '') } : { url: String(args.url ?? '') }),
     run: async (args, ctx = {}) => {
-      const { text, sources } = await runTool(ws, name, args, { signal: ctx.signal, defaults: options.defaults, maxChars });
-      return { data: text, sources };
+      const { text, sources, images } = await runTool(ws, name, args, { signal: ctx.signal, defaults: options.defaults, maxChars, screenshots: offered.screenshots });
+      return images?.length ? { data: text, sources, images } : { data: text, sources };
     }
   }));
 }
 
 /** Pour createToolRegistry / runAgentLoop de @astratra/ai (qui met de côté au-delà de 12 000 caractères). */
-function registryTools(ws, { roles, defaults, maxChars = 10_000 } = {}) {
+function registryTools(ws, { roles, defaults, maxChars = 10_000, browser } = {}) {
   if (!Array.isArray(roles) || !roles.length) throw new Error('registryTools needs the roles allowed to search.');
-  return TOOLS.map(({ name, description, parameters }) => ({
+  /* Le registre rend du texte seulement : pas de capture d'écran. */
+  return toolList(toolOptions(ws, { browser })).map(({ name, description, parameters }) => ({
     name,
     description,
     type: 'read',
@@ -161,4 +229,12 @@ function registryTools(ws, { roles, defaults, maxChars = 10_000 } = {}) {
   }));
 }
 
-module.exports = { toolDefinitions, nativeTools, registryTools, runTool, searchArgs, TOOL_SCHEMAS: { web_search: SEARCH_SCHEMA, read_page: READ_SCHEMA } };
+module.exports = {
+  toolDefinitions,
+  nativeTools,
+  registryTools,
+  runTool,
+  searchArgs,
+  toolList,
+  TOOL_SCHEMAS: { web_search: SEARCH_SCHEMA, read_page: READ_SCHEMA, browse_page: BROWSE_SCHEMA, search_site: SITE_SEARCH_SCHEMA }
+};

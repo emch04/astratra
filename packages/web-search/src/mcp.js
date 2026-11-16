@@ -1,6 +1,8 @@
 /**
- * `@astratra/web-search/mcp` : la recherche servie en MCP, avec les deux mêmes
- * outils (`web_search`, `read_page`) et le même texte cadré.
+ * `@astratra/web-search/mcp` : la recherche servie en MCP, avec les mêmes
+ * outils (`web_search`, `read_page`, et `browse_page`, `search_site` quand le
+ * navigateur est branché) et le même texte cadré. Une capture d'écran revient
+ * en contenu image, seulement avec `screenshots: true`.
  *
  * Le SDK MCP officiel (@modelcontextprotocol/sdk) est une dépendance
  * facultative : il n'est chargé qu'ici. Le serveur bas niveau prend les
@@ -28,7 +30,7 @@ function loadSdk() {
 
 /**
  * @param {object} ws  createWebSearch(…)
- * @param {{ name?: string, version?: string, defaults?: object, maxChars?: number }} [options]
+ * @param {{ name?: string, version?: string, defaults?: object, maxChars?: number, browser?: boolean, screenshots?: boolean }} [options]
  */
 function createMcpServer(ws, options = {}) {
   if (!ws || typeof ws.search !== 'function' || typeof ws.read !== 'function') throw new Error('createMcpServer needs a web search from createWebSearch().');
@@ -40,7 +42,8 @@ function createMcpServer(ws, options = {}) {
       instructions: 'Web search where every result is one page of one site. Cite sources by their id and url; never merge two sources into one claim.'
     }
   );
-  const tools = toolDefinitions('generic').map(({ name, description, parameters }) => ({
+  const offered = { browser: Boolean(ws.hasBrowser) && options.browser !== false, screenshots: options.screenshots === true };
+  const tools = toolDefinitions('generic', offered).map(({ name, description, parameters }) => ({
     name,
     description,
     inputSchema: parameters,
@@ -50,8 +53,9 @@ function createMcpServer(ws, options = {}) {
   server.setRequestHandler(CallToolRequestSchema, async (request, extra) => {
     const { name, arguments: args } = request.params;
     try {
-      const { text } = await runTool(ws, name, args || {}, { signal: extra?.signal, defaults: options.defaults, maxChars: options.maxChars });
-      return { content: [{ type: 'text', text }] };
+      if ((name === 'browse_page' || name === 'search_site') && !offered.browser) throw Object.assign(new Error(`unknown tool ${name}`), { code: 'WEB_SEARCH_BAD_REQUEST' });
+      const { text, images } = await runTool(ws, name, args || {}, { signal: extra?.signal, defaults: options.defaults, maxChars: options.maxChars, screenshots: offered.screenshots });
+      return { content: [{ type: 'text', text }, ...(images || []).map((image) => ({ type: 'image', data: image.data, mimeType: image.mediaType }))] };
     } catch (error) {
       if (extra?.signal?.aborted) throw error;
       return { isError: true, content: [{ type: 'text', text: `${error.code || 'WEB_SEARCH_ERROR'}: ${error.code ? error.message : 'the tool failed'}` }] };

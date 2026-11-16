@@ -1,7 +1,7 @@
 # @astratra/web-search — navigateur intégré : conception
 
 Date : 2026-11-16
-État : conception en attente. Quatre questions restent ouvertes (voir « Questions ouvertes ») ; elles seront tranchées plus tard. Rien n'est construit.
+État : conception validée le 16 novembre 2026 (réponses dans « Décisions »). Premier étage en construction ; plan : `docs/plans/2026-11-16-astratra-web-search-navigateur-plan.md`.
 
 ## Pourquoi
 
@@ -244,25 +244,30 @@ Chaque protection doit tenir si une autre cède.
 - Une IA réelle, branchée par `nativeTools` et les gardes, lit une page en
   JavaScript, suit un lien et cite ses passages.
 
-## Questions ouvertes (à trancher avant de construire)
+## Décisions (16 novembre 2026)
 
-1. **Jusqu'où l'IA peut naviguer.** Proposition : comme `read_page`, toute
-   page publique en `https`, les liens du même site montrés d'abord. Autre
-   choix : une liste de sites autorisés par application (plus sûr, mais l'IA
-   n'explore plus librement).
-2. **Respecter `robots.txt` ?** Proposition : oui, pour chaque page ouverte
-   par le navigateur (comportement honnête ; certaines pages seront
-   refusées). Autre choix : l'ignorer, puisque c'est une personne qui
-   demande à travers l'IA (la lecture actuelle l'ignore déjà).
-3. **Où l'essayer sur Linux.** Le pare-feu et le cloisonnement ne s'essaient
-   que sur Linux : un VPS d'essai, ou une machine Linux sur le Mac avec
-   Colima. Pas le VPS de production pour un premier essai. À préciser aussi :
-   le système des VPS (Ubuntu ?), dont dépendent nftables et AppArmor.
-4. **Identité de l'agent (peut attendre).** Le domaine qui publiera la page
-   qui explique l'agent (`infoUrl`) et l'annuaire de sa clé Web Bot Auth. La
-   signature peut être construite maintenant et activée plus tard.
+Les quatre questions ouvertes ont été tranchées :
 
-## Choix de conception de Claude (à relire)
+1. **Jusqu'où l'IA peut naviguer : toutes les pages publiques** en `https`,
+   comme `read_page`, les liens du même site montrés d'abord. Un réglage
+   facultatif `allowDomains` permet à une application de restreindre ses IA à
+   une liste de sites ; sans lui, l'exploration est libre.
+2. **`robots.txt` est respecté** pour chaque page ouverte par le navigateur
+   (jeton `AstratraWebBrowser`, sinon `*`, cache d'une heure). Une page
+   interdite rend `{ status: 'robots_disallowed' }`. La lecture simple
+   (`read_page` sans navigateur) reste inchangée.
+3. **Essai Linux sur Colima** (déjà installé sur le Mac), dans une machine
+   Ubuntu à part dont les fichiers restent sur le SSD ; pas le VPS de
+   production. Le système exact du VPS reste à confirmer : le profil AppArmor
+   est écrit pour Ubuntu 24 et sans effet ailleurs.
+4. **Identité de l'agent** : la signature Web Bot Auth est construite mais
+   désactivée par défaut ; `infoUrl` pointe par défaut vers la page GitHub du
+   pack (`https://github.com/emch04/astratra/tree/main/packages/web-search`)
+   tant qu'aucun domaine n'est choisi.
+
+Les « Choix de conception de Claude » ci-dessous ont aussi été validés tels quels.
+
+## Choix de conception de Claude (validés)
 
 Faits sans demander, modifiables : port 5008 ; 2 pages en parallèle
 (`maxContexts`), attente bornée puis `503 busy` ; 15 s par page, 25 s par

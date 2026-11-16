@@ -20,6 +20,14 @@ export const CODES: Readonly<{
   BAD_STATUS: 'WEB_READ_BAD_STATUS';
   UNSUPPORTED_TYPE: 'WEB_READ_UNSUPPORTED_TYPE';
   READ_FAILED: 'WEB_READ_FAILED';
+  BROWSER_UNAVAILABLE: 'WEB_BROWSER_UNAVAILABLE';
+  BROWSE_REFUSED: 'WEB_BROWSE_REFUSED';
+  BROWSE_FAILED: 'WEB_BROWSE_FAILED';
+  BROWSE_ROBOTS: 'WEB_BROWSE_ROBOTS_DISALLOWED';
+  BROWSE_BUSY: 'WEB_BROWSE_BUSY';
+  BROWSE_TIMEOUT: 'WEB_BROWSE_TIMEOUT';
+  NO_SITE_SEARCH: 'WEB_BROWSE_NO_SITE_SEARCH';
+  BLOCKED_DOMAIN: 'WEB_READ_BLOCKED_DOMAIN';
 }>;
 
 export class WebSearchError extends Error {
@@ -196,10 +204,25 @@ export interface ReadPage {
   modifiedAt: string | null;
   text: string;
   truncated: boolean;
-  bytes: number;
+  /** null quand la page a été lue par le navigateur. */
+  bytes: number | null;
+  /** fetch : lecture simple ; browser : page rendue par le navigateur intégré. */
+  via: 'fetch' | 'browser';
   quotes: QuoteCheck[];
   passages: Array<Passage & { score: number }>;
   report: { ms: number; cached: boolean };
+}
+
+/** Un lien d'une page rendue : numéroté, ceux du même site d'abord. */
+export interface BrowsedLink { n: number; url: string; text: string; sameSite: boolean }
+export interface Screenshot { mediaType: 'image/png'; data: string; width?: number; height?: number }
+
+/** Une page ouverte par le navigateur (ws.browse), ou la page de résultats de la recherche interne d'un site (ws.searchSite). */
+export interface BrowsedPage extends ReadPage {
+  via: 'browser';
+  links: BrowsedLink[];
+  screenshot?: Screenshot;
+  siteSearch?: { query: string; via: 'opensearch' | 'form'; searchUrl: string };
 }
 
 /* ─────────────────── La recherche ─────────────────── */
@@ -230,6 +253,10 @@ export interface ReadingOptions {
   passageSize?: number;
   ports?: number[];
   userAgent?: string;
+  /** Avec un navigateur : 'fallback' (défaut, sous minWords mots), 'always' ou 'never'. */
+  browser?: 'fallback' | 'always' | 'never';
+  /** En dessous, la lecture simple passe la main au navigateur. Défaut 200. */
+  minWords?: number;
 }
 
 export interface WebSearchOptions {
@@ -247,6 +274,10 @@ export interface WebSearchOptions {
   budgetMs?: number;
   ranking?: RankingOptions;
   reading?: ReadingOptions;
+  /** Le navigateur intégré : createBrowserClient(…) ou createLocalBrowser(…). */
+  browser?: BrowserBackend;
+  /** Si donné, seules ces pages (et leurs sous-domaines) sont lues ou ouvertes. */
+  allowDomains?: string[];
   rewrite?: (request: SearchRequest) => string | { query: string } | null | undefined | Promise<string | { query: string } | null | undefined>;
   extract?: (html: string, context: { url: string; now: number }) => Partial<ExtractedPage> & { text: string } | Promise<Partial<ExtractedPage> & { text: string }>;
   onReport?: (report: SearchReport) => void;
@@ -263,6 +294,11 @@ export interface WebSearchOptions {
 export interface WebSearch {
   search(input: string | SearchInput, options?: { signal?: AbortSignal }): Promise<SearchResponse>;
   read(url: string, options?: { quotes?: string[]; query?: string; passages?: number; lang?: string; signal?: AbortSignal }): Promise<ReadPage>;
+  /** La page rendue par le navigateur, ses liens numérotés, sa capture sur demande. */
+  browse(url: string, options?: { screenshot?: boolean; quotes?: string[]; query?: string; passages?: number; lang?: string; signal?: AbortSignal }): Promise<BrowsedPage>;
+  /** La recherche interne d'un site (OpenSearch ou formulaire GET), sans clic. */
+  searchSite(url: string, query: string, options?: { screenshot?: boolean; passages?: number; lang?: string; signal?: AbortSignal }): Promise<BrowsedPage>;
+  readonly hasBrowser: boolean;
   readonly providerIds: string[];
 }
 
@@ -320,30 +356,37 @@ export function createMemoryCounters(options?: { now?: () => number }): CounterS
 export const CITATION_RULES: string;
 export function formatForModel(found: SearchResponse, options?: { maxChars?: number; snippetChars?: number; passageChars?: number }): string;
 export function formatPageForModel(page: ReadPage, options?: { maxChars?: number }): string;
+export function formatBrowsedForModel(page: BrowsedPage, options?: { maxChars?: number; maxLinks?: number }): string;
 
 export type ToolFormat = 'anthropic' | 'openai' | 'mistral' | 'gemini' | 'generic';
-export const TOOL_SCHEMAS: Readonly<{ web_search: Record<string, unknown>; read_page: Record<string, unknown> }>;
-export function toolDefinitions(format?: ToolFormat): any[];
+export type WebToolName = 'web_search' | 'read_page' | 'browse_page' | 'search_site';
+export const TOOL_SCHEMAS: Readonly<{ web_search: Record<string, unknown>; read_page: Record<string, unknown>; browse_page: Record<string, unknown>; search_site: Record<string, unknown> }>;
+/** browser : ajouter browse_page et search_site ; screenshots : le modèle lit les images. */
+export function toolDefinitions(format?: ToolFormat, options?: { browser?: boolean; screenshots?: boolean }): any[];
+export function toolList(options?: { browser?: boolean; screenshots?: boolean }): Array<{ name: WebToolName; description: string; parameters: Record<string, unknown> }>;
 export function searchArgs(args: Record<string, unknown>, defaults?: { limit?: number; read?: number }): SearchInput;
 
 export interface WebSource { kind: 'web'; id?: string; url: string; title: string; domain: string; publishedAt: string | null; excerpt: string }
-export function runTool(ws: WebSearch, name: 'web_search' | 'read_page' | string, args: Record<string, unknown>, options?: {
-  signal?: AbortSignal; defaults?: { limit?: number; read?: number }; maxChars?: number;
-}): Promise<{ text: string; sources: WebSource[]; found: SearchResponse | ReadPage }>;
+export interface ToolImage { mediaType: 'image/png'; data: string }
+export function runTool(ws: WebSearch, name: WebToolName | string, args: Record<string, unknown>, options?: {
+  signal?: AbortSignal; defaults?: { limit?: number; read?: number }; maxChars?: number; screenshots?: boolean;
+}): Promise<{ text: string; sources: WebSource[]; images?: ToolImage[]; found: SearchResponse | ReadPage | BrowsedPage }>;
 
 export interface WebNativeTool {
-  name: 'web_search' | 'read_page';
+  name: WebToolName;
   description: string;
   parameters: Record<string, unknown>;
   kind: 'read';
   risk: 'LOW';
   summary(args?: Record<string, unknown>): Record<string, string>;
-  run(args: Record<string, unknown>, ctx?: { signal?: AbortSignal }): Promise<{ data: string; sources: WebSource[] }>;
+  /** images : la capture d'écran, seulement avec { screenshots: true }. */
+  run(args: Record<string, unknown>, ctx?: { signal?: AbortSignal }): Promise<{ data: string; sources: WebSource[]; images?: ToolImage[] }>;
 }
-export function nativeTools(ws: WebSearch, options?: { defaults?: { limit?: number; read?: number }; maxChars?: number }): WebNativeTool[];
+/** Avec un navigateur branché, browse_page et search_site s'ajoutent (browser: false pour les retirer). */
+export function nativeTools(ws: WebSearch, options?: { defaults?: { limit?: number; read?: number }; maxChars?: number; browser?: boolean; screenshots?: boolean }): WebNativeTool[];
 
 export interface WebRegistryTool {
-  name: 'web_search' | 'read_page';
+  name: WebToolName;
   description: string;
   type: 'read';
   risk: 'LOW';
@@ -352,7 +395,190 @@ export interface WebRegistryTool {
   params: Record<string, string>;
   handler(params: Record<string, unknown>, ctx?: { signal?: AbortSignal }): Promise<string>;
 }
-export function registryTools(ws: WebSearch, options: { roles: string[]; defaults?: { limit?: number; read?: number }; maxChars?: number }): WebRegistryTool[];
+export function registryTools(ws: WebSearch, options: { roles: string[]; defaults?: { limit?: number; read?: number }; maxChars?: number; browser?: boolean }): WebRegistryTool[];
+
+/* ─────────────────── Navigateur intégré ─────────────────── */
+
+export type BrowserStatus =
+  | 'ok' | 'blocked' | 'robots_disallowed' | 'domain_refused' | 'bad_status' | 'timeout' | 'too_many_redirects'
+  | 'unsupported_type' | 'no_site_search' | 'search_engine_refused' | 'failed' | 'busy' | 'invalid_input' | 'browser_unavailable';
+
+/** Ce que rend le service (ou le moteur) pour une page. */
+export interface BrowserResult {
+  status: BrowserStatus;
+  url?: string;
+  finalUrl?: string;
+  httpStatus?: number;
+  title?: string;
+  lang?: string | null;
+  text?: string;
+  links?: BrowsedLink[];
+  canonical?: string | null;
+  publishedAt?: string | null;
+  modifiedAt?: string | null;
+  truncated?: boolean;
+  resourceLimitReached?: boolean;
+  blockedRequests?: number;
+  removed?: { overlays: number; hidden: number };
+  screenshot?: Screenshot;
+  searchUrl?: string;
+  via?: 'opensearch' | 'form';
+  query?: string;
+  reason?: string;
+  blockedUrl?: string;
+  robotsUnavailable?: boolean;
+  ms?: number;
+}
+
+export interface BrowserOpenRequest { url: string; screenshot?: boolean; waitFor?: string; allowDomains?: string[]; blockDomains?: string[]; lang?: string }
+export interface BrowserSiteSearchRequest { url: string; query: string; screenshot?: boolean; allowDomains?: string[]; blockDomains?: string[]; lang?: string }
+
+export type BrowserCallResult =
+  | { ok: true; result: BrowserResult }
+  | { ok: false; code: string; retryable: boolean; status?: number; message?: string };
+
+/** Ce que createWebSearch attend dans `browser`. */
+export interface BrowserBackend {
+  open(request: BrowserOpenRequest, options?: { signal?: AbortSignal }): Promise<BrowserCallResult>;
+  siteSearch(request: BrowserSiteSearchRequest, options?: { signal?: AbortSignal }): Promise<BrowserCallResult>;
+  health?(options?: { signal?: AbortSignal }): Promise<{ ok: true; result: any } | { ok: false; code: string; retryable: boolean }>;
+}
+
+export interface BrowserClient extends BrowserBackend {
+  health(options?: { signal?: AbortSignal }): Promise<{ ok: true; result: any } | { ok: false; code: string; retryable: boolean }>;
+  breakerStatus(): { state: 'closed' | 'open' | 'half-open'; failures: number } | null;
+  readonly kind: 'service';
+}
+export function createBrowserClient(options?: {
+  baseUrl?: string;
+  token?: string | (() => string | Promise<string>);
+  tokenFile?: string;
+  fetch?: (url: string, init?: any) => Promise<any>;
+  timeoutMs?: number;
+  retry?: { attempts?: number; baseDelayMs?: number; maxDelayMs?: number };
+  breaker?: { failureThreshold?: number; recoveryMs?: number } | false;
+  onEvent?: (event: { type: string; [key: string]: unknown }) => void;
+  now?: () => number;
+  sleep?: (ms: number) => Promise<void>;
+  random?: () => number;
+}): BrowserClient;
+
+export interface BrowserEngineOptions {
+  playwright?: unknown;
+  executablePath?: string;
+  infoUrl?: string;
+  userAgent?: string;
+  signer?: RequestSigner | null;
+  robots?: boolean;
+  fetchRobots?: (url: string, ctx: { signal?: AbortSignal }) => Promise<{ status: number; body: string }>;
+  ports?: number[];
+  allowHttp?: boolean;
+  resolve?: (...args: any[]) => any;
+  proxyPort?: number;
+  maxContexts?: number;
+  queueMs?: number;
+  maxQueue?: number;
+  pageTimeoutMs?: number;
+  requestTimeoutMs?: number;
+  settleMs?: number;
+  maxRedirects?: number;
+  maxResourceBytes?: number;
+  maxTextChars?: number;
+  maxLinks?: number;
+  /** Tests seulement. */
+  connect?: (target: { hostname: string; address: string; port: number }) => unknown;
+  /** Tests seulement : certificats non vérifiés. */
+  insecureTls?: boolean;
+}
+export interface BrowserEngine {
+  open(request: BrowserOpenRequest, options?: { signal?: AbortSignal }): Promise<BrowserResult>;
+  siteSearch(request: BrowserSiteSearchRequest, options?: { signal?: AbortSignal }): Promise<BrowserResult>;
+  health(): Promise<{ ok: boolean; version: string; chromium: string | null; sandbox: boolean; userAgent: string; robots: boolean; signing: { keyid: string } | null; active: number; queued: number; max: number; error?: string }>;
+  start(): Promise<unknown>;
+  close(): Promise<void>;
+  readonly userAgent: string;
+}
+export function createBrowserEngine(options?: BrowserEngineOptions): BrowserEngine;
+export function createLocalBrowser(options?: BrowserEngineOptions & { engine?: BrowserEngine }): BrowserBackend & { start(): Promise<unknown>; close(): Promise<void>; readonly kind: 'local' };
+export function browserUserAgent(options?: { version?: string; infoUrl?: string }): string;
+export const BROWSER_DEFAULTS: Readonly<{ maxContexts: number; queueMs: number; maxQueue: number; pageTimeoutMs: number; requestTimeoutMs: number; settleMs: number; maxRedirects: number; maxResourceBytes: number; maxTextChars: number; maxLinks: number; viewport: { width: number; height: number } }>;
+export const DEFAULT_INFO_URL: string;
+
+export interface IsolationReport { ok: boolean; checkedAt: string; probes: Array<{ name: string; host: string; port: number; outcome: 'reached' | 'blocked' | 'timeout' | 'unreachable' }> }
+export function checkIsolation(options: { servicePort?: number; timeoutMs?: number; targets?: Array<{ name: string; host: string; port: number }>; connect?: (...args: any[]) => any }): Promise<IsolationReport>;
+
+export function createBrowserService(options: {
+  engine: BrowserEngine;
+  tokenFile: string;
+  host?: '127.0.0.1' | '::1';
+  port?: number;
+  unsafeNoFirewall?: boolean;
+  checkIsolation?: (options: { servicePort: number }) => Promise<IsolationReport>;
+  log?: (event: { route: string; outcome: string; ms: number }) => void;
+}): {
+  start(): Promise<{ host: string; port: number; isolation: IsolationReport }>;
+  close(): Promise<void>;
+  address(): unknown;
+  isolation(): IsolationReport | null;
+};
+
+export function startEgressProxy(options?: { resolve?: (...args: any[]) => any; connect?: (...args: any[]) => any; ports?: number[]; allowHttp?: boolean; port?: number; host?: string; idleMs?: number; onRefused?: (event: { hostname: string; port: number; reason: string }) => void }): Promise<{
+  port: number; server: string; username: string; password: string; stats(): { tunnels: number; refused: number; open: number }; close(): Promise<void>;
+}>;
+
+export interface ParsedRobots { groups: Array<{ agents: string[]; rules: Array<{ allow: boolean; path: string }> }> }
+export function parseRobots(text: string): ParsedRobots;
+export function robotsAllows(parsed: ParsedRobots | { allowAll: true } | { disallowAll: true }, target: string | URL, token?: string): boolean;
+export function createRobotsCache(options: { fetchRobots: (url: string, ctx: { signal?: AbortSignal }) => Promise<{ status: number; body: string }>; ttlMs?: number; errorTtlMs?: number; maxEntries?: number; token?: string; now?: () => number }): {
+  check(target: string | URL, options?: { signal?: AbortSignal }): Promise<{ allowed: boolean; unavailable?: boolean }>;
+  clear(): void;
+  size(): number;
+};
+export const ROBOTS_AGENT_TOKEN: 'AstratraWebBrowser';
+
+export function openSearchUrl(xml: string, context: { query: string; pageUrl: string }): string | null;
+export function formSearchUrl(form: { action?: string; method?: string; searchRole?: boolean; fields: Array<{ name: string; type: string; value?: string; checked?: boolean }> }, context: { query: string; pageUrl: string }): string | null;
+export function isSearchEngine(value: string): boolean;
+export const SEARCH_ENGINES: readonly string[];
+
+export interface RequestSigner {
+  sign(url: string | URL): { 'signature-agent': string; 'signature-input': string; signature: string };
+  readonly keyid: string;
+  readonly publicJwk: { kty: 'OKP'; crv: 'Ed25519'; x: string };
+}
+export function createSigningKey(): { privateKeyPem: string; publicJwk: { kty: 'OKP'; crv: 'Ed25519'; x: string } };
+export function createRequestSigner(options: { privateKey: string | unknown; signatureAgent: string; validitySeconds?: number; now?: () => number }): RequestSigner;
+export function signerFromFile(options?: { signingKeyFile?: string; signatureAgent?: string }): RequestSigner | null;
+export function jwkThumbprint(jwk: { kty: string; crv: string; x: string }): string;
+export function signatureDirectory(publicJwks: { kty: string; crv: string; x: string } | Array<{ kty: string; crv: string; x: string }>): { keys: Array<{ kty: 'OKP'; crv: 'Ed25519'; x: string }> };
+export const SIGNATURE_DIRECTORY_PATH: string;
+export const SIGNATURE_DIRECTORY_TYPE: string;
+
+export interface BrowserDeployOptions {
+  port?: number;
+  proxyPort?: number;
+  maxContexts?: number;
+  queueMs?: number;
+  infoUrl?: string;
+  signatureAgent?: string;
+  browsersPath?: string;
+  tokenFile?: string;
+  signingKeyFile?: string;
+  env?: Record<string, string>;
+}
+export function browserServiceEnv(options?: BrowserDeployOptions): Record<string, string>;
+export function createBrowserSystemdUnit(options: BrowserDeployOptions & {
+  node: string; user: string; tokenFile: string; script?: string; group?: string; description?: string; workingDirectory?: string;
+  environmentFile?: string; memoryMax?: string; memoryHigh?: string; cpuQuota?: string; tasksMax?: number; restartSec?: number; readWritePaths?: string[];
+}): string;
+export function createBrowserPm2App(options: BrowserDeployOptions & { tokenFile: string; node?: string; script?: string; name?: string; cwd?: string; maxRestarts?: number; restartDelay?: number; killTimeout?: number; maxMemoryRestart?: string }): Record<string, unknown>;
+export function createBrowserFirewall(options?: { user?: string; proxyPort?: number; dnsServers?: string[]; table?: string }): string;
+export function createBrowserAppArmorProfile(options: { chromiumPath: string; name?: string }): string;
+export function browserSetupFiles(options: Parameters<typeof createBrowserSystemdUnit>[0] & { chromiumPath?: string; dnsServers?: string[]; table?: string }): Record<string, string>;
+export const BROWSER_CLI: string;
+
+export const BLOCKED_IPV4: ReadonlyArray<readonly [string, number]>;
+export const BLOCKED_IPV6: ReadonlyArray<readonly [string, number]>;
 
 /* ─────────────────── Évaluation ─────────────────── */
 

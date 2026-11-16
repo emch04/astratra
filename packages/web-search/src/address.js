@@ -9,18 +9,23 @@
 
 const net = require('net');
 
-const blocked4 = new net.BlockList();
-for (const [prefix, bits] of [
+/* Les mêmes listes servent au pare-feu du navigateur (createBrowserFirewall). */
+const BLOCKED_IPV4 = Object.freeze([
   ['0.0.0.0', 8], ['10.0.0.0', 8], ['100.64.0.0', 10], ['127.0.0.0', 8], ['169.254.0.0', 16],
   ['172.16.0.0', 12], ['192.0.0.0', 24], ['192.0.2.0', 24], ['192.88.99.0', 24], ['192.168.0.0', 16],
   ['198.18.0.0', 15], ['198.51.100.0', 24], ['203.0.113.0', 24], ['224.0.0.0', 4], ['240.0.0.0', 4]
-]) blocked4.addSubnet(prefix, bits, 'ipv4');
-
-const blocked6 = new net.BlockList();
-for (const [prefix, bits] of [
+]);
+/* En IPv6, seul 2000::/3 (unicast global) est public, moins ces plages. */
+const BLOCKED_IPV6 = Object.freeze([
   ['64:ff9b::', 96], ['64:ff9b:1::', 48], ['100::', 64], ['2001::', 23], ['2001:db8::', 32],
   ['2002::', 16], ['3fff::', 20], ['fc00::', 7], ['fe80::', 10], ['fec0::', 10], ['ff00::', 8]
-]) blocked6.addSubnet(prefix, bits, 'ipv6');
+]);
+
+const blocked4 = new net.BlockList();
+for (const [prefix, bits] of BLOCKED_IPV4) blocked4.addSubnet(prefix, bits, 'ipv4');
+
+const blocked6 = new net.BlockList();
+for (const [prefix, bits] of BLOCKED_IPV6) blocked6.addSubnet(prefix, bits, 'ipv6');
 
 /** Les 8 groupes de 16 bits d'une adresse IPv6, ou null. */
 function groupsOf(address) {
@@ -68,4 +73,4 @@ function isBlockedHostname(hostname) {
     || host.endsWith('.in-addr.arpa') || host.endsWith('.ip6.arpa');
 }
 
-module.exports = { isPublicAddress, isBlockedHostname };
+module.exports = { isPublicAddress, isBlockedHostname, BLOCKED_IPV4, BLOCKED_IPV6 };

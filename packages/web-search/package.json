@@ -1,7 +1,7 @@
 {
   "name": "@astratra/web-search",
   "version": "1.1.0",
-  "description": "Web search for AI agents: several engines (Serper, Brave, Tavily, Exa, or a gateway of your own) with automatic fallback, rank fusion without content mixing (one entry = one page = one site), verbatim passages with their position, SSRF-safe page reading, content framed as data, cache, quotas, cost report, tool definitions and an MCP server.",
+  "description": "Web search for AI agents: several engines (Serper, Brave, Tavily, Exa, or a gateway of your own) with automatic fallback, rank fusion without content mixing (one entry = one page = one site), verbatim passages with their position, SSRF-safe page reading, content framed as data, cache, quotas, cost report, tool definitions and an MCP server, and an integrated read-only browser (shared, isolated Chromium service) for JavaScript pages, site links and site search.",
   "engines": {
     "node": ">=22"
   },
@@ -12,7 +12,8 @@
     "src"
   ],
   "bin": {
-    "astratra-web-search-mcp": "src/mcpStdio.js"
+    "astratra-web-search-mcp": "src/mcpStdio.js",
+    "astratra-web-browser": "src/browser/cli.js"
   },
   "scripts": {
     "test": "jest",
@@ -34,7 +35,12 @@
     "tavily",
     "exa",
     "mcp",
-    "ssrf"
+    "ssrf",
+    "browser",
+    "playwright",
+    "headless",
+    "robots-txt",
+    "web-bot-auth"
   ],
   "license": "MIT",
   "publishConfig": {
@@ -44,16 +50,21 @@
     "@astratra/ai": "^1.15.0"
   },
   "peerDependencies": {
-    "@modelcontextprotocol/sdk": ">=1.20.0"
+    "@modelcontextprotocol/sdk": ">=1.20.0",
+    "playwright": ">=1.48"
   },
   "peerDependenciesMeta": {
     "@modelcontextprotocol/sdk": {
+      "optional": true
+    },
+    "playwright": {
       "optional": true
     }
   },
   "devDependencies": {
     "@modelcontextprotocol/sdk": "^1.32.1",
-    "jest": "30.4.2"
+    "jest": "30.4.2",
+    "playwright": "^1.64.1"
   },
   "exports": {
     ".": {

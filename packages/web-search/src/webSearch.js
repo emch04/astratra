@@ -25,7 +25,7 @@ const crypto = require('crypto');
 const { WebSearchError, CODES } = require('./errors');
 const { normalizeRequest } = require('./query');
 const { fuseRankings, rankEntries } = require('./fusion');
-const { canonicalUrl, domainOf, sameSite, normalizeSite } = require('./url');
+const { canonicalUrl, domainOf, sameSite, normalizeSite, inSite } = require('./url');
 const { safeFetch, checkUrl, SAFE_FETCH_DEFAULTS } = require('./safeFetch');
 const { extractPage } = require('./extract');
 const { findQuote, bestPassages } = require('./passages');
@@ -44,6 +44,14 @@ const defaultSleep = (ms, signal) => new Promise((resolve, reject) => {
     reject(signal.reason);
   }, { once: true });
 });
+
+/* Les mots d'un texte : ce qui porte une lettre ou un chiffre. */
+const wordCount = (text) => String(text || '').split(/\s+/).filter((word) => /[\p{L}\p{N}]/u.test(word)).length;
+
+/** L'adresse https donnée, sinon celle de repli. */
+function parseHttpsOr(value, fallback) {
+  return typeof value === 'string' && canonicalUrl(value) ? value : fallback;
+}
 
 function validateProviders(providers) {
   if (!Array.isArray(providers) || providers.length === 0) {
@@ -74,7 +82,10 @@ function validateProviders(providers) {
  * @param {number} [options.cooldownMs]          repos d'un moteur à court de quota. Défaut 60 s.
  * @param {number} [options.budgetMs]            temps total d'une recherche, lectures comprises. Défaut 25 s.
  * @param {object} [options.ranking]             { blockDomains, preferDomains, demoteDomains, domainScore, maxPerDomain }.
- * @param {object} [options.reading]             { timeoutMs, maxBytes, maxChars, passages, passageSize, ports, userAgent }.
+ * @param {object} [options.reading]             { timeoutMs, maxBytes, maxChars, passages, passageSize, ports, userAgent,
+ *                                                browser: 'fallback'|'always'|'never', minWords }.
+ * @param {object} [options.browser]             le navigateur intégré : createBrowserClient(…) ou createLocalBrowser(…).
+ * @param {string[]} [options.allowDomains]      si donné, seules ces pages (et leurs sous-domaines) sont lues ou ouvertes.
  * @param {Function} [options.rewrite]           async (request) => string | { query } : réécrire la requête.
  * @param {Function} [options.extract]           (html, { url }) => { text, title?, … } : un autre extracteur.
  * @param {Function} [options.onReport]          (report) => void, après chaque recherche.
@@ -110,7 +121,14 @@ function createWebSearch(options = {}) {
     preferDomains: (options.ranking?.preferDomains || []).map(normalizeSite).filter(Boolean),
     demoteDomains: (options.ranking?.demoteDomains || []).map(normalizeSite).filter(Boolean)
   };
-  const reading = { maxChars: 60_000, passages: 3, passageSize: 500, ...(options.reading || {}) };
+  const reading = { maxChars: 60_000, passages: 3, passageSize: 500, minWords: 200, ...(options.reading || {}) };
+  const browser = options.browser || null;
+  if (browser && (typeof browser.open !== 'function' || typeof browser.siteSearch !== 'function')) {
+    throw new Error('browser must come from createBrowserClient() or createLocalBrowser().');
+  }
+  const browserMode = browser ? (reading.browser || 'fallback') : 'never';
+  if (!['fallback', 'always', 'never'].includes(browserMode)) throw new Error("reading.browser must be 'fallback', 'always' or 'never'.");
+  const allowDomains = (options.allowDomains || []).map(normalizeSite).filter(Boolean);
   const extract = options.extract || extractPage;
   const resting = new Map();
 
@@ -260,6 +278,91 @@ function createWebSearch(options = {}) {
     return { lists, traces };
   }
 
+  /** Refuse une adresse d'un site bloqué, ou hors des sites permis. */
+  function checkDomain(url) {
+    const domain = domainOf(url);
+    if (!domain) return;
+    if (ranking.blockDomains.some((site) => inSite(domain, site))) throw new WebSearchError(CODES.BLOCKED_DOMAIN, 'this site is blocked');
+    if (allowDomains.length && !allowDomains.some((site) => inSite(domain, site))) throw new WebSearchError(CODES.BLOCKED_DOMAIN, 'this site is not in the allowed sites');
+  }
+
+  const linkAllowed = (url) => {
+    const domain = domainOf(url);
+    return Boolean(domain) && !ranking.blockDomains.some((site) => inSite(domain, site))
+      && (!allowDomains.length || allowDomains.some((site) => inSite(domain, site)));
+  };
+
+  /** Ce que le navigateur rend, en erreur du paquet. */
+  function browserError(outcome) {
+    if (!outcome.ok) {
+      if (outcome.code === 'busy') return new WebSearchError(CODES.BROWSE_BUSY, 'the browser is busy; try again later', { retryable: true });
+      if (outcome.code === 'invalid_input') return new WebSearchError(CODES.BAD_REQUEST, 'the browser refused the request');
+      return new WebSearchError(CODES.BROWSER_UNAVAILABLE, `the browser is unavailable (${String(outcome.code).slice(0, 40)})`, { retryable: Boolean(outcome.retryable) });
+    }
+    const result = outcome.result;
+    switch (result.status) {
+      case 'blocked': return new WebSearchError(CODES.BLOCKED_ADDRESS, 'the page or one of its redirects is not public');
+      case 'domain_refused': return new WebSearchError(CODES.BLOCKED_DOMAIN, 'the page or one of its redirects is on a refused site');
+      case 'robots_disallowed': return new WebSearchError(CODES.BROWSE_ROBOTS, "the site's robots.txt does not allow this page");
+      case 'bad_status': return new WebSearchError(CODES.BAD_STATUS, `page answered ${Number(result.httpStatus) || 0}`, { status: Number(result.httpStatus) || undefined });
+      case 'timeout': return new WebSearchError(CODES.BROWSE_TIMEOUT, 'the page took too long to load');
+      case 'too_many_redirects': return new WebSearchError(CODES.TOO_MANY_REDIRECTS, 'too many redirects');
+      case 'unsupported_type': return new WebSearchError(CODES.UNSUPPORTED_TYPE, 'this address is not a web page');
+      case 'no_site_search': return new WebSearchError(CODES.NO_SITE_SEARCH, 'this site has no search the browser can use (OpenSearch or a GET search form)');
+      case 'search_engine_refused': return new WebSearchError(CODES.BROWSE_REFUSED, 'search engines are queried through their API (web_search), not through their pages');
+      default: return new WebSearchError(CODES.BROWSE_FAILED, 'the browser could not read the page');
+    }
+  }
+
+  /** Le résultat du navigateur, en page du paquet. */
+  function browsedPage(result, asked) {
+    const fullText = String(result.text || '');
+    const text = fullText.length > reading.maxChars ? clip(fullText, reading.maxChars) : fullText;
+    const finalUrl = parseHttpsOr(result.finalUrl, asked);
+    const pageCanonical = result.canonical && sameSite(result.canonical, finalUrl) ? canonicalUrl(result.canonical) : null;
+    return {
+      url: asked,
+      finalUrl,
+      redirects: [],
+      canonicalUrl: pageCanonical || canonicalUrl(finalUrl),
+      domain: domainOf(finalUrl),
+      title: String(result.title || ''),
+      lang: result.lang || null,
+      publishedAt: result.publishedAt || null,
+      modifiedAt: result.modifiedAt || null,
+      text,
+      truncated: Boolean(result.truncated) || text.length < fullText.length,
+      bytes: null,
+      via: 'browser'
+    };
+  }
+
+  /** Les liens rendus par le navigateur : sites bloqués ou hors des sites permis retirés, renumérotés. */
+  function browsedLinks(result) {
+    return (Array.isArray(result.links) ? result.links : [])
+      .filter((link) => link && typeof link.url === 'string' && canonicalUrl(link.url) && linkAllowed(link.url))
+      .map((link, index) => ({ n: index + 1, url: link.url, text: String(link.text || '').replace(/\s+/g, ' ').trim().slice(0, 120), sameSite: Boolean(link.sameSite) }));
+  }
+
+  const browserPolicy = () => ({
+    ...(allowDomains.length ? { allowDomains } : {}),
+    ...(ranking.blockDomains.length ? { blockDomains: ranking.blockDomains } : {})
+  });
+
+  /** Une page ouverte par le navigateur, en cache comme les lectures. */
+  async function openWithBrowser(url, { signal, lang, screenshot = false } = {}) {
+    const key = `ws:browse:${hash(canonicalUrl(url))}`;
+    if (!screenshot) {
+      const cached = await cacheGet(key);
+      if (cached && cached.page) return { ...cached, cached: true };
+    }
+    const outcome = await browser.open({ url, ...(screenshot ? { screenshot: true } : {}), ...(lang && /^[a-z]{2}$/.test(lang) ? { lang } : {}), ...browserPolicy() }, { signal });
+    if (!outcome.ok || outcome.result?.status !== 'ok') throw browserError(outcome);
+    const value = { page: browsedPage(outcome.result, url), links: browsedLinks(outcome.result) };
+    await cacheSet(key, value, readCacheTtlMs);
+    return { ...value, cached: false, screenshot: outcome.result.screenshot || null };
+  }
+
   /**
    * Lit une page : le texte principal, sa date, et les passages cités mot pour mot.
    * @param {string} url
@@ -268,51 +371,142 @@ function createWebSearch(options = {}) {
   async function read(url, readOptions = {}) {
     const started = now();
     checkUrl(url, reading.ports || SAFE_FETCH_DEFAULTS.ports);
+    checkDomain(url);
     const quotes = (Array.isArray(readOptions.quotes) ? readOptions.quotes : []).filter((quote) => typeof quote === 'string' && quote.trim()).slice(0, MAX_QUOTES);
-    const key = `ws:read:${hash(canonicalUrl(url))}`;
-    let page = await cacheGet(key);
-    const cached = Boolean(page);
-    if (!page) {
-      const fetched = await safeFetch(url, {
-        timeoutMs: reading.timeoutMs,
-        maxBytes: reading.maxBytes,
-        maxRedirects: reading.maxRedirects,
-        ports: reading.ports,
-        userAgent: reading.userAgent,
-        lang: readOptions.lang,
-        signal: readOptions.signal,
-        request: options.request,
-        resolve: options.resolve
-      });
-      const extracted = fetched.contentType === 'text/plain'
-        ? { title: '', text: fetched.body.replace(/\r\n?/g, '\n').trim() }
-        : (await extract(fetched.body, { url: fetched.finalUrl, now: now() })) || { text: '' };
-      const fullText = String(extracted.text || '');
-      const text = fullText.length > reading.maxChars ? clip(fullText, reading.maxChars) : fullText;
-      const pageCanonical = extracted.canonical && sameSite(extracted.canonical, fetched.finalUrl) ? canonicalUrl(extracted.canonical) : null;
-      page = {
-        url: fetched.url,
-        finalUrl: fetched.finalUrl,
-        redirects: fetched.redirects,
-        canonicalUrl: pageCanonical || canonicalUrl(fetched.finalUrl),
-        domain: domainOf(fetched.finalUrl),
-        title: String(extracted.title || ''),
-        lang: extracted.lang || null,
-        publishedAt: extracted.publishedAt || null,
-        modifiedAt: extracted.modifiedAt || null,
-        text,
-        truncated: fetched.truncated || text.length < fullText.length,
-        bytes: fetched.bytes
-      };
-      await cacheSet(key, page, readCacheTtlMs);
+    let page;
+    let cached;
+    if (browserMode === 'always') {
+      const opened = await openWithBrowser(url, { signal: readOptions.signal, lang: readOptions.lang });
+      page = opened.page;
+      cached = opened.cached;
+    } else {
+      const key = `ws:read:${hash(canonicalUrl(url))}`;
+      page = await cacheGet(key);
+      cached = Boolean(page);
+      if (!page) {
+        page = await fetchPage(url, readOptions);
+        await cacheSet(key, page, readCacheTtlMs);
+      }
+      /* Une page construite en JavaScript donne presque rien sans navigateur : il prend le relais. */
+      if (browserMode === 'fallback' && wordCount(page.text) < reading.minWords) {
+        try {
+          const opened = await openWithBrowser(url, { signal: readOptions.signal, lang: readOptions.lang });
+          if (wordCount(opened.page.text) > wordCount(page.text)) {
+            page = opened.page;
+            cached = opened.cached;
+          }
+        } catch (_error) {
+          /* le navigateur en panne, refusé ou bloqué : la lecture simple reste */
+        }
+      }
     }
+    checkDomain(page.finalUrl);
     const passageCount = readOptions.passages ?? reading.passages;
     return {
       ...page,
+      via: page.via || 'fetch',
       sameSite: sameSite(url, page.finalUrl),
       quotes: quotes.map((quote) => findQuote(page.text, quote)),
       passages: readOptions.query ? bestPassages(page.text, readOptions.query, { count: passageCount, size: reading.passageSize }) : [],
       report: { ms: now() - started, cached }
+    };
+  }
+
+  /** La lecture simple (sans JavaScript) d'une page. */
+  async function fetchPage(url, readOptions) {
+    const fetched = await safeFetch(url, {
+      timeoutMs: reading.timeoutMs,
+      maxBytes: reading.maxBytes,
+      maxRedirects: reading.maxRedirects,
+      ports: reading.ports,
+      userAgent: reading.userAgent,
+      lang: readOptions.lang,
+      signal: readOptions.signal,
+      request: options.request,
+      resolve: options.resolve
+    });
+    const extracted = fetched.contentType === 'text/plain'
+      ? { title: '', text: fetched.body.replace(/\r\n?/g, '\n').trim() }
+      : (await extract(fetched.body, { url: fetched.finalUrl, now: now() })) || { text: '' };
+    const fullText = String(extracted.text || '');
+    const text = fullText.length > reading.maxChars ? clip(fullText, reading.maxChars) : fullText;
+    const pageCanonical = extracted.canonical && sameSite(extracted.canonical, fetched.finalUrl) ? canonicalUrl(extracted.canonical) : null;
+    return {
+      url: fetched.url,
+      finalUrl: fetched.finalUrl,
+      redirects: fetched.redirects,
+      canonicalUrl: pageCanonical || canonicalUrl(fetched.finalUrl),
+      domain: domainOf(fetched.finalUrl),
+      title: String(extracted.title || ''),
+      lang: extracted.lang || null,
+      publishedAt: extracted.publishedAt || null,
+      modifiedAt: extracted.modifiedAt || null,
+      text,
+      truncated: fetched.truncated || text.length < fullText.length,
+      bytes: fetched.bytes,
+      via: 'fetch'
+    };
+  }
+
+  function requireBrowser(name) {
+    if (!browser) throw new WebSearchError(CODES.BROWSER_UNAVAILABLE, `${name} needs the integrated browser (createWebSearch({ browser }))`);
+  }
+
+  /**
+   * Ouvre une page dans le navigateur : son texte rendu, ses liens numérotés,
+   * et sa capture d'écran si on la demande.
+   * @param {string} url
+   * @param {{ screenshot?: boolean, quotes?: string[], query?: string, passages?: number, lang?: string, signal?: AbortSignal }} [browseOptions]
+   */
+  async function browse(url, browseOptions = {}) {
+    requireBrowser('browse');
+    const started = now();
+    checkUrl(url, reading.ports || SAFE_FETCH_DEFAULTS.ports);
+    checkDomain(url);
+    const opened = await openWithBrowser(url, { signal: browseOptions.signal, lang: browseOptions.lang, screenshot: browseOptions.screenshot === true });
+    return finishBrowsed(url, opened, browseOptions, started);
+  }
+
+  function finishBrowsed(url, opened, extra, started) {
+    const { page } = opened;
+    const quotes = (Array.isArray(extra.quotes) ? extra.quotes : []).filter((quote) => typeof quote === 'string' && quote.trim()).slice(0, MAX_QUOTES);
+    return {
+      ...page,
+      sameSite: sameSite(url, page.finalUrl),
+      links: opened.links,
+      ...(opened.screenshot ? { screenshot: opened.screenshot } : {}),
+      quotes: quotes.map((quote) => findQuote(page.text, quote)),
+      passages: extra.query ? bestPassages(page.text, extra.query, { count: extra.passages ?? reading.passages, size: reading.passageSize }) : [],
+      report: { ms: now() - started, cached: Boolean(opened.cached) }
+    };
+  }
+
+  /**
+   * La recherche interne d'un site (OpenSearch ou formulaire GET), sans clic.
+   * @param {string} url    une page du site.
+   * @param {string} query
+   * @param {{ screenshot?: boolean, passages?: number, lang?: string, signal?: AbortSignal }} [searchOptions]
+   */
+  async function searchSite(url, query, searchOptions = {}) {
+    requireBrowser('searchSite');
+    const started = now();
+    checkUrl(url, reading.ports || SAFE_FETCH_DEFAULTS.ports);
+    checkDomain(url);
+    if (typeof query !== 'string' || !query.trim()) throw new WebSearchError(CODES.BAD_REQUEST, 'searchSite needs a query');
+    const outcome = await browser.siteSearch({
+      url,
+      query: query.trim().slice(0, 200),
+      ...(searchOptions.screenshot === true ? { screenshot: true } : {}),
+      ...(searchOptions.lang && /^[a-z]{2}$/.test(searchOptions.lang) ? { lang: searchOptions.lang } : {}),
+      ...browserPolicy()
+    }, { signal: searchOptions.signal });
+    if (!outcome.ok || outcome.result?.status !== 'ok') throw browserError(outcome);
+    const result = outcome.result;
+    const opened = { page: browsedPage(result, result.searchUrl || url), links: browsedLinks(result), screenshot: result.screenshot || null, cached: false };
+    checkDomain(opened.page.finalUrl);
+    return {
+      ...finishBrowsed(url, opened, { query, passages: searchOptions.passages }, started),
+      siteSearch: { query: query.trim().slice(0, 200), via: result.via, searchUrl: result.searchUrl }
     };
   }
 
@@ -460,7 +654,7 @@ function createWebSearch(options = {}) {
     }
   }
 
-  return { search, read, providerIds: providers.map((provider) => provider.id) };
+  return { search, read, browse, searchSite, hasBrowser: Boolean(browser), providerIds: providers.map((provider) => provider.id) };
 }
 
 module.exports = { createWebSearch };

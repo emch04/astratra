@@ -22,5 +22,14 @@ module.exports = {
   ...require('./providers/brave'),
   ...require('./providers/tavily'),
   ...require('./providers/exa'),
-  ...require('./providers/gateway')
+  ...require('./providers/gateway'),
+  ...require('./browser/client'),
+  ...require('./browser/engine'),
+  ...require('./browser/service'),
+  ...require('./browser/deploy'),
+  ...require('./browser/robots'),
+  ...require('./browser/siteSearch'),
+  ...require('./browser/webBotAuth'),
+  ...require('./browser/isolation'),
+  ...require('./browser/egressProxy')
 };
