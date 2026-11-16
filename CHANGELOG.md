@@ -26,6 +26,7 @@ Toutes les briques publiques montent d'une version mineure : `@astratra/agent` 1
 - `@astratra/security`, `createMongoSanitizeMiddleware` sous Express 5 : Express 5 relit `req.query` depuis l'adresse à chaque accès, et le nettoyage fait en place était perdu ; avec l'analyseur de requêtes étendu, `?date[$gt]=…` atteignait la route. L'objet nettoyé devient la valeur de `req.query`. Sous Express 4, rien ne change.
 - `@astratra/security`, `createWafMiddleware` et `createAccountLimiter` : sous Express 5, `req.body` reste `undefined` pour une requête sans corps, et chaque GET déclenchait l'avertissement « monté avant express.json() ». Il ne part plus que si la requête annonce un corps (`content-length` non nul ou `transfer-encoding`).
 - `@astratra/resilience` : `undici` est demandé en `^7.30.2` (au lieu de `^7.30.0`) ; les versions jusqu'à 7.30.0 ont deux failles hautes (déni de service par le lecteur EventSource, contournement de l'intégrité des sous-ressources).
+- `@astratra/wallet` : le README conseille la surcharge `joi` 17.13.9 (et non plus 17.13.8, encore vulnérable) tant que `passkit-generator` 3.7.0 épingle `joi` 17.13.4.
 - `create-astratra-app` : le projet créé demande les versions de cette publication pour chaque brique (dont `@astratra/ai` ^1.16.0 et `@astratra/security` ^1.15.0) ; il demandait encore `@astratra/ai` et `@astratra/security` ^1.13.0, sans les fonctions des versions suivantes.
 
 ## 2026-11-06 — `@astratra/centrale-cli` 1.1.0 et AstratraCentrale (Swift) : les plantages Apple traduits en fonction, fichier et ligne

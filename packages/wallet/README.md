@@ -152,13 +152,15 @@ redémarrage.
 - **Badges** : dans un e-mail ou une page, utilise les badges officiels
   (« Ajouter à l'app Cartes Apple », « Ajouter au Google Wallet »), téléchargés
   depuis les kits de marque d'Apple et de Google.
-- **Fixe `joi` dans ton projet** : `passkit-generator` 3.6.1 (dernière version)
-  épingle `joi` 17.13.4, touché par trois failles (pollution de prototype,
-  expression régulière quadratique dans `isoDate()`, qui sert aux dates des
-  champs de carte). npm n'applique que les `overrides` du projet racine, pas
-  ceux d'un paquet installé : ajoute-les dans le `package.json` de ton
-  application.
+- **Fixe `joi` dans ton projet** : `passkit-generator` 3.7.0 (dernière version)
+  épingle exactement `joi` 17.13.4. Toutes les versions jusqu'à 17.13.8 ont
+  des failles connues (pollution de prototype, expression régulière lente) ;
+  17.13.9 les corrige. npm n'applique que les `overrides` du projet racine,
+  pas ceux d'un paquet installé : ajoute-les dans le `package.json` de ton
+  application. Avec cette surcharge, `npm audit` ne signale plus rien et
+  `@astratra/wallet` fonctionne normalement. Elle devient inutile dès que
+  `passkit-generator` met `joi` à jour de lui-même.
 
   ```json
-  { "overrides": { "passkit-generator": { "joi": "17.13.8" } } }
+  { "overrides": { "passkit-generator": { "joi": "17.13.9" } } }
   ```
