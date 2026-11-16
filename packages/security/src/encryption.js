@@ -3,6 +3,7 @@ const crypto = require('crypto');
 const ALGORITHM = 'aes-256-gcm';
 const KEY_LENGTH = 32;
 const IV_LENGTH = 12;
+const AUTH_TAG_LENGTH = 16;
 
 const normalizeKey = (key) => {
   if (Buffer.isBuffer(key)) {
@@ -63,8 +64,13 @@ const createFieldCipher = (options = {}) => {
       const iv = Buffer.from(ivPart, 'base64url');
       const authTag = Buffer.from(authTagPart, 'base64url');
       const ciphertext = Buffer.from(ciphertextPart, 'base64url');
+      // Étiquette de 16 octets exactement : GCM accepte sinon une étiquette
+      // raccourcie (4 octets), bien plus facile à forger.
+      if (iv.length !== IV_LENGTH || authTag.length !== AUTH_TAG_LENGTH) {
+        throw new Error('createFieldCipher.decrypt received a malformed payload.');
+      }
 
-      const decipher = crypto.createDecipheriv(ALGORITHM, key, iv);
+      const decipher = crypto.createDecipheriv(ALGORITHM, key, iv, { authTagLength: AUTH_TAG_LENGTH });
       decipher.setAuthTag(authTag);
       const plaintext = Buffer.concat([decipher.update(ciphertext), decipher.final()]);
       return plaintext.toString('utf8');

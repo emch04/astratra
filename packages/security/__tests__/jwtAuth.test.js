@@ -276,3 +276,11 @@ describe('jwtAuth: logout-all cannot be dodged by a token without issue time', (
     expect(next).toHaveBeenCalledTimes(1);
   });
 });
+
+describe('jwtAuth: configuration that is refused', () => {
+  test('the middleware is not built without a secret', () => {
+    expect(() => createAuthMiddleware({})).toThrow(/options\.secret/);
+    expect(() => createAuthMiddleware({ secret: '' })).toThrow(/options\.secret/);
+    expect(() => createAuthMiddleware()).toThrow(/options\.secret/);
+  });
+});

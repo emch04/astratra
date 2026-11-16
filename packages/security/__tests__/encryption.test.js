@@ -61,3 +61,40 @@ describe('field encryption', () => {
     expect(() => cipher.encrypt(undefined)).toThrow();
   });
 });
+
+describe('createFieldCipher.decrypt: what is refused', () => {
+  const { createFieldCipher: make, generateFieldEncryptionKey: newKey } = require('../src');
+
+  test('a payload that is not three dotted parts is refused', () => {
+    const cipher = make({ key: newKey() });
+    for (const payload of ['', null, undefined, 'abc', 'a.b', 'a.b.c.d']) {
+      expect(() => cipher.decrypt(payload)).toThrow(/malformed/);
+    }
+  });
+
+  test('a truncated authentication tag is refused, even when its bytes are the real ones', () => {
+    const cipher = make({ key: newKey() });
+    const [iv, tag, data] = cipher.encrypt('secret').split('.');
+    const full = Buffer.from(tag, 'base64url');
+    for (const length of [4, 8, 12, 15]) {
+      const short = full.subarray(0, length).toString('base64url');
+      expect(() => cipher.decrypt([iv, short, data].join('.'))).toThrow();
+    }
+  });
+
+  test('a changed nonce (IV) is refused', () => {
+    const cipher = make({ key: newKey() });
+    const [iv, tag, data] = cipher.encrypt('secret').split('.');
+    const other = Buffer.from(iv, 'base64url');
+    other[0] ^= 1;
+    expect(() => cipher.decrypt([other.toString('base64url'), tag, data].join('.'))).toThrow();
+    expect(() => cipher.decrypt(['', tag, data].join('.'))).toThrow();
+  });
+
+  test('a key string that decodes to neither 32 bytes of base64 nor of hex is refused, as is a key of another type', () => {
+    expect(() => make({ key: 'trop-court' })).toThrow(/32-byte key encoded as base64 or hex/);
+    expect(() => make({ key: 'ab'.repeat(31) })).toThrow(/32-byte/);
+    expect(() => make({})).toThrow(/Buffer or a base64\/hex string/);
+    expect(() => make({ key: 12345 })).toThrow(/Buffer or a base64\/hex string/);
+  });
+});
