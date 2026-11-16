@@ -1,6 +1,6 @@
 {
   "name": "@astratra/saas-kit",
-  "version": "2.0.1",
+  "version": "2.1.0",
   "description": "Reusable backend starter kit that assembles Astratra core, security, and AI packages.",
   "engines": {
     "node": ">=22"

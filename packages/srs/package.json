@@ -1,6 +1,6 @@
 {
   "name": "@astratra/srs",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Spaced repetition on top of FSRS: cards, grading (Again/Hard/Good/Easy), next due date, FSRS parameters, daily queue and statistics, with an injectable store.",
   "engines": {
     "node": ">=22"

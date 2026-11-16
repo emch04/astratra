@@ -1,6 +1,6 @@
 {
   "name": "@astratra/rag",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Injected retrieval, indexing, and source verification primitives.",
   "engines": { "node": ">=22" },
   "main": "src/index.js",

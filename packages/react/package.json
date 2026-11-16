@@ -1,6 +1,6 @@
 {
   "name": "@astratra/react",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Primitives React génériques pour sessions, permissions et appels API Astratra.",
   "engines": {
     "node": ">=22"

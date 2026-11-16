@@ -68,10 +68,10 @@ function assertCanCreate(targetDir, force) {
 
 function packageJson(projectName, template, bricks = []) {
   const dependencies = {
-    '@astratra/ai': '^1.15.0',
-    '@astratra/core': '^1.1.0',
-    '@astratra/saas-kit': '^2.0.1',
-    '@astratra/security': '^1.14.0'
+    '@astratra/ai': '^1.16.0',
+    '@astratra/core': '^1.2.0',
+    '@astratra/saas-kit': '^2.1.0',
+    '@astratra/security': '^1.15.0'
   };
   // Scaffolded (api/stores/mongo.js, api/db/mongo.js) but not wired into
   // api/server.js by default — the project starts on the in-memory store.
@@ -79,13 +79,13 @@ function packageJson(projectName, template, bricks = []) {
   // real driver dependency) before the project has ever chosen to use it.
   // `npm install @astratra/store-mongo mongoose` to switch to MongoDB.
   const optionalDependencies = {
-    '@astratra/store-mongo': '^1.1.0',
+    '@astratra/store-mongo': '^1.2.0',
     mongoose: '^8.17.0'
   };
   const devDependencies = {};
 
   if (template === 'fullstack') {
-    dependencies['@astratra/saas-kit-ui'] = '^1.4.0';
+    dependencies['@astratra/saas-kit-ui'] = '^1.5.0';
     dependencies.react = '^19.0.0';
     dependencies['react-dom'] = '^19.0.0';
     devDependencies['@vitejs/plugin-react'] = '^4.3.4';
