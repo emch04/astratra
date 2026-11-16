@@ -64,7 +64,7 @@ application Astratra, écrite comme des phrases.
 
 ## Prérequis
 
-- Node.js 20 ou plus récent (la CI tourne sur 20.x et 22.x).
+- Node.js 22 ou plus récent (la CI tourne sur 22.x et 24.x).
 - npm workspaces : la racine du dépôt est un espace de travail npm.
 - Docker, seulement pour `@astratra/testkit` (conteneurs MongoDB ou PostgreSQL
   jetables).

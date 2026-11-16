@@ -12,7 +12,7 @@ constructeurs avec de vrais codes LOINC et unités UCUM.
 npm install @astratra/fhir
 ```
 
-Node 20 ou plus récent.
+Node 22 ou plus récent.
 
 ## Exemple
 

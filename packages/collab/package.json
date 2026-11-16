@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "Real-time collaborative editing: Hocuspocus server wired to your auth (read/write per document), injectable persistence with Yjs snapshots, named versions and restore, size limits, a headless Tiptap editor factory, and Yjs to JSON/Markdown/HTML conversion for search and export.",
   "engines": {
-    "node": ">=20.19"
+    "node": ">=22"
   },
   "main": "src/index.js",
   "types": "src/index.d.ts",

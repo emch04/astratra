@@ -3,7 +3,7 @@
   "version": "1.4.0",
   "description": "Reusable React dashboard shell for Astratra SaaS applications, plus a thumbs up/down feedback bar for AI answers.",
   "engines": {
-    "node": ">=20"
+    "node": ">=22"
   },
   "type": "module",
   "main": "src/index.jsx",

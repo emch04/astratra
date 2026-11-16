@@ -3,7 +3,7 @@
 [English](README.md) | [Français](README.fr.md)
 
 Durable task execution built on `runToolLoop` from `@astratra/ai`. Models,
-application tools, completion checks and persistence are injected. Node >= 20,
+application tools, completion checks and persistence are injected. Node >= 22,
 CommonJS, MIT. No provider or database driver is included.
 
 ```sh

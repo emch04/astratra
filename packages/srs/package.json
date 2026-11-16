@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "Spaced repetition on top of FSRS: cards, grading (Again/Hard/Good/Easy), next due date, FSRS parameters, daily queue and statistics, with an injectable store.",
   "engines": {
-    "node": ">=20"
+    "node": ">=22"
   },
   "main": "src/index.js",
   "types": "src/index.d.ts",
