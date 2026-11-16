@@ -38,6 +38,6 @@
     "jest": "30.4.2"
   },
   "dependencies": {
-    "undici": "^7.30.0"
+    "undici": "^7.30.2"
   }
 }

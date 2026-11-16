@@ -426,8 +426,10 @@ app.use(createApiLimiter({
 Avant, `req.body` vaut `undefined` et toutes les tentatives retombent sur la clé
 partagée `"unknown"` — la limite par compte disparaît au profit d'une limite
 globale partagée par tous les comptes. Un avertissement (`console.warn`, une
-seule fois par processus) signale ce cas. Fournir son propre `keyGenerator`
-contourne complètement ce point.
+seule fois par processus) signale ce cas. Il ne part que si la requête annonce
+un corps (`content-length` non nul ou `transfer-encoding`) : avec Express 5,
+`req.body` reste `undefined` pour une requête sans corps, même bien montée.
+Fournir son propre `keyGenerator` contourne complètement ce point.
 ```
 
 ### Store Redis namespacé
@@ -469,7 +471,9 @@ const { createWafMiddleware } = require('@astratra/security');
 // vaut undefined et ce middleware n'a rien à inspecter dans le corps de la requête
 // — il continue de fonctionner (bloque toujours sur path/query), mais silencieusement
 // sans jamais voir un payload dangereux envoyé dans le body. Un avertissement
-// (`console.warn`, une seule fois par instance) signale ce cas s'il se produit.
+// (`console.warn`, une seule fois par instance) signale ce cas s'il se produit :
+// seulement pour une requête qui annonce un corps (content-length non nul ou
+// transfer-encoding), car Express 5 laisse req.body à undefined sans corps.
 app.use(express.json());
 app.use(createWafMiddleware({ message: { success: false, message: 'Requête bloquée.' } }));
 ```
@@ -496,9 +500,14 @@ l'appelant. Aucune requête légitime n'envoie une clé JSON littéralement
 préfixée par `$` ou contenant un point — sans risque de faux positif sur un
 usage normal.
 
-Mute les objets en place plutôt que de réassigner `req.query` (getter
-seul sur certaines configurations Express/routeur — une réassignation y
-échouerait silencieusement ou lèverait selon la version).
+Fonctionne avec Express 4 et Express 5. Express 5 définit `req.query` par
+un lecteur qui relit l'adresse à chaque accès : un nettoyage fait en place
+serait perdu au prochain accès. L'objet nettoyé devient donc la valeur de
+`req.query` pour la suite de la requête (sous Express 4, où `req.query` est
+une simple valeur, rien ne change). Avec l'analyseur de requêtes par défaut
+d'Express 5 (`simple`), `?date[$gt]=x` reste une clé plate et inoffensive
+(`"date[$gt]": "x"`) ; avec `app.set('query parser', 'extended')`, il devient un
+objet, que ce middleware vide comme sous Express 4.
 
 Monté par défaut, sans configuration, par `createSaasApp()` (voir
 `@astratra/saas-kit`) — pas besoin d'y penser route par route.
