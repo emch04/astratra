@@ -1015,7 +1015,10 @@ export function readEnvironmentKeys(env: Record<string, string | undefined>, nam
 export interface AiEnvironmentConfig extends ConfiguredRouterConfig {
   localModels: LocalModelsOptions;
   language: ServiceLanguageOptions;
+  /** No model, voice or order is chosen for you: empty lists and undefined until configured. */
   voice: SpeechServiceOptions & TranscriptionServiceOptions;
+  /** A key set without the model or voice its service needs; that service is skipped. */
+  warnings: string[];
 }
 export function readAiConfigFromEnv(options?: { env?: Record<string, string | undefined>; prefix?: string }): AiEnvironmentConfig;
 
@@ -1024,6 +1027,10 @@ export class AiServiceError extends Error {
   code: string;
   status: number | null;
   statusCode: number | null;
+  /** Exhausted voice chains and AI_*_ORDER_REQUIRED: the settings to give (environment names). */
+  missing?: string[];
+  /** AI_*_ORDER_REQUIRED: the usable services to put in order. */
+  services?: string[];
 }
 export type ServiceFetch = (url: string, init: RequestInit) => Promise<Pick<Response, 'ok' | 'status' | 'json' | 'arrayBuffer'>>;
 export function createTokenFileReader(options?: {
@@ -1093,11 +1100,26 @@ export function createServiceLanguageDetector(options?: ServiceLanguageOptions):
 
 export interface VoiceProviderOptions {
   keys?: string[] | string | (() => Awaitable<string[] | string | undefined | null>);
+  /** Required: no model is chosen by the package. A service with keys but no model is skipped with a warning. */
   models?: string[];
   timeoutMs?: number;
   cooldownMs?: number;
 }
+/** A service with keys but a missing setting: reported once, then skipped. */
+export interface VoiceWarning {
+  service: 'groq' | 'cloudflare' | 'gemini';
+  /** Environment names of the missing settings (IA_GROQ_WHISPER_MODELS…). */
+  missing: string[];
+  message: string;
+}
 export interface TranscriptionServiceOptions {
+  /**
+   * Order of the transcription services, chosen by you. Required when several
+   * services are usable; a single usable service needs none. Services left out
+   * are never called.
+   */
+  transcriptionOrder?: Array<'local' | 'groq' | 'cloudflare'>;
+  onWarning?: (message: string, warning: VoiceWarning) => void;
   local?: Pick<LocalModelsClient, 'transcrire'>;
   localModels?: LocalModelsOptions;
   localTimeoutMs?: number;
@@ -1125,15 +1147,23 @@ export interface TranscriptionResult {
   text: string;
   language: string | null;
   provider: 'local' | 'groq' | 'cloudflare';
-  model: string;
+  /** The model that answered; null for the local server, which does not say. */
+  model: string | null;
+  /** True when the service is not first in your order. */
   fallback: boolean;
   confidence?: number;
   noSpeech?: boolean;
 }
 export function createTranscriptionService(options?: TranscriptionServiceOptions): { transcribe(input: TranscriptionInput): Promise<TranscriptionResult> };
 export interface SpeechServiceOptions {
-  /** Synthesis order. Default: Gemini (online) first, Piper (local) as fallback. */
+  /**
+   * Order of the speech services, chosen by you. Required when several services
+   * are usable; a single usable service needs none.
+   */
+  speechOrder?: Array<'gemini' | 'piper'>;
+  /** Same as speechOrder (kept from 1.x). */
   order?: Array<'gemini' | 'piper'>;
+  onWarning?: (message: string, warning: VoiceWarning) => void;
   piper?: {
     baseUrl?: string;
     tokenFile?: string;
@@ -1141,6 +1171,7 @@ export interface SpeechServiceOptions {
     timeoutMs?: number;
     cooldownMs?: number;
   };
+  /** Gemini needs models and a voice, both yours; without them it is skipped with a warning. */
   gemini?: VoiceProviderOptions & { endpoint?: string; voice?: string };
   now?: () => number;
   fetch?: ServiceFetch;

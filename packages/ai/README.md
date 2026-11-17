@@ -997,17 +997,24 @@ object, never an `.env` file. `ARIA_` or another prefix works identically.
 | `IA_MODELS_URL`, `IA_MODELS_TOKEN_FILE` | Optional local model server and its Bearer file |
 | `IA_TTS_URL`, `IA_TTS_TOKEN_FILE` | Optional Piper server and Bearer file |
 | `IA_LANGUAGE_URL`, `IA_LANGUAGE_TIMEOUT_MS` | Optional fastText server; default timeout 800 |
-| `IA_GROQ_WHISPER_URL`, `IA_GROQ_WHISPER_MODELS` | Full endpoint, JSON model IDs; defaults Groq transcription endpoint and turbo/large-v3 |
-| `IA_CLOUDFLARE_ACCOUNT_ID`, `IA_CLOUDFLARE_WHISPER_URL` | Account for the default Whisper run URL, or explicit full URL |
-| `IA_GEMINI_TTS_ENDPOINT`, `IA_GEMINI_TTS_MODELS`, `IA_GEMINI_TTS_VOICE` | Models base URL, JSON model IDs, voice; defaults Gemini endpoint, gemini-2.5-flash-preview-tts, Aoede |
+| `IA_GROQ_WHISPER_URL`, `IA_GROQ_WHISPER_MODELS` | Full endpoint (default: Groq's official transcription address), JSON model IDs (**required**, no default) |
+| `IA_CLOUDFLARE_ACCOUNT_ID`, `IA_CLOUDFLARE_WHISPER_URL`, `IA_CLOUDFLARE_WHISPER_MODELS` | Account for the Workers AI run address (the model is appended), or an explicit full URL; JSON model IDs (**required**, no default) |
+| `IA_GEMINI_TTS_ENDPOINT`, `IA_GEMINI_TTS_MODELS`, `IA_GEMINI_TTS_VOICE` | Models base URL (default: Google's official address), JSON model IDs and voice name (both **required**, no default) |
+| `IA_TRANSCRIPTION_ORDER`, `IA_SPEECH_ORDER` | JSON order of services, e.g. `["local","groq"]`, `["piper","gemini"]`; required when several services are usable |
 
 Voice uses `IA_GROQ_KEY[_N]`, `IA_CLOUDFLARE_KEY[_N]` and
 `IA_GEMINI_KEY[_N]`. No provider catalogue is auto-created: `IA_PROVIDERS`
 is required to configure text routing. Voice/local sections are returned as
 `config.voice`, `config.localModels`, `config.language`. Inject the store in
 code after reading the configuration. Invalid JSON is reported by variable
-name only, never by its value. Endpoint/model defaults are configurable
-protocol examples, not a claim that a model or free tier remains available.
+name only, never by its value.
+
+**Nothing is chosen for you.** No model, no voice and no order of services is
+written in the package: each comes from your configuration. Only the official
+address of a service you enabled has a default, because an address is not a
+choice. A key set without the model (or, for Gemini, the voice) its service
+needs is listed in `config.warnings` at startup; at run time that service is
+reported once through `onWarning` and skipped, and the others keep working.
 
 ```js
 const { readAiConfigFromEnv, createConfiguredRouter } = require('@astratra/ai');
@@ -1055,7 +1062,9 @@ and native voice primitives remain in `@astratra/rag` and `@astratra/voice`.
 const { readAiConfigFromEnv, createTranscriptionService,
   createSpeechService, createServiceLanguageDetector } = require('@astratra/ai');
 const config = readAiConfigFromEnv({ prefix: 'IA_' });
-const transcription = createTranscriptionService({ ...config.voice, localModels: config.localModels });
+for (const warning of config.warnings) console.warn(warning);
+const transcription = createTranscriptionService({ ...config.voice, localModels: config.localModels,
+  onWarning: (message) => console.warn(message) });
 const heard = await transcription.transcribe({
   audio: pcm16Bytes, format: 'pcm16', language: 'fr', vocabulary: '', signal,
   allowRemote: false // optional: confidential calls remain on this machine
@@ -1068,8 +1077,12 @@ const language = createServiceLanguageDetector(config.language);
 await language.reply('hello', 'fr'); // fastText first, then small-word heuristic
 ```
 
-Transcription tries local Whisper, then Groq (multipart with a WAV file for PCM),
-then Cloudflare (raw file base64 in `{ audio }`, including `success:false` checks).
+Transcription follows your `transcriptionOrder` (`IA_TRANSCRIPTION_ORDER`) among
+the usable services: the local server, Groq (multipart with a WAV file for PCM)
+and Cloudflare (raw file base64 in `{ audio }`, including `success:false` checks).
+A single usable service needs no order; with several and no order, the call fails
+with `AI_TRANSCRIPTION_ORDER_REQUIRED` (`error.services` lists them). Services
+left out of the order are never called. Groq and Cloudflare need `models`.
 `format: 'pcm16'` is little-endian 16kHz mono; `'wav'` can use the local server
 when it contains that same PCM format. `'file'` forwards compressed audio to
 remote services; this client does not transcode it. Base64 or byte input works.
@@ -1079,9 +1092,12 @@ stock subtitle hallucinations or repeated words are rejected; `stockPhrases`,
 `null` if the service did not identify it. Limits, timeouts, key rotation and
 rests are enforced, and an aborted request never proceeds to the next provider.
 
-Speech tries Gemini TTS first (online, rotating keys/models), then Piper `/tts`
-(`{ text, lang }` → validated WAV) as the local fallback. `order: ['piper', 'gemini']`
-reverses it; `allowRemote: false` keeps everything local. Gemini PCM is wrapped in a WAV header with the supplied
+Speech follows your `speechOrder` (`IA_SPEECH_ORDER`, or `order`) between Gemini
+TTS (online, rotating keys/models, needs `models` and `voice`) and Piper `/tts`
+(`{ text, lang }` → validated WAV). The same rules apply: one usable service needs
+no order, several need one (`AI_SPEECH_ORDER_REQUIRED`). `allowRemote: false`
+keeps everything local. `fallback` is true when the service that answered is not
+first in your order. Gemini PCM is wrapped in a WAV header with the supplied
 sample rate (24kHz by default), never mislabeled as an existing WAV file.
 `speakableText` removes markup/emoji and limits text to 6000 characters;
 `prepareText` can provide your app's pronunciation rules. A missing Piper
@@ -1091,7 +1107,8 @@ synthesis uses one provider. Native segmentation, prosody, AAC finishing and
 voice caching are separate existing `@astratra/voice` primitives.
 
 `AI_TRANSCRIPTION_UNAVAILABLE` and `AI_SPEECH_UNAVAILABLE` identify exhausted
-chains; input errors use `AI_AUDIO_INPUT`/`AI_SPEECH_INPUT`. Unconfigured optional
+chains (`error.missing` names the settings of services skipped for lack of a
+model or voice); input errors use `AI_AUDIO_INPUT`/`AI_SPEECH_INPUT`. Unconfigured optional
 services never initiate an implicit local request. Language supports fr/en/es
 by default; custom word lists can extend it. Statistical confidence defaults to
 0.5, or 0.9 for fewer than three words; unsupported/uncertain results keep the

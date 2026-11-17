@@ -5,9 +5,9 @@ let handle;
 const pcm = () => Buffer.alloc(6400, 1);
 beforeEach(async () => { handle = ({ res }) => json(res, {}); fixture = await httpFixture((args) => handle(args)); });
 afterEach(async () => { await fixture?.close(); });
-const transcriber = (extra = {}) => createTranscriptionService({ local: createLocalModelsClient({ baseUrl: fixture.url }), groq: { url: fixture.url + '/groq', keys: ['fake-groq'], models: ['whisper'] }, cloudflare: { url: fixture.url + '/cloudflare', keys: ['fake-cf'] }, ...extra });
-/* Ces scénarios testent le repli Piper puis Gemini : l'ordre est donc donné explicitement. */
-const speaker = (extra = {}) => createSpeechService({ order: ['piper', 'gemini'], piper: { baseUrl: fixture.url }, gemini: { endpoint: fixture.url, keys: ['fake-gemini'], models: ['tts'] }, ...extra });
+/* Nothing is chosen by the package: models, voice and order are given here. */
+const transcriber = (extra = {}) => createTranscriptionService({ transcriptionOrder: ['local', 'groq', 'cloudflare'], local: createLocalModelsClient({ baseUrl: fixture.url }), groq: { url: fixture.url + '/groq', keys: ['fake-groq'], models: ['whisper'] }, cloudflare: { url: fixture.url + '/cloudflare', keys: ['fake-cf'], models: ['cf-whisper'] }, ...extra });
+const speaker = (extra = {}) => createSpeechService({ order: ['piper', 'gemini'], piper: { baseUrl: fixture.url }, gemini: { endpoint: fixture.url, keys: ['fake-gemini'], models: ['tts'], voice: 'test-voice' }, ...extra });
 const whisper = (res, extra = {}) => json(res, { texte: 'Bonjour Ada', langue: 'fr', logprob: -0.1, sans_parole: 0.01, duree_ms: 200, ...extra });
 
 test('Whisper local is first, with exact PCM and vocabulary; no remote call', async () => {
@@ -85,10 +85,10 @@ test('Piper first, speech text cleaned, binary WAV preserved', async () => {
 
 function geminiAudio(res) { json(res, { candidates: [{ content: { parts: [{ inlineData: { mimeType: 'audio/L16;codec=pcm;rate=24000', data: pcm().toString('base64') } }] } }] }); }
 
-test('by default Gemini speaks first, Piper only when Gemini fails', async () => {
+test('the caller’s speech order is followed: Gemini first, Piper only when Gemini fails', async () => {
   const wav = pcmToWav(pcm(), { sampleRate: 22050 });
   handle = ({ req, res }) => req.url === '/tts' ? (res.writeHead(200, { 'content-type': 'audio/wav' }), res.end(wav)) : geminiAudio(res);
-  const both = createSpeechService({ piper: { baseUrl: fixture.url }, gemini: { endpoint: fixture.url, keys: ['fake-gemini'], models: ['tts'] } });
+  const both = createSpeechService({ speechOrder: ['gemini', 'piper'], piper: { baseUrl: fixture.url }, gemini: { endpoint: fixture.url, keys: ['fake-gemini'], models: ['tts'], voice: 'test-voice' } });
   expect(await both.synthesize({ text: 'bonjour' })).toMatchObject({ provider: 'gemini', fallback: false });
   expect(fixture.requests.map((r) => r.path)).toEqual(['/tts:generateContent']);
   handle = ({ req, res }) => req.url === '/tts' ? (res.writeHead(200, { 'content-type': 'audio/wav' }), res.end(wav)) : json(res, {}, 503);
@@ -96,12 +96,12 @@ test('by default Gemini speaks first, Piper only when Gemini fails', async () =>
   expect(await both.synthesize({ text: 'bonjour', allowRemote: false })).toMatchObject({ provider: 'piper', fallback: true });
 });
 
-test('Piper failure falls back to Gemini TTS with Aoede and converts PCM to valid WAV', async () => {
+test('Piper failure falls back to Gemini TTS with the configured voice and converts PCM to valid WAV', async () => {
   handle = ({ req, res }) => req.url === '/tts' ? json(res, {}, 503) : geminiAudio(res);
   const result = await speaker().synthesize({ text: 'hello' });
   expect(result).toMatchObject({ provider: 'gemini', model: 'tts', fallback: true, sampleRate: 24000 });
   expect(readPcmWav(result.audio).pcm).toEqual(pcm());
-  expect(fixture.requests[1].body.generationConfig).toEqual({ responseModalities: ['AUDIO'], speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Aoede' } } } });
+  expect(fixture.requests[1].body.generationConfig).toEqual({ responseModalities: ['AUDIO'], speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: 'test-voice' } } } });
 });
 
 test('malformed Piper WAV falls back, rotating Gemini keys retry and local rests are observed', async () => {
@@ -110,7 +110,7 @@ test('malformed Piper WAV falls back, rotating Gemini keys retry and local rests
     else if (req.headers['x-goog-api-key'] === 'fake-first') json(res, {}, 429);
     else geminiAudio(res);
   };
-  const service = speaker({ gemini: { endpoint: fixture.url, models: ['tts'], keys: ['fake-first', 'fake-second'] } });
+  const service = speaker({ gemini: { endpoint: fixture.url, models: ['tts'], voice: 'test-voice', keys: ['fake-first', 'fake-second'] } });
   await service.synthesize({ text: 'hello' }); await service.synthesize({ text: 'again' });
   expect(fixture.requests.map((r) => r.path)).toEqual(['/tts', '/tts:generateContent', '/tts:generateContent', '/tts:generateContent']);
   expect(fixture.requests[3].headers['x-goog-api-key']).toBe('fake-second');
@@ -166,4 +166,51 @@ test('speech deadlines fall back and abort prevents further providers', async ()
   const controller = new globalThis.AbortController(); controller.abort(new Error('left'));
   await expect(service.synthesize({ text: 'hello', signal: controller.signal })).rejects.toThrow('left');
   expect(fixture.requests).toHaveLength(2);
+});
+
+describe('nothing is chosen for the person', () => {
+  test('a key without a model or voice: one clear warning, that service skipped, the others work', async () => {
+    const warnings = [];
+    handle = ({ res }) => { res.writeHead(200, { 'content-type': 'audio/wav' }); res.end(pcmToWav(pcm())); };
+    const service = createSpeechService({ speechOrder: ['gemini', 'piper'], piper: { baseUrl: fixture.url }, gemini: { endpoint: fixture.url, keys: ['fake-gemini'] }, onWarning: (message, detail) => warnings.push({ message, detail }) });
+    expect(await service.synthesize({ text: 'bonjour' })).toMatchObject({ provider: 'piper', fallback: true });
+    await service.synthesize({ text: 'encore' });
+    expect(warnings).toHaveLength(1);
+    expect(warnings[0].message).toMatch(/Gemini speech has a key but no models .*IA_GEMINI_TTS_MODELS.* and no voice .*IA_GEMINI_TTS_VOICE.*skipped/);
+    expect(warnings[0].detail).toMatchObject({ service: 'gemini', missing: ['IA_GEMINI_TTS_MODELS', 'IA_GEMINI_TTS_VOICE'] });
+    expect(fixture.requests.map((r) => r.path)).toEqual(['/tts', '/tts']);
+  });
+
+  test('when nothing else works, the error names the missing settings', async () => {
+    const service = createTranscriptionService({ groq: { url: fixture.url + '/groq', keys: ['fake-groq'] } });
+    await expect(service.transcribe({ audio: pcm() })).rejects.toMatchObject({ code: 'AI_TRANSCRIPTION_UNAVAILABLE', missing: ['IA_GROQ_WHISPER_MODELS'] });
+    expect(fixture.requests).toHaveLength(0);
+    const speech = createSpeechService({ gemini: { keys: ['fake-gemini'], models: ['tts'] } });
+    await expect(speech.synthesize({ text: 'bonjour' })).rejects.toMatchObject({ code: 'AI_SPEECH_UNAVAILABLE', missing: ['IA_GEMINI_TTS_VOICE'] });
+  });
+
+  test('several usable services and no order: the order is asked for, nothing is guessed', async () => {
+    const speech = createSpeechService({ piper: { baseUrl: fixture.url }, gemini: { endpoint: fixture.url, keys: ['fake-gemini'], models: ['tts'], voice: 'v' } });
+    await expect(speech.synthesize({ text: 'bonjour' })).rejects.toMatchObject({ code: 'AI_SPEECH_ORDER_REQUIRED', missing: ['speechOrder (IA_SPEECH_ORDER)'], services: ['gemini', 'piper'] });
+    const heard = createTranscriptionService({ local: createLocalModelsClient({ baseUrl: fixture.url }), groq: { url: fixture.url + '/groq', keys: ['k'], models: ['m'] } });
+    await expect(heard.transcribe({ audio: pcm() })).rejects.toMatchObject({ code: 'AI_TRANSCRIPTION_ORDER_REQUIRED' });
+    expect(fixture.requests).toHaveLength(0);
+  });
+
+  test('a single usable service needs no order; allowRemote:false leaves only the local ones', async () => {
+    handle = ({ res }) => whisper(res);
+    const heard = createTranscriptionService({ local: createLocalModelsClient({ baseUrl: fixture.url }), groq: { url: fixture.url + '/groq', keys: ['k'], models: ['m'] } });
+    expect(await heard.transcribe({ audio: pcm(), allowRemote: false })).toMatchObject({ provider: 'local', model: null, fallback: false });
+    const only = createTranscriptionService({ local: createLocalModelsClient({ baseUrl: fixture.url }) });
+    expect((await only.transcribe({ audio: pcm() })).provider).toBe('local');
+  });
+
+  test('a service left out of the order is never called; an unknown service in the order is refused', async () => {
+    handle = ({ res }) => json(res, { text: 'remote' });
+    const heard = transcriber({ transcriptionOrder: ['groq'] });
+    expect((await heard.transcribe({ audio: pcm() })).provider).toBe('groq');
+    expect(fixture.requests.map((r) => r.path)).toEqual(['/groq']);
+    expect(() => createSpeechService({ speechOrder: ['gemini', 'eleven'] })).toThrow('INVALID_AI_VOICE_SPEECH_ORDER');
+    expect(() => createTranscriptionService({ transcriptionOrder: 'groq' })).toThrow('INVALID_AI_VOICE_TRANSCRIPTION_ORDER');
+  });
 });

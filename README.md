@@ -128,14 +128,14 @@ package is in [CHANGELOG.md](CHANGELOG.md).
 
 | Package | Version | What it does |
 |---|---|---|
-| [`@astratra/ai`](packages/ai/README.md) | 1.16.0 | Multi-provider AI routing with quotas and fallback, tool registry, agent loop, risk levels with confirmation, local llama.cpp provider |
-| [`@astratra/agent`](packages/agent/README.md) | 1.4.0 | Durable tasks, budgets, plans, completion checks, context summaries, consumption tracking, user feedback (👍/👎), a timed task scheduler and an approval queue for proposed actions |
+| [`@astratra/ai`](packages/ai/README.md) | 2.0.0 | Multi-provider AI routing with quotas and fallback, tool registry, agent loop, risk levels with confirmation, local llama.cpp provider |
+| [`@astratra/agent`](packages/agent/README.md) | 1.4.1 | Durable tasks, budgets, plans, completion checks, context summaries, consumption tracking, user feedback (👍/👎), a timed task scheduler and an approval queue for proposed actions |
 | [`@astratra/models`](packages/models/README.md) | 1.3.0 | Local CPU model service (embeddings, reranking, NLI, entities, speech-to-text) and its Node client; price catalogue and cost calculation |
-| [`@astratra/conscience`](packages/conscience/README.md) | 1.5.0 | Documented memory of an agent's decisions (outcomes, corrections, lessons with evidence, self-model, lineage, erasure) under a deterministic governor without any language model |
-| [`@astratra/memory`](packages/memory/README.md) | 2.1.0 | Per-person memories for an assistant: hybrid recall, duplicate merging, undoable corrections, PostgreSQL store |
+| [`@astratra/conscience`](packages/conscience/README.md) | 1.5.1 | Documented memory of an agent's decisions (outcomes, corrections, lessons with evidence, self-model, lineage, erasure) under a deterministic governor without any language model |
+| [`@astratra/memory`](packages/memory/README.md) | 2.1.1 | Per-person memories for an assistant: hybrid recall, duplicate merging, undoable corrections, PostgreSQL store |
 | [`@astratra/rag`](packages/rag/README.md) | 1.1.0 | Document retrieval: chunking, injected embeddings, hybrid search, source verification, document reading through an optional service |
 | [`@astratra/voice`](packages/voice/README.md) | 1.2.0 | Server-side text-to-speech (Piper, ffmpeg), versioned caches, provider chain with key rotation, local transcription |
-| [`@astratra/live`](packages/live/README.md) | 1.1.0 | Real-time voice call sessions and client protocol helpers |
+| [`@astratra/live`](packages/live/README.md) | 1.1.1 | Real-time voice call sessions and client protocol helpers |
 | [`@astratra/app-guide`](packages/app-guide/README.md) | 1.1.0 | Role-aware in-app guide generated from the screen configuration, with coverage checks |
 | [`@astratra/repomap`](packages/repomap/README.md) | 1.1.0 | Weighted symbol map of a repository, for exploring code within a token budget |
 | [`@astratra/web-search`](packages/web-search/README.md) | 1.1.0 | Web search for agents: several engines with fallback, rank fusion without content mixing (one entry = one page = one site), verbatim passages, SSRF-safe page reading, an isolated integrated browser (JavaScript pages, links, site search), tool definitions and an MCP server |
@@ -171,7 +171,7 @@ package is in [CHANGELOG.md](CHANGELOG.md).
 | [`@astratra/native`](packages/native/README.md) | 1.1.0 | Mobile plumbing: keychain session, biometric gate, push registration, payment return |
 | [`@astratra/native-ui`](packages/native-ui/README.md) | 1.3.0 | UI kit for React Native and Expo, with pure logic testable in Node, 👍/👎 feedback bar |
 | [`@astratra/app-version`](packages/app-version/README.md) | 1.1.0 | Announcements of new mobile builds: public version route, one announcement per version |
-| [`create-astratra-app`](packages/create-astratra-app/README.md) | 1.12.0 | Project generator: full stack, API only, or Expo app, with optional building blocks |
+| [`create-astratra-app`](packages/create-astratra-app/README.md) | 1.12.1 | Project generator: full stack, API only, or Expo app, with optional building blocks |
 
 ### Monitoring and tooling
 

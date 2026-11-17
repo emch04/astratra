@@ -288,3 +288,37 @@ test('local inference concurrency is bounded and queued cancellation consumes no
   expect(fixture.requests).toHaveLength(1);
   finish(); await first; expect((await router.getStats())['cloud:m@key-1'].rpdUsed).toBe(1);
 });
+
+test('voice configuration chooses no model, voice or order; a key without them is reported', () => {
+  const bare = readAiConfigFromEnv({ env: {} });
+  expect(bare.voice.groq.models).toEqual([]);
+  expect(bare.voice.cloudflare.models).toEqual([]);
+  expect(bare.voice.cloudflare.url).toBeUndefined();
+  expect(bare.voice.gemini.models).toEqual([]);
+  expect(bare.voice.gemini.voice).toBeUndefined();
+  expect(bare.voice.transcriptionOrder).toBeUndefined();
+  expect(bare.voice.speechOrder).toBeUndefined();
+  expect(bare.warnings).toEqual([]);
+  const keysOnly = readAiConfigFromEnv({ env: { IA_GROQ_KEY: 'g', IA_GEMINI_KEY: 'k', IA_CLOUDFLARE_KEY: 'c', IA_CLOUDFLARE_ACCOUNT_ID: 'acc' } });
+  expect(keysOnly.warnings).toEqual([
+    'IA_GROQ_KEY is set but IA_GROQ_WHISPER_MODELS is empty: Groq transcription is skipped.',
+    'IA_CLOUDFLARE_KEY is set but IA_CLOUDFLARE_WHISPER_MODELS is empty: Cloudflare transcription is skipped.',
+    'IA_GEMINI_KEY is set but IA_GEMINI_TTS_MODELS is empty: Gemini speech is skipped.',
+    'IA_GEMINI_KEY is set but IA_GEMINI_TTS_VOICE is empty: Gemini speech is skipped.'
+  ]);
+  const chosen = readAiConfigFromEnv({ env: {
+    IA_GROQ_KEY: 'g', IA_GROQ_WHISPER_MODELS: '["my-whisper"]',
+    IA_CLOUDFLARE_KEY: 'c', IA_CLOUDFLARE_ACCOUNT_ID: 'a/b', IA_CLOUDFLARE_WHISPER_MODELS: '["@cf/vendor/model"]',
+    IA_GEMINI_KEY: 'k', IA_GEMINI_TTS_MODELS: '["my-tts"]', IA_GEMINI_TTS_VOICE: 'MyVoice',
+    IA_TRANSCRIPTION_ORDER: '["groq","local"]', IA_SPEECH_ORDER: '["piper"]'
+  } });
+  expect(chosen.warnings).toEqual([]);
+  expect(chosen.voice.groq.models).toEqual(['my-whisper']);
+  expect(chosen.voice.cloudflare.url('@cf/vendor/model')).toBe('https://api.cloudflare.com/client/v4/accounts/a%2Fb/ai/run/@cf/vendor/model');
+  expect(chosen.voice.gemini).toMatchObject({ models: ['my-tts'], voice: 'MyVoice' });
+  expect(chosen.voice.transcriptionOrder).toEqual(['groq', 'local']);
+  expect(chosen.voice.speechOrder).toEqual(['piper']);
+  expect(() => readAiConfigFromEnv({ env: { IA_SPEECH_ORDER: '["gemini","eleven"]' } })).toThrow('INVALID_AI_CONFIG_SPEECH_ORDER');
+  expect(() => readAiConfigFromEnv({ env: { IA_TRANSCRIPTION_ORDER: '[]' } })).toThrow('INVALID_AI_CONFIG_TRANSCRIPTION_ORDER');
+  expect(() => readAiConfigFromEnv({ env: { IA_GROQ_WHISPER_MODELS: '"one"' } })).toThrow('INVALID_AI_CONFIG_GROQ_WHISPER_MODELS');
+});

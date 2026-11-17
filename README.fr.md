@@ -134,14 +134,14 @@ est dans [CHANGELOG.md](CHANGELOG.md).
 
 | Paquet | Version | Rôle |
 |---|---|---|
-| [`@astratra/ai`](packages/ai/README.md) | 1.16.0 | Routage multi-fournisseur avec quotas et repli, registre d'outils, boucle d'agent, niveaux de risque avec confirmation, fournisseur llama.cpp local |
-| [`@astratra/agent`](packages/agent/README.md) | 1.4.0 | Tâches durables, budgets, plans, vérifications de fin, résumés de contexte, suivi de la consommation, retours utilisateur (👍/👎), ordonnanceur de tâches à heure fixe et file d'actions en attente d'approbation |
+| [`@astratra/ai`](packages/ai/README.md) | 2.0.0 | Routage multi-fournisseur avec quotas et repli, registre d'outils, boucle d'agent, niveaux de risque avec confirmation, fournisseur llama.cpp local |
+| [`@astratra/agent`](packages/agent/README.md) | 1.4.1 | Tâches durables, budgets, plans, vérifications de fin, résumés de contexte, suivi de la consommation, retours utilisateur (👍/👎), ordonnanceur de tâches à heure fixe et file d'actions en attente d'approbation |
 | [`@astratra/models`](packages/models/README.md) | 1.3.0 | Service local de modèles sur CPU (vecteurs, reclassement, NLI, entités, transcription) et son client Node ; catalogue des prix et calcul du coût |
-| [`@astratra/conscience`](packages/conscience/README.md) | 1.5.0 | Mémoire documentée des décisions d'un agent (résultats, corrections, leçons avec preuves, modèle de soi, traçabilité, effacement) sous un gouverneur déterministe sans aucun modèle de langage |
-| [`@astratra/memory`](packages/memory/README.md) | 2.1.0 | Souvenirs par personne pour un assistant : rappel hybride, fusion des doublons, corrections annulables, magasin PostgreSQL |
+| [`@astratra/conscience`](packages/conscience/README.md) | 1.5.1 | Mémoire documentée des décisions d'un agent (résultats, corrections, leçons avec preuves, modèle de soi, traçabilité, effacement) sous un gouverneur déterministe sans aucun modèle de langage |
+| [`@astratra/memory`](packages/memory/README.md) | 2.1.1 | Souvenirs par personne pour un assistant : rappel hybride, fusion des doublons, corrections annulables, magasin PostgreSQL |
 | [`@astratra/rag`](packages/rag/README.md) | 1.1.0 | Recherche dans des documents : découpage, vecteurs injectés, recherche mixte, vérification des sources, lecture de documents par un service optionnel |
 | [`@astratra/voice`](packages/voice/README.md) | 1.2.0 | Synthèse vocale côté serveur (Piper, ffmpeg), caches versionnés, chaîne de fournisseurs avec rotation des clés, transcription locale |
-| [`@astratra/live`](packages/live/README.md) | 1.1.0 | Sessions d'appel vocal en temps réel et aides au protocole côté client |
+| [`@astratra/live`](packages/live/README.md) | 1.1.1 | Sessions d'appel vocal en temps réel et aides au protocole côté client |
 | [`@astratra/app-guide`](packages/app-guide/README.md) | 1.1.0 | Guide d'usage filtré par rôle, généré depuis la configuration des écrans, avec contrôle de couverture |
 | [`@astratra/repomap`](packages/repomap/README.md) | 1.1.0 | Carte pondérée des symboles d'un dépôt, pour explorer du code dans un budget de jetons |
 | [`@astratra/web-search`](packages/web-search/README.md) | 1.1.0 | Recherche web pour les agents : plusieurs moteurs avec repli, fusion des classements sans mélange des contenus (une entrée = une page = un site), passages mot pour mot, lecture des pages protégée contre le SSRF, navigateur intégré isolé (pages en JavaScript, liens, recherche interne d'un site), définitions d'outils et serveur MCP |
@@ -177,7 +177,7 @@ est dans [CHANGELOG.md](CHANGELOG.md).
 | [`@astratra/native`](packages/native/README.md) | 1.1.0 | Plomberie mobile : session dans le trousseau, verrou biométrique, enregistrement des notifications, retour de paiement |
 | [`@astratra/native-ui`](packages/native-ui/README.md) | 1.3.0 | Kit d'interface React Native et Expo, dont la logique pure se teste dans Node, barre de retours 👍/👎 |
 | [`@astratra/app-version`](packages/app-version/README.md) | 1.1.0 | Annonces de nouvelles versions d'applications mobiles : route publique des versions, une annonce par version |
-| [`create-astratra-app`](packages/create-astratra-app/README.md) | 1.12.0 | Générateur de projets : pile complète, API seule ou application Expo, briques optionnelles |
+| [`create-astratra-app`](packages/create-astratra-app/README.md) | 1.12.1 | Générateur de projets : pile complète, API seule ou application Expo, briques optionnelles |
 
 ### Supervision et outillage
 

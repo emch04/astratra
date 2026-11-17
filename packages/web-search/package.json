@@ -47,7 +47,7 @@
     "access": "public"
   },
   "dependencies": {
-    "@astratra/ai": "^1.15.0"
+    "@astratra/ai": "^1.15.0 || ^2.0.0"
   },
   "peerDependencies": {
     "@modelcontextprotocol/sdk": ">=1.20.0",

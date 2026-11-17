@@ -298,6 +298,13 @@ async function exerciseConfiguredServices(): Promise<void> {
   await modelServices.entites('Ada', ['person']);
   const transcription: TranscriptionResult = await createTranscriptionService({ ...environmentConfig.voice, local: modelServices }).transcribe({ audio: Buffer.alloc(6400), format: 'pcm16', allowRemote: false });
   const speech: SpeechResult = await createSpeechService(environmentConfig.voice).synthesize({ text: 'hello', language: 'en' });
+  const warnings: string[] = environmentConfig.warnings;
+  const chosen = createSpeechService({
+    speechOrder: ['piper', 'gemini'], piper: { baseUrl: 'http://127.0.0.1:5005' },
+    gemini: { keys: ['k'], models: ['your-tts-model'], voice: 'your-voice' },
+    onWarning: (message, warning) => console.warn(message, warning.service, warning.missing)
+  });
+  const heardInOrder = createTranscriptionService({ transcriptionOrder: ['local', 'groq'], groq: { keys: ['k'], models: ['your-whisper-model'] } });
   const pcm = readPcmWav(pcmToWav(Buffer.alloc(6400))).pcm;
   const detector = createServiceLanguageDetector({ ...environmentConfig.language, words: { fr: ['merci'], en: ['thanks'] } });
   const language = await detector.reply('thanks', 'fr');

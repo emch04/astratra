@@ -19,6 +19,17 @@ function readAiConfigFromEnv({ env = process.env, prefix = 'IA_' } = {}) {
     if (!['true', 'false', '1', '0'].includes(read(name))) throw new TypeError(`INVALID_AI_CONFIG_${name}`);
     return ['true', '1'].includes(read(name));
   };
+  const list = (name) => {
+    const value = json(name, []);
+    if (!Array.isArray(value) || value.some((entry) => typeof entry !== 'string' || !entry.trim())) throw new TypeError(`INVALID_AI_CONFIG_${name}`);
+    return value;
+  };
+  const order = (name, known) => {
+    const value = json(name, undefined);
+    if (value === undefined) return undefined;
+    if (!Array.isArray(value) || !value.length || value.some((entry) => !known.includes(entry))) throw new TypeError(`INVALID_AI_CONFIG_${name}`);
+    return value;
+  };
   const providers = json('PROVIDERS', []);
   if (!Array.isArray(providers)) throw new TypeError('INVALID_AI_CONFIG_PROVIDERS');
   const usages = {};
@@ -52,15 +63,37 @@ function readAiConfigFromEnv({ env = process.env, prefix = 'IA_' } = {}) {
     reserveVision: boolean('RESERVE_VISION', false),
     localModels: { baseUrl: read('MODELS_URL'), tokenFile: read('MODELS_TOKEN_FILE') },
     language: { baseUrl: read('LANGUAGE_URL'), timeoutMs: number('LANGUAGE_TIMEOUT_MS', 800) },
+    // No model, voice or service order is chosen for the person: each comes
+    // from the configuration. Official service addresses are only addresses.
     voice: {
       piper: { baseUrl: read('TTS_URL'), tokenFile: read('TTS_TOKEN_FILE') },
-      groq: { url: read('GROQ_WHISPER_URL') || 'https://api.groq.com/openai/v1/audio/transcriptions', keys: () => readEnvironmentKeys(env, prefix + 'GROQ_KEY'), models: json('GROQ_WHISPER_MODELS', ['whisper-large-v3-turbo', 'whisper-large-v3']) },
-      cloudflare: { url: read('CLOUDFLARE_WHISPER_URL') || (read('CLOUDFLARE_ACCOUNT_ID') ? `https://api.cloudflare.com/client/v4/accounts/${read('CLOUDFLARE_ACCOUNT_ID')}/ai/run/@cf/openai/whisper-large-v3-turbo` : undefined), keys: () => readEnvironmentKeys(env, prefix + 'CLOUDFLARE_KEY') },
-      gemini: { endpoint: read('GEMINI_TTS_ENDPOINT'), keys: () => readEnvironmentKeys(env, prefix + 'GEMINI_KEY'), models: json('GEMINI_TTS_MODELS', ['gemini-2.5-flash-preview-tts']), voice: read('GEMINI_TTS_VOICE') || 'Aoede' }
+      groq: { url: read('GROQ_WHISPER_URL') || 'https://api.groq.com/openai/v1/audio/transcriptions', keys: () => readEnvironmentKeys(env, prefix + 'GROQ_KEY'), models: list('GROQ_WHISPER_MODELS') },
+      cloudflare: { url: read('CLOUDFLARE_WHISPER_URL') || cloudflareRunUrl(read('CLOUDFLARE_ACCOUNT_ID')), keys: () => readEnvironmentKeys(env, prefix + 'CLOUDFLARE_KEY'), models: list('CLOUDFLARE_WHISPER_MODELS') },
+      gemini: { endpoint: read('GEMINI_TTS_ENDPOINT'), keys: () => readEnvironmentKeys(env, prefix + 'GEMINI_KEY'), models: list('GEMINI_TTS_MODELS'), voice: read('GEMINI_TTS_VOICE') || undefined },
+      transcriptionOrder: order('TRANSCRIPTION_ORDER', ['local', 'groq', 'cloudflare']),
+      speechOrder: order('SPEECH_ORDER', ['gemini', 'piper'])
     }
   };
+  config.warnings = voiceWarnings(config.voice, env, prefix);
   if (!['skip', 'try'].includes(config.whenAllCooling)) throw new TypeError('INVALID_AI_CONFIG_WHEN_ALL_COOLING');
   return config;
+}
+
+// The Workers AI run address of the account; the model is the person's.
+function cloudflareRunUrl(accountId) {
+  if (!accountId) return undefined;
+  return (model) => `https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(accountId)}/ai/run/${model}`;
+}
+
+// A key without the settings it needs: said at startup, the service is skipped.
+function voiceWarnings(voice, env, prefix) {
+  const warnings = [];
+  const hasKey = (name) => readEnvironmentKeys(env, prefix + name).length > 0;
+  if (hasKey('GROQ_KEY') && !voice.groq.models.length) warnings.push(`${prefix}GROQ_KEY is set but ${prefix}GROQ_WHISPER_MODELS is empty: Groq transcription is skipped.`);
+  if (hasKey('CLOUDFLARE_KEY') && voice.cloudflare.url && !voice.cloudflare.models.length) warnings.push(`${prefix}CLOUDFLARE_KEY is set but ${prefix}CLOUDFLARE_WHISPER_MODELS is empty: Cloudflare transcription is skipped.`);
+  if (hasKey('GEMINI_KEY') && !voice.gemini.models.length) warnings.push(`${prefix}GEMINI_KEY is set but ${prefix}GEMINI_TTS_MODELS is empty: Gemini speech is skipped.`);
+  if (hasKey('GEMINI_KEY') && !voice.gemini.voice) warnings.push(`${prefix}GEMINI_KEY is set but ${prefix}GEMINI_TTS_VOICE is empty: Gemini speech is skipped.`);
+  return warnings;
 }
 
 function readEnvironmentKeys(env, name) {

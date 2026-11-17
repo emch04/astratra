@@ -3,6 +3,23 @@
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Chaque package Astratra est versionné indépendamment.
 
+## 2026-11-17 — `@astratra/ai` 2.0.0 (à publier) : aucun modèle, aucune voix, aucun ordre choisi d'avance
+
+### Versions
+`@astratra/ai` 2.0.0 ; `@astratra/agent` 1.4.1, `@astratra/conscience` 1.5.1, `@astratra/memory` 2.1.1, `@astratra/live` 1.1.1 et `@astratra/web-search` 1.2.0 acceptent `@astratra/ai` 1.x ou 2.x ; `create-astratra-app` 1.12.1 génère des projets avec `@astratra/ai` 2.x (le projet n'utilise que le routage, inchangé). Rien n'est encore publié sur npm.
+
+### Cassé
+- `@astratra/ai` n'écrit plus aucun modèle, aucune voix ni aucun ordre de services : la personne choisit tout. Disparaissent les modèles de transcription Groq et Cloudflare, le modèle et la voix de synthèse Gemini, et les ordres fixes (local, Groq puis Cloudflare pour la transcription ; Gemini puis Piper pour la synthèse). Seules restent les adresses officielles d'un service que la personne a activé.
+- Configuration : `IA_GROQ_WHISPER_MODELS`, `IA_CLOUDFLARE_WHISPER_MODELS` (nouveau), `IA_GEMINI_TTS_MODELS` et `IA_GEMINI_TTS_VOICE` sont obligatoires pour utiliser ces services ; `IA_TRANSCRIPTION_ORDER` et `IA_SPEECH_ORDER` (nouveaux) donnent l'ordre. Avec `IA_CLOUDFLARE_ACCOUNT_ID`, l'adresse de Workers AI reçoit le modèle choisi.
+- Code : `createTranscriptionService({ transcriptionOrder })` et `createSpeechService({ speechOrder })` (`order` reste accepté pour la synthèse). Un seul service utilisable n'a pas besoin d'ordre ; plusieurs sans ordre donnent `AI_TRANSCRIPTION_ORDER_REQUIRED` ou `AI_SPEECH_ORDER_REQUIRED`, avec `error.services`. Un service absent de l'ordre n'est jamais appelé.
+- Le résultat local de transcription porte `model: null` au lieu d'un nom écrit d'avance ; `fallback` vaut vrai quand le service qui a répondu n'est pas le premier de l'ordre choisi.
+
+### Ajouté
+- Une clé sans le modèle (ou, pour Gemini, la voix) qu'il faut : `config.warnings` le dit au démarrage, `onWarning(message, { service, missing, message })` une seule fois pendant l'exécution, le service est sauté et les autres continuent ; une chaîne épuisée porte `error.missing` (noms des réglages).
+
+### Pour passer de 1.x à 2.0
+Donner ses modèles et sa voix (par exemple `IA_GROQ_WHISPER_MODELS='["…"]'`, `IA_GEMINI_TTS_MODELS='["…"]'`, `IA_GEMINI_TTS_VOICE='…'`), puis l'ordre si plusieurs services sont utilisables (`IA_SPEECH_ORDER='["gemini","piper"]'` reproduit l'ancien comportement).
+
 ## 2026-11-16 — `@astratra/web-search` 1.2.0 (à publier) : un navigateur intégré, en lecture seule
 
 ### Versions

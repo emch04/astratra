@@ -46,16 +46,24 @@ function doubtfulTranscription(text, { stockPhrases = WHISPER_STOCK_PHRASES } = 
   return false;
 }
 
+async function readKeys(config = {}) {
+  const source = typeof config.keys === 'function' ? await config.keys() : config.keys;
+  return [...new Set((Array.isArray(source) ? source : [source]).filter((key) => typeof key === 'string' && key.trim()))];
+}
+
+const modelsOf = (config = {}) => (Array.isArray(config.models) ? config.models.filter((model) => typeof model === 'string' && model.trim()) : []);
+
+/* No model, voice or service order is chosen here: everything comes from the
+   caller's configuration. */
 function rotatingPool(config = {}, now) {
   const rests = new Map();
   let next = 0;
   return {
-    async candidates(defaultModels) {
-      const source = typeof config.keys === 'function' ? await config.keys() : config.keys;
-      const keys = [...new Set((Array.isArray(source) ? source : [source]).filter(Boolean))];
+    async candidates() {
+      const keys = await readKeys(config);
       const start = keys.length ? next++ % keys.length : 0;
       const list = [];
-      for (const model of config.models || defaultModels) for (let offset = 0; offset < keys.length; offset += 1) {
+      for (const model of modelsOf(config)) for (let offset = 0; offset < keys.length; offset += 1) {
         const slot = (start + offset) % keys.length;
         const id = `${model}:key-${slot + 1}`;
         if ((rests.get(id) || 0) <= now()) list.push({ model, key: keys[slot], id });
@@ -66,6 +74,41 @@ function rotatingPool(config = {}, now) {
   };
 }
 
+/* Each enabled service (address, key) that lacks a setting is reported once
+   through onWarning and skipped; the others keep working. */
+function createWarner(onWarning) {
+  const said = new Set();
+  return (problem) => {
+    if (said.has(problem.message) || typeof onWarning !== 'function') return;
+    said.add(problem.message);
+    try { onWarning(problem.message, problem); } catch { /* A warning must not break a call. */ }
+  };
+}
+
+function checkOrder(order, known, name) {
+  if (order === undefined || order === null) return null;
+  if (!Array.isArray(order) || order.some((service) => !known.includes(service))) throw new TypeError(`INVALID_AI_VOICE_${name}`);
+  return order;
+}
+
+/* The chain is the caller's order, kept to the usable services. Without an
+   order, a single usable service is used alone; several need an order. A
+   result is a fallback when its service is not first in the caller's order. */
+function chainOf(order, usable, code, setting) {
+  if (order) return order.filter((service) => usable.includes(service));
+  if (usable.length <= 1) return usable;
+  const error = new AiServiceError(code);
+  error.missing = [setting];
+  error.services = usable;
+  throw error;
+}
+
+function unavailable(code, problems) {
+  const error = new AiServiceError(code);
+  error.missing = [...new Set(problems.flatMap((problem) => problem.missing))];
+  return error;
+}
+
 function createTranscriptionService(options = {}) {
   const local = options.local || createLocalModelsClient({ fetch: options.fetch, ...(options.localModels || {}) });
   const now = options.now || Date.now;
@@ -74,6 +117,22 @@ function createTranscriptionService(options = {}) {
   const groqPool = rotatingPool(groq, now);
   const cloudPool = rotatingPool(cloudflare, now);
   const fetchImpl = options.fetch || globalThis.fetch;
+  const order = checkOrder(options.transcriptionOrder, ['local', 'groq', 'cloudflare'], 'TRANSCRIPTION_ORDER');
+  const warn = createWarner(options.onWarning);
+  const localEnabled = Boolean(options.local || options.localModels?.baseUrl);
+  async function services(allowRemote) {
+    const usable = localEnabled ? ['local'] : [];
+    const problems = [];
+    if (allowRemote) {
+      for (const [name, config, label, setting] of [['groq', groq, 'Groq', 'IA_GROQ_WHISPER_MODELS'], ['cloudflare', cloudflare, 'Cloudflare', 'IA_CLOUDFLARE_WHISPER_MODELS']]) {
+        if (!config.url || !(await readKeys(config)).length) continue;
+        if (modelsOf(config).length) { usable.push(name); continue; }
+        problems.push({ service: name, missing: [setting], message: `${label} transcription has a key but no model: set ${name}.models (${setting}). ${label} is skipped.` });
+      }
+    }
+    problems.forEach(warn);
+    return { usable, problems };
+  }
   async function transcribe({ audio, format = 'pcm16', language = 'fr', vocabulary = '', filename = 'audio.wav', mimeType = 'audio/wav', signal, allowRemote = true } = {}) {
     const bytes = typeof audio === 'string' ? Buffer.from(audio, 'base64') : Buffer.from(audio || []);
     if (!bytes.length || bytes.length > (options.maxAudioBytes ?? 25000000)) throw new AiServiceError('AI_AUDIO_INPUT');
@@ -89,18 +148,29 @@ function createTranscriptionService(options = {}) {
       if (wave.sampleRate === 16000 && wave.channels === 1 && validPcmAudio(wave.pcm.toString('base64'))) pcm = wave.pcm;
     } else if (format !== 'file') throw new AiServiceError('AI_AUDIO_INPUT');
     if (signal?.aborted) throw signal.reason;
-    if (pcm) {
-      const result = await local.transcrire(pcm.toString('base64'), { langue: language, vocabulaire: vocabulary, timeoutMs: options.localTimeoutMs ?? 15000, signal });
-      if (result) {
-        // Genuine silence is an answer, not an outage to send to another model.
-        const silence = result.sansParole > (options.noSpeechThreshold ?? 0.6);
-        const doubtful = result.logprob < (options.logprobThreshold ?? -1) || doubtfulTranscription(result.texte, options);
-        if (silence || !doubtful) return { text: silence ? '' : result.texte, language: result.langue, provider: 'local', model: 'whisper', confidence: Math.exp(Math.min(0, result.logprob)), noSpeech: silence, fallback: false };
-      }
+    const { usable, problems } = await services(allowRemote);
+    const chain = chainOf(order, usable, 'AI_TRANSCRIPTION_ORDER_REQUIRED', 'transcriptionOrder (IA_TRANSCRIPTION_ORDER)');
+    for (const [rank, service] of chain.entries()) {
+      if (signal?.aborted) throw signal.reason;
+      const result = service === 'local' ? await viaLocal(pcm, language, vocabulary, signal)
+        : service === 'groq' ? await viaGroq(file, filename, mimeType, language, vocabulary, signal)
+          : await viaCloudflare(file, signal);
+      if (result) return { ...result, fallback: (order ? order.indexOf(service) : rank) > 0 };
     }
-    if (!allowRemote) throw new AiServiceError('AI_TRANSCRIPTION_UNAVAILABLE');
-    for (const candidate of await groqPool.candidates(['whisper-large-v3-turbo', 'whisper-large-v3'])) {
-      if (!groq.url) break;
+    throw unavailable('AI_TRANSCRIPTION_UNAVAILABLE', problems);
+  }
+  async function viaLocal(pcm, language, vocabulary, signal) {
+    if (!pcm) return null;
+    const result = await local.transcrire(pcm.toString('base64'), { langue: language, vocabulaire: vocabulary, timeoutMs: options.localTimeoutMs ?? 15000, signal });
+    if (!result) return null;
+    // Genuine silence is an answer, not an outage to send to another model.
+    const silence = result.sansParole > (options.noSpeechThreshold ?? 0.6);
+    const doubtful = result.logprob < (options.logprobThreshold ?? -1) || doubtfulTranscription(result.texte, options);
+    if (silence || !doubtful) return { text: silence ? '' : result.texte, language: result.langue, provider: 'local', model: result.modele ?? null, confidence: Math.exp(Math.min(0, result.logprob)), noSpeech: silence };
+    return null;
+  }
+  async function viaGroq(file, filename, mimeType, language, vocabulary, signal) {
+    for (const candidate of await groqPool.candidates()) {
       try {
         const form = new globalThis.FormData();
         form.set('file', new globalThis.Blob([file], { type: mimeType }), filename);
@@ -109,18 +179,20 @@ function createTranscriptionService(options = {}) {
         if (vocabulary) form.set('prompt', vocabulary);
         const data = await serviceRequest(groq.url, { fetch: fetchImpl, timeoutMs: groq.timeoutMs ?? 30000, signal, rawBody: form, headers: { Authorization: `Bearer ${candidate.key}` } });
         if (typeof data?.text !== 'string' || doubtfulTranscription(data.text, options)) throw new AiServiceError('AI_SERVICE_RESPONSE');
-        return { text: data.text, language: data.language || null, provider: 'groq', model: candidate.model, fallback: true };
+        return { text: data.text, language: data.language || null, provider: 'groq', model: candidate.model };
       } catch (_error) { if (signal?.aborted) throw signal.reason; groqPool.rest(candidate.id); }
     }
-    for (const candidate of await cloudPool.candidates(['@cf/openai/whisper-large-v3-turbo'])) {
-      if (!cloudflare.url) break;
+    return null;
+  }
+  async function viaCloudflare(file, signal) {
+    for (const candidate of await cloudPool.candidates()) {
       try {
         const data = await serviceRequest(typeof cloudflare.url === 'function' ? cloudflare.url(candidate.model) : cloudflare.url, { fetch: fetchImpl, timeoutMs: cloudflare.timeoutMs ?? 30000, signal, body: { audio: file.toString('base64') }, headers: { Authorization: `Bearer ${candidate.key}` } });
         if (data?.success === false || typeof data?.result?.text !== 'string' || doubtfulTranscription(data.result.text, options)) throw new AiServiceError('AI_SERVICE_RESPONSE');
-        return { text: data.result.text, language: data.result.language || null, provider: 'cloudflare', model: candidate.model, fallback: true };
+        return { text: data.result.text, language: data.result.language || null, provider: 'cloudflare', model: candidate.model };
       } catch (_error) { if (signal?.aborted) throw signal.reason; cloudPool.rest(candidate.id); }
     }
-    throw new AiServiceError('AI_TRANSCRIPTION_UNAVAILABLE');
+    return null;
   }
   return { transcribe };
 }
@@ -133,8 +205,23 @@ function createSpeechService(options = {}) {
   const pool = rotatingPool(gemini, now);
   const fetchImpl = options.fetch || globalThis.fetch;
   const piperRests = new Map();
-  /* Gemini (en ligne) d'abord, Piper (local) en repli ; `options.order` permet l'inverse. */
-  const order = Array.isArray(options.order) && options.order.length ? options.order : ['gemini', 'piper'];
+  /* No order is chosen here: `speechOrder` (or `order`) is the caller's. */
+  const order = checkOrder(options.speechOrder ?? options.order, ['gemini', 'piper'], 'SPEECH_ORDER');
+  const warn = createWarner(options.onWarning);
+  async function services(allowRemote) {
+    const usable = piper.baseUrl ? ['piper'] : [];
+    const problems = [];
+    if (allowRemote && (await readKeys(gemini)).length) {
+      const missing = [];
+      if (!modelsOf(gemini).length) missing.push(['gemini.models', 'IA_GEMINI_TTS_MODELS']);
+      if (!(typeof gemini.voice === 'string' && gemini.voice.trim())) missing.push(['gemini.voice', 'IA_GEMINI_TTS_VOICE']);
+      if (missing.length) {
+        problems.push({ service: 'gemini', missing: missing.map(([, env]) => env), message: `Gemini speech has a key but no ${missing.map(([option, env]) => `${option.split('.')[1]} (${option}, ${env})`).join(' and no ')}. Gemini is skipped.` });
+      } else usable.unshift('gemini');
+    }
+    problems.forEach(warn);
+    return { usable, problems };
+  }
   async function viaPiper(clean, language, signal) {
     if (!piper.baseUrl || (piperRests.get(language) || 0) > now()) return null;
     try {
@@ -145,11 +232,11 @@ function createSpeechService(options = {}) {
     } catch (_error) { if (signal?.aborted) throw signal.reason; piperRests.set(language, now() + (piper.cooldownMs ?? 60000)); return null; }
   }
   async function viaGemini(clean, signal) {
-    for (const candidate of await pool.candidates(['gemini-2.5-flash-preview-tts'])) {
+    for (const candidate of await pool.candidates()) {
       try {
         const data = await serviceRequest(endpoint(gemini.endpoint || 'https://generativelanguage.googleapis.com/v1beta/models', `/${candidate.model}:generateContent`), {
           fetch: fetchImpl, signal, timeoutMs: gemini.timeoutMs ?? 45000, headers: { 'x-goog-api-key': candidate.key },
-          body: { contents: [{ role: 'user', parts: [{ text: clean }] }], generationConfig: { responseModalities: ['AUDIO'], speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: gemini.voice || 'Aoede' } } } } }
+          body: { contents: [{ role: 'user', parts: [{ text: clean }] }], generationConfig: { responseModalities: ['AUDIO'], speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: gemini.voice } } } } }
         });
         const part = data?.candidates?.[0]?.content?.parts?.find((one) => one.inlineData || one.inline_data);
         const inline = part?.inlineData || part?.inline_data;
@@ -167,13 +254,14 @@ function createSpeechService(options = {}) {
     const clean = (options.prepareText || speakableText)(text);
     if (!clean) throw new AiServiceError('AI_SPEECH_INPUT');
     if (signal?.aborted) throw signal.reason;
-    for (const [rang, nom] of order.entries()) {
+    const { usable, problems } = await services(allowRemote);
+    const chain = chainOf(order, usable, 'AI_SPEECH_ORDER_REQUIRED', 'speechOrder (IA_SPEECH_ORDER)');
+    for (const [rank, service] of chain.entries()) {
       if (signal?.aborted) throw signal.reason;
-      const result = nom === 'piper' ? await viaPiper(clean, language, signal)
-        : nom === 'gemini' && allowRemote ? await viaGemini(clean, signal) : null;
-      if (result) return { ...result, fallback: rang > 0 };
+      const result = service === 'piper' ? await viaPiper(clean, language, signal) : await viaGemini(clean, signal);
+      if (result) return { ...result, fallback: (order ? order.indexOf(service) : rank) > 0 };
     }
-    throw new AiServiceError('AI_SPEECH_UNAVAILABLE');
+    throw unavailable('AI_SPEECH_UNAVAILABLE', problems);
   }
   return { synthesize };
 }
