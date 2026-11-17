@@ -19,7 +19,8 @@ const INTERDITS = new Set([
   '49f106b5d9e7e0987c84', '33961073611853611b5f', '00a077907693b632e081', 'e5a488d5f8b335e3a7fa',
   '470e3a627abe2fdda7eb', '0a6476e78d74a1e8efef', 'bdf1c381753ea2e32f7b', '2603a9558657b318f49a',
   '020aaecbc10923015941', 'f72e3b5eae0d1ee0c94e', 'ed3f4d611fb681591afd', '17fed598e17d80d8b9fe',
-  'c9fd0ae6a0b507614742', '3aa0dca597b6bbc8fbe1', 'c90de06efbd7add06405'
+  'c9fd0ae6a0b507614742', '3aa0dca597b6bbc8fbe1', 'c90de06efbd7add06405',
+  '4b49a7cabde14555d70f', 'cc520d382812b4eb5348'
 ]);
 
 const empreinte = (texte) => crypto.createHash('sha256').update(`astratra-noms:${texte}`).digest('hex').slice(0, 20);
