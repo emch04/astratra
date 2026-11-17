@@ -1,13 +1,35 @@
 const http2 = require('node:http2');
 const { APPLE_WWDR_G4, readPassCertificate } = require('./credentials');
 const { fabriquerPkpass, preparerSignataire } = require('./pkpass/pkpass');
+const { NOMS_OPTIONS } = require('./pkpass/options');
 
 const APNS_PRODUCTION = 'https://api.push.apple.com';
 
 /* Un QR code quand le format n'est pas dit ; ce qui n'est pas un objet est
    laissé tel quel, pour être refusé avec un message clair. */
 function avecFormatParDefaut(code) {
-  return typeof code === 'object' ? { ...code, format: code.format || 'PKBarcodeFormatQR' } : code;
+  return code && typeof code === 'object' ? { ...code, format: code.format || 'PKBarcodeFormatQR' } : code;
+}
+
+/* Les clés de premier niveau (dates, lieux, billets groupés…) données à la
+   fabrique valent pour toutes ses cartes ; une carte les remplace une à une. */
+function optionsDe(source) {
+  const options = {};
+  for (const nom of NOMS_OPTIONS) {
+    if (source[nom] !== undefined && source[nom] !== null) options[nom] = source[nom];
+  }
+  return options;
+}
+
+/* Les extraKeys de la carte s'ajoutent à ceux de la fabrique ; ce qui n'est
+   pas un objet passe tel quel, pour être refusé avec un message clair. */
+function fusionnerExtra(communs, propres) {
+  if (communs === undefined || communs === null) return propres;
+  if (propres === undefined || propres === null) return communs;
+  const objet = (valeur) => typeof valeur === 'object' && !Array.isArray(valeur);
+  if (!objet(communs)) return communs;
+  if (!objet(propres)) return propres;
+  return { ...communs, ...propres };
 }
 
 /**
@@ -32,12 +54,19 @@ function avecFormatParDefaut(code) {
  * @param {string} options.description
  * @param {Record<string, Buffer>} options.images  images communes : icon.png (obligatoire), icon@2x.png, logo.png…
  * @param {{foregroundColor?: string, backgroundColor?: string, labelColor?: string}} [options.colors]  au format rgb(r, g, b).
- * @param {'storeCard'|'generic'|'coupon'|'eventTicket'} [options.type='storeCard']
+ * @param {'storeCard'|'generic'|'coupon'|'eventTicket'|'boardingPass'} [options.type='storeCard']
+ * @param {string} [options.transitType]  carte d'embarquement : PKTransitTypeAir, Boat, Bus, Generic ou Train.
  * @param {string} [options.logoText]
+ * @param {Record<string, unknown>} [options.extraKeys]  autres clés du pass.json, écrites telles quelles
+ *        (une clé qu'Apple ajoute après cette version du paquet).
+ * Toutes les clés de premier niveau d'Apple prises en charge (relevantDates,
+ * locations, semantics, groupingIdentifier… voir index.d.ts) se donnent ici
+ * pour toutes les cartes, ou dans chaque carte.
  */
 function createApplePasses({
   certificate, privateKey, passphrase, wwdr, webServiceURL,
-  organizationName, description, images = {}, colors = {}, type = 'storeCard', logoText
+  organizationName, description, images = {}, colors = {}, type = 'storeCard', logoText,
+  transitType, extraKeys, ...reglages
 }) {
   const lu = readPassCertificate(certificate);
   if (!lu?.passTypeIdentifier || !lu.teamIdentifier) {
@@ -46,15 +75,24 @@ function createApplePasses({
   const { passTypeIdentifier, teamIdentifier } = lu;
   /* Absent, null ou vide (un champ de réglage laissé blanc) : celui d'Apple. */
   const signataire = preparerSignataire({ certificate, privateKey, passphrase, wwdr: wwdr || APPLE_WWDR_G4 });
+  const optionsCommunes = optionsDe(reglages);
 
   /**
    * @param {object} card
    * @param {string} card.serialNumber
    * @param {string} [card.authenticationToken] au moins 16 caractères (exigence Apple) ;
    *        obligatoire avec un webServiceURL, ignoré sans.
-   * @param {Array<object>} [card.headerFields] … et primaryFields, secondaryFields, auxiliaryFields, backFields ;
-   *        chaque clé (key) est unique sur toute la carte.
+   * @param {Array<object>} [card.headerFields] … et primaryFields, secondaryFields, auxiliaryFields, backFields,
+   *        additionalInfoFields ; chaque clé (key) est unique sur toute la carte.
    * @param {{message: string, altText?: string, format?: string}} [card.barcode]
+   * @param {Array<{message: string, altText?: string, format?: string}>} [card.barcodes] plusieurs codes,
+   *        le premier lisible par l'appareil étant affiché (à la place de barcode).
+   * @param {object} [card.posterGeneric] zones de la carte en affiche (iOS 27).
+   * @param {string} [card.description] remplace celle de la fabrique (« Billet pour… »).
+   * @param {string} [card.logoText] remplace celui de la fabrique.
+   * @param {object} [card.colors] remplacent celles de la fabrique, une à une.
+   * @param {string} [card.transitType] remplace celui de la fabrique.
+   * @param {Record<string, unknown>} [card.extraKeys] s'ajoutent à ceux de la fabrique.
    * @param {Record<string, Buffer>} [card.images] images propres à cette carte (strip.png…), prioritaires.
    * @param {boolean} [card.voided] carte annulée : Apple Wallet la grise et la
    *        déclare inutilisable. C'est la seule façon, côté émetteur, de
@@ -69,15 +107,22 @@ function createApplePasses({
         teamIdentifier,
         serialNumber: card.serialNumber,
         organizationName,
-        description,
+        description: card.description ?? description,
         /* Un logoText vide n'est pas écrit, comme avant. */
-        logoText: logoText || undefined,
-        colors: colors || {},
+        logoText: (card.logoText ?? logoText) || undefined,
+        colors: { ...(colors || {}), ...(card.colors || {}) },
         webServiceURL,
         authenticationToken: card.authenticationToken,
         voided: Boolean(card.voided),
+        transitType: card.transitType ?? transitType,
         fields: card,
-        ...(card.barcode ? { barcode: avecFormatParDefaut(card.barcode) } : {})
+        ...(card.posterGeneric ? { posterGeneric: card.posterGeneric } : {}),
+        ...(card.barcode ? { barcode: avecFormatParDefaut(card.barcode) } : {}),
+        ...(card.barcodes !== undefined
+          ? { barcodes: Array.isArray(card.barcodes) ? card.barcodes.map(avecFormatParDefaut) : card.barcodes }
+          : {}),
+        options: { ...optionsCommunes, ...optionsDe(card) },
+        extraKeys: fusionnerExtra(extraKeys, card.extraKeys)
       },
       fichiers: { ...images, ...(card.images || {}) },
       signataire

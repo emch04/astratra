@@ -152,7 +152,7 @@ package is in [CHANGELOG.md](CHANGELOG.md).
 | [`@astratra/srs`](packages/srs/README.md) | 1.1.0 | Spaced repetition on FSRS: cards, grading, due dates, daily queue, statistics |
 | [`@astratra/fhir`](packages/fhir/README.md) | 1.1.0 | FHIR R4 helpers on the official Medplum types: minimal validation, references, builders |
 | [`@astratra/loyalty`](packages/loyalty/README.md) | 1.1.0 | Stamp cards and monthly-quota passes, computed without a database |
-| [`@astratra/wallet`](packages/wallet/README.md) | 1.2.0 | Apple Wallet and Google Wallet passes kept up to date: signing, web service, add-to-wallet links, removal |
+| [`@astratra/wallet`](packages/wallet/README.md) | 1.2.0 | Apple Wallet and Google Wallet passes kept up to date (loyalty cards, event tickets, boarding passes): signing, web service, add-to-wallet links, removal |
 | [`@astratra/pdf`](packages/pdf/README.md) | 1.1.0 | PDFKit layout primitives: text that fits its box, paginated tables, card sheets with vector QR codes |
 | [`@astratra/closure`](packages/closure/README.md) | 1.1.0 | Period closing checklist with blocking and acknowledged items, and an archive free of credentials |
 | [`@astratra/notify`](packages/notify/README.md) | 1.2.0 | Outbound e-mail, SMS and push: injected transport, header-injection safe, never throws |

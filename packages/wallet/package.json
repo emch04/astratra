@@ -1,7 +1,7 @@
 {
   "name": "@astratra/wallet",
   "version": "1.2.0",
-  "description": "Apple Wallet and Google Wallet loyalty cards: signed passes, live updates, add-to-wallet links.",
+  "description": "Apple Wallet and Google Wallet loyalty cards, event tickets and boarding passes: signed passes, live updates, add-to-wallet links.",
   "engines": {
     "node": ">=22"
   },
@@ -25,7 +25,9 @@
     "apple-wallet",
     "google-wallet",
     "pkpass",
-    "loyalty"
+    "loyalty",
+    "event-ticket",
+    "boarding-pass"
   ],
   "license": "MIT",
   "publishConfig": {

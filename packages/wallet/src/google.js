@@ -6,12 +6,16 @@ const SCOPE = 'https://www.googleapis.com/auth/wallet_object.issuer';
 
 /* Chaque type de carte Google a sa ressource REST et sa clé dans le JWT
    d'ajout. La fidélité est le cas courant ; les autres suivent le même
-   chemin. */
+   chemin : billets d'événement, cartes d'embarquement (vols) et titres de
+   transport. */
 const KINDS = {
   loyalty: { resource: 'loyalty', jwtKey: 'loyaltyObjects' },
   generic: { resource: 'generic', jwtKey: 'genericObjects' },
   offer: { resource: 'offer', jwtKey: 'offerObjects' },
-  giftCard: { resource: 'giftCard', jwtKey: 'giftCardObjects' }
+  giftCard: { resource: 'giftCard', jwtKey: 'giftCardObjects' },
+  eventTicket: { resource: 'eventTicket', jwtKey: 'eventTicketObjects' },
+  flight: { resource: 'flight', jwtKey: 'flightObjects' },
+  transit: { resource: 'transit', jwtKey: 'transitObjects' }
 };
 
 const base64urlJson = (value) => Buffer.from(JSON.stringify(value)).toString('base64url');
@@ -39,7 +43,7 @@ function signSaveJwt(payload, credentials, { now = new Date(), origins } = {}) {
  * @param {object} options
  * @param {string} options.issuerId
  * @param {object} options.credentials   JSON du compte de service (client_email, private_key).
- * @param {'loyalty'|'generic'|'offer'|'giftCard'} [options.kind='loyalty']
+ * @param {'loyalty'|'generic'|'offer'|'giftCard'|'eventTicket'|'flight'|'transit'} [options.kind='loyalty']
  * @param {(options: object) => Promise<object>} [options.request]  remplace le client HTTP (tests).
  */
 function createGoogleWallet({ issuerId, credentials, kind = 'loyalty', request }) {

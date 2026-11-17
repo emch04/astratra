@@ -54,6 +54,13 @@ describe('signataire', () => {
 });
 
 describe('contenu de la carte', () => {
+  test('deux champs avec la même clé, recto, dos et informations confondus', () => {
+    expect(() => construire({
+      headerFields: [{ key: 'portes', value: '1' }],
+      additionalInfoFields: [{ key: 'portes', value: '2' }]
+    })).toThrow(/portes.*unique/);
+  });
+
   test('deux champs avec la même clé, recto et dos confondus', () => {
     expect(() => construire({
       headerFields: [{ key: 'telephone', value: '1' }],
@@ -76,7 +83,7 @@ describe('contenu de la carte', () => {
   });
 
   test.each([
-    ['format inconnu', { message: 'x', format: 'PKBarcodeFormatEAN13' }, /format de code-barres inconnu/],
+    ['format inconnu', { message: 'x', format: 'PKBarcodeFormatEAN8' }, /format de code-barres inconnu/],
     ['message vide', { message: '' }, /pas de message/],
     ['message absent', {}, /pas de message/],
     ['altText nombre', { message: 'x', altText: 3 }, /altText/],
@@ -112,8 +119,12 @@ describe('réglages de l’émetteur', () => {
     expect(() => construire({}, { colors })).toThrow(message);
   });
 
-  test('type non pris en charge (une carte d’embarquement demande un transitType)', () => {
-    expect(() => construire({}, { type: 'boardingPass' })).toThrow(/type inconnu/);
+  test('type inconnu', () => {
+    expect(() => construire({}, { type: 'membershipCard' })).toThrow(/type inconnu/);
+  });
+
+  test('une carte d’embarquement sans transitType', () => {
+    expect(() => construire({}, { type: 'boardingPass' })).toThrow(/demande transitType/);
   });
 
   test('adresse de service web invalide', () => {

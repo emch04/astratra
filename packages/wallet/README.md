@@ -1,7 +1,7 @@
 # @astratra/wallet
 
-Des cartes de fidélité dans **Apple Wallet** et **Google Wallet**, qui se
-mettent à jour toutes seules. Le client n'installe rien et ne crée aucun
+Des cartes de fidélité, des billets et des cartes d'embarquement dans
+**Apple Wallet** et **Google Wallet**, qui se mettent à jour tout seuls. Le client n'installe rien et ne crée aucun
 compte : il touche « Ajouter », la carte vit dans son téléphone, et ton serveur
 la tient à jour.
 
@@ -68,8 +68,18 @@ ce qu'Apple Wallet refuserait sans explication :
 - une carte sans `icon.png` (commune ou propre à la carte) ;
 - un jeton de moins de 16 caractères quand il y a un service web ;
 - une couleur qui n'est pas au format `rgb(r, g, b)` ;
-- un format de code-barres autre que `PKBarcodeFormatQR` (par défaut),
-  `PKBarcodeFormatPDF417`, `PKBarcodeFormatAztec` ou `PKBarcodeFormatCode128` ;
+- deux champs avec la même clé dans la zone d'informations
+  (`additionalInfoFields`), comptée avec les autres ;
+- un format de code-barres inconnu, ou un format d'iOS 27 (Code 39, Codabar,
+  EAN-13, ITF) sans un code `PKBarcodeFormatQR`, `PKBarcodeFormatPDF417`,
+  `PKBarcodeFormatAztec` ou `PKBarcodeFormatCode128` après lui : les autres
+  téléphones n'afficheraient aucun code ;
+- une date sans heure ou sans fuseau, une plage de dates à l'envers, plus de
+  dix lieux, une latitude impossible, une clé mal écrite dans un lieu ou une
+  plage (`lat` au lieu de `latitude`) ;
+- un lien du guide de l'événement qui n'est pas en `http(s)` ;
+- une carte d'embarquement sans `transitType`, ou un `transitType` sur une
+  autre carte ;
 - un nom d'image qui sort de la carte (`..`, chemin absolu) ou qui prend la
   place d'un fichier fabriqué (`pass.json`, `manifest.json`, `signature`).
 
@@ -95,6 +105,67 @@ Après chaque changement (visite validée, récompense accordée…), mets à jo
 ```js
 await notifyApplePass({ registrations, passTypeIdentifier, serialNumber, certificate, privateKey });
 ```
+
+## Billets, embarquement et cartes riches
+
+Tout ce que le format d'Apple prévoit se donne à la fabrique (valable pour
+toutes ses cartes) ou à chaque carte (qui le remplace). Les dates acceptent un
+`Date` ou un texte ISO 8601 avec l'heure et le fuseau.
+
+```js
+const billets = createApplePasses({
+  certificate, privateKey, webServiceURL,
+  organizationName: 'Théâtre du Port',
+  description: 'Billet',
+  type: 'eventTicket',
+  images: { 'icon.png': icon, 'logo.png': logo, 'background.png': fond, 'thumbnail.png': affiche },
+  locations: [{ latitude: 43.2965, longitude: 5.3698, relevantText: 'Vous arrivez au théâtre' }],
+  sharingProhibited: true
+});
+
+const pkpass = billets.build({
+  serialNumber: 'B-2026-0042-1',
+  authenticationToken: billet.jeton,
+  description: 'Billet pour Le Cid',                       // remplace celle de la fabrique
+  primaryFields: [{ key: 'spectacle', label: 'SPECTACLE', value: 'Le Cid' }],
+  secondaryFields: [{ key: 'place', label: 'PLACE', value: 'Orchestre, rang F, 12' }],
+  auxiliaryFields: [{ key: 'date', label: 'DATE', value: seance.debut, dateStyle: 'PKDateStyleMedium', timeStyle: 'PKDateStyleShort' }],
+  additionalInfoFields: [{ key: 'portes', label: 'OUVERTURE DES PORTES', value: '19 h' }],
+  relevantDates: [{ startDate: seance.ouverture, endDate: seance.fin }],   // la carte remonte sur l'écran verrouillé
+  groupingIdentifier: 'commande-2026-0042',                // les billets d'une commande, rangés ensemble
+  semantics: { eventName: 'Le Cid', venueName: 'Théâtre du Port', venueRegionName: 'Marseille',
+    venueRoom: 'Grande salle', performerNames: ['Troupe du Port'], eventStartDate: seance.debut },
+  preferredStyleSchemes: ['posterEventTicket', 'eventTicket'],          // billet en affiche (iOS 26)
+  barcode: { message: billet.code, format: 'PKBarcodeFormatAztec' }
+});
+```
+
+- **La zone d'informations** (`additionalInfoFields`, iOS 18) s'affiche sous
+  la carte. Elle n'est écrite que si elle est remplie.
+- **Le billet en affiche** d'iOS 26 demande `preferredStyleSchemes` et les
+  étiquettes sémantiques `eventName`, `venueName`, `venueRegionName` et
+  `venueRoom` (et `performerNames` pour un concert, les abréviations des
+  équipes pour un match). Sans elles, Apple affiche le billet classique :
+  garde donc aussi les champs habituels.
+- **Plusieurs codes** : `barcodes: [...]` à la place de `barcode` ; l'appareil
+  affiche le premier qu'il sait lire.
+- **Les liens du guide de l'événement** (`directionsInformationURL`,
+  `parkingInformationURL`, `orderFoodURL`, `sellURL`, `transferURL`…) et les
+  contacts (`contactVenuePhoneNumber`…) se donnent comme les autres clés.
+- **Une carte d'embarquement** (train, bus, avion, bateau) :
+  `type: 'boardingPass'` et `transitType: 'PKTransitTypeTrain'`.
+- **La carte en affiche d'iOS 27** (fidélité, adhésion…) : `posterGeneric`,
+  avec ses zones (`headerFields`, `primaryFields`, `footerFields`,
+  `backFields`, `additionalInfoFields`), écrite à côté du style classique que
+  gardent les appareils plus anciens.
+- **Une clé qu'Apple ajoutera après cette version** : `extraKeys`, écrite telle
+  quelle dans le `pass.json`, sans attendre une mise à jour du paquet. Elle ne
+  peut pas remplacer une clé que le paquet écrit ou contrôle.
+
+La liste complète des clés prises en charge est dans `src/index.d.ts`
+(`ApplePassKeys`). Côté Google, `createGoogleWallet({ kind: 'eventTicket' })`
+(ou `flight`, `transit`) crée des billets ; leur contenu suit l'API de Google
+Wallet, comme pour la fidélité.
 
 ## Google Wallet
 

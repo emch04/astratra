@@ -25,16 +25,28 @@ Chaque package Astratra est versionné indépendamment.
 - `@astratra/web-search` : `ranking.blockDomains` s'applique aussi à `ws.read` et à `read_page` (`WEB_READ_BLOCKED_DOMAIN`), y compris après une redirection ; avant, un site bloqué n'était retiré que des résultats de recherche.
 - `@astratra/web-search` : une page lue porte `via` (`fetch` ou `browser`) ; `bytes` vaut `null` quand le navigateur l'a lue.
 
-## 2026-11-16 — `@astratra/wallet` fabrique ses cartes Apple sans passkit-generator
+## 2026-11-16 — `@astratra/wallet` fabrique ses cartes Apple sans passkit-generator, et fait des billets
 
 ### Versions
-`@astratra/wallet` 1.2.0.
+`@astratra/wallet` 1.2.0 (à publier).
+
+### Ajouté (2026-11-17)
+- Billets et cartes riches, selon `docs/design/2026-11-17-astratra-wallet-billets-design.md` :
+  - la zone d'informations `additionalInfoFields` (iOS 18), écrite seulement si elle est remplie ;
+  - les clés de premier niveau d'Apple, contrôlées puis écrites : `relevantDates`, `relevantDate`, `expirationDate`, `locations` (10 au plus), `maxDistance`, `beacons`, `groupingIdentifier`, `sharingProhibited`, `suppressStripShine`, `semantics`, `userInfo`, `preferredStyleSchemes`, `eventLogoText`, `footerBackgroundColor`, `useAutomaticColors`, `suppressHeaderDarkening`, les contacts, `associatedStoreIdentifiers`, `auxiliaryStoreIdentifiers`, `appLaunchURL`, `nfc` et les liens du guide de l'événement et des cartes d'embarquement. Données à `createApplePasses`, elles valent pour toutes les cartes ; chaque carte les remplace une à une ;
+  - `extraKeys` : toute autre clé du `pass.json`, écrite telle quelle, pour une clé qu'Apple ajoutera après cette version ; elle ne peut pas remplacer une clé que le paquet écrit ou contrôle ;
+  - les cartes d'embarquement (`type: 'boardingPass'` et `transitType`) ;
+  - la carte en affiche d'iOS 27 (`posterGeneric`), écrite à côté du style classique ;
+  - plusieurs codes-barres (`barcodes`) et les formats d'iOS 27 (Code 39, Codabar, EAN-13, ITF), refusés sans un format classique après eux ; `messageEncoding` au choix ;
+  - une `Date` comme valeur de champ, de date ou d'étiquette sémantique, écrite en ISO 8601 ;
+  - `description`, `logoText` et `colors` propres à une carte (« Billet pour… ») ;
+  - Google : `kind` accepte `eventTicket`, `flight` et `transit`.
 
 ### Changé
-- `@astratra/wallet` fabrique lui-même le `.pkpass` : `pass.json`, `manifest.json` (SHA-1 de chaque fichier), signature CMS détachée (SHA-256, certificat de l'émetteur et intermédiaire WWDR joints) et archive ZIP sans compression, avec le seul module `crypto` de Node. `passkit-generator` est retiré, et avec lui `joi` (épinglé à une version vulnérable), `node-forge` et `do-not-zip`. La surcharge `joi` que le README demandait d'ajouter devient inutile. L'API ne change pas : pour la même carte, le `pass.json` est identique à celui de passkit-generator (seul disparaît `additionalInfoFields`, vide, propre aux billets d'événement), et openssl accepte la signature.
+- `@astratra/wallet` fabrique lui-même le `.pkpass` : `pass.json`, `manifest.json` (SHA-1 de chaque fichier), signature CMS détachée (SHA-256, certificat de l'émetteur et intermédiaire WWDR joints) et archive ZIP sans compression, avec le seul module `crypto` de Node. `passkit-generator` est retiré, et avec lui `joi` (épinglé à une version vulnérable), `node-forge` et `do-not-zip`. La surcharge `joi` que le README demandait d'ajouter devient inutile. L'API ne change pas : pour la même carte, le `pass.json` est identique à celui de passkit-generator (seul disparaît `additionalInfoFields` vide, que passkit-generator écrivait sur toute carte ; il est maintenant écrit quand il est rempli), et openssl accepte la signature.
 - `createApplePasses` lit la clé privée et la compare au certificat dès sa création : une clé qui ne va pas, une phrase secrète fausse ou un intermédiaire illisible échouent tout de suite, et non à la première carte. Une phrase secrète `null` (clé en clair lue depuis une base) reste acceptée, et un `wwdr` absent, `null` ou vide prend celui d'Apple.
 - `build` refuse, avec une `TypeError` qui dit quoi corriger, ce qu'Apple Wallet refuserait sans explication : deux champs avec la même clé (passkit-generator ignorait le second), une carte sans `icon.png` (passkit-generator avertissait seulement), un jeton de moins de 16 caractères avec un service web, une couleur hors du format `rgb(r, g, b)`, un format de code-barres inconnu, un nom d'image qui sort de la carte ou prend la place d'un fichier fabriqué.
-- Types : `webServiceURL` et `authenticationToken` deviennent facultatifs (carte fixe, sans service web, où le jeton n'est pas écrit) ; `barcode.format` n'accepte plus que les quatre formats d'Apple.
+- Types : `webServiceURL` et `authenticationToken` deviennent facultatifs (carte fixe, sans service web, où le jeton n'est pas écrit) ; `barcode.format` n'accepte plus que les formats d'Apple (`BarcodeFormat`).
 
 ## 2026-11-16 — Node 22 au minimum, Express 5 accepté, tests négatifs, intégration continue réparée
 
