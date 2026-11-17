@@ -392,7 +392,15 @@ describe('déploiement', () => {
     expect(createBrowserAppArmorProfile({ chromiumPath: '/opt/pw/chrome-headless-shell' })).toContain('profile astratra-chromium /opt/pw/chrome-headless-shell flags=(unconfined) {\n  userns,');
     expect(() => createBrowserAppArmorProfile({ chromiumPath: '/opt/a b' })).toThrow(/spaces/);
     const files = browserSetupFiles({ node: '/usr/bin/node', tokenFile: '/etc/astratra/browser-token', chromiumPath: '/opt/pw/chrome-headless-shell' });
-    expect(Object.keys(files).sort()).toEqual(['INSTALL.md', 'astratra-chromium.apparmor', 'astratra-web-browser.nft', 'astratra-web-browser.service']);
+    expect(Object.keys(files).sort()).toEqual(['INSTALL.fr.md', 'INSTALL.md', 'astratra-chromium.apparmor', 'astratra-web-browser-firewall.service', 'astratra-web-browser.nft', 'astratra-web-browser.service']);
+    expect(files['astratra-web-browser.service']).toContain('Requires=astratra-web-browser-firewall.service');
+    expect(files['astratra-web-browser-firewall.service']).toContain('ExecStart=/usr/sbin/nft -f /etc/astratra/astratra-web-browser.nft');
+    expect(files['astratra-web-browser-firewall.service']).toContain('Before=network-pre.target astratra-web-browser.service');
+    expect(files['INSTALL.md']).toContain('Do not enable nftables.service');
+    expect(files['INSTALL.md']).toContain('groupadd --system astratra-browser');
+    expect(files['INSTALL.md']).toContain('token --out /etc/astratra/browser-token --group astratra-browser');
+    expect(files['INSTALL.fr.md']).toContain('usermod -aG astratra-browser');
+    expect(() => browserSetupFiles({ node: '/usr/bin/node', tokenFile: '/etc/t', clientsGroup: 'a b' })).toThrow(/clientsGroup/);
     expect(files['INSTALL.md']).toContain('useradd --system');
     expect(JSON.stringify(files)).not.toMatch(/BEGIN PRIVATE KEY/);
   });
@@ -417,5 +425,70 @@ describe('moteur, sans Chromium', () => {
     expect(ordered[0]).toEqual({ n: 1, url: 'https://www.site.example/b', text: 'B', sameSite: true });
     expect(ordered.every((link) => link.sameSite)).toBe(true);
     expect(ordered.map((link) => link.url)).not.toContain('https://localhost/d');
+  });
+});
+
+describe('commande astratra-web-browser', () => {
+  const fs = require('fs');
+  const os = require('os');
+  const path = require('path');
+  const { inspectBrowserHost, resolversOf, setup, token } = require('../src/browser/cli');
+  const tmp = () => fs.mkdtempSync(path.join(process.env.TMPDIR || os.tmpdir(), 'astratra-cli-'));
+  const quiet = () => jest.spyOn(process.stdout, 'write').mockImplementation(() => true);
+
+  test('résolveurs lus dans resolv.conf', () => {
+    expect(resolversOf('# x\nnameserver 127.0.0.53\nnameserver fe80::1%eth0\nnameserver pasuneip\noptions edns0')).toEqual(['127.0.0.53', 'fe80::1']);
+  });
+
+  test('vérification de la machine : tout présent', () => {
+    const checks = inspectBrowserHost({
+      platform: 'linux', exists: (file) => file === '/run/systemd/system', hasCommand: (name) => name === 'nft',
+      read: () => '1\n', nodeVersion: '22.22.0', chromiumPath: '/opt/pw/chrome-headless-shell', resolvers: ['127.0.0.53']
+    });
+    expect(checks.map((check) => [check.name, check.ok])).toEqual([['linux', true], ['systemd', true], ['nftables', true], ['apparmor', true], ['node', true], ['chromium', true], ['dns', true]]);
+  });
+
+  test('vérification de la machine : ce qui manque, avec la marche à suivre', () => {
+    const checks = inspectBrowserHost({ platform: 'linux', exists: () => false, hasCommand: () => false, read: () => '1', nodeVersion: '20.11.0', resolvers: [] });
+    const missing = checks.filter((check) => !check.ok);
+    expect(missing.map((check) => check.name)).toEqual(['systemd', 'nftables', 'apparmor', 'node', 'chromium', 'dns']);
+    expect(missing.every((check) => typeof check.fix === 'string' && check.fix.length > 10)).toBe(true);
+    const mac = inspectBrowserHost({ platform: 'darwin' });
+    expect(mac).toHaveLength(1);
+    expect(mac[0]).toMatchObject({ name: 'linux', ok: false });
+    expect(mac[0].fix).toContain('createLocalBrowser');
+  });
+
+  test('setup écrit les fichiers et rend la vérification', () => {
+    const out = tmp();
+    const spy = quiet();
+    try {
+      const result = setup({ out, node: '/usr/bin/node', 'token-file': '/etc/astratra/browser-token', dns: '127.0.0.53', chromium: '/opt/pw/chrome-headless-shell' });
+      expect(result.files).toContain('INSTALL.fr.md');
+      expect(fs.readFileSync(path.join(out, 'astratra-web-browser.nft'), 'utf8')).toContain('ip daddr 127.0.0.53 udp dport 53 accept');
+      expect(result.checks[0].name).toBe('linux');
+      expect(() => setup({ out, node: '/usr/bin/node' })).toThrow(/token-file/);
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  test('jeton : 600 sans groupe, 640 avec groupe, jamais écrasé, groupe inconnu refusé', () => {
+    const dir = tmp();
+    const spy = quiet();
+    try {
+      token({ out: path.join(dir, 'seul') });
+      expect(fs.statSync(path.join(dir, 'seul')).mode & 0o777).toBe(0o600);
+      expect(fs.readFileSync(path.join(dir, 'seul'), 'utf8').trim()).toMatch(/^[A-Za-z0-9_-]{43}$/);
+      expect(() => token({ out: path.join(dir, 'seul') })).toThrow(/EEXIST/);
+      token({ out: path.join(dir, 'groupe'), group: String(process.getgid()) });
+      const stat = fs.statSync(path.join(dir, 'groupe'));
+      expect(stat.mode & 0o777).toBe(0o640);
+      expect(stat.gid).toBe(process.getgid());
+      expect(() => token({ out: path.join(dir, 'x'), group: 'groupe-qui-nexiste-pas-astratra' })).toThrow(/no group named/);
+      expect(fs.existsSync(path.join(dir, 'x'))).toBe(false);
+    } finally {
+      spy.mockRestore();
+    }
   });
 });

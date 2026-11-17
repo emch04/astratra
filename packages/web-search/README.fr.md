@@ -240,22 +240,60 @@ Installation sur un serveur Linux (Ubuntu 24, en root) :
 npm install @astratra/web-search playwright
 PLAYWRIGHT_BROWSERS_PATH=/opt/ms-playwright npx playwright install --with-deps chromium-headless-shell
 npx astratra-web-browser setup --out ./navigateur --node "$(command -v node)" \
-  --token-file /etc/astratra/browser-token --browsers-path /opt/ms-playwright --dns 127.0.0.53
+  --token-file /etc/astratra/browser-token --browsers-path /opt/ms-playwright
 ```
 
-`setup` écrit l'unité systemd, les règles nftables, le profil AppArmor et
-`INSTALL.md` (création de l'utilisateur `navigateur`, du jeton avec
-`astratra-web-browser token`, chargement du pare-feu et du profil, démarrage).
-`--dns` donne le résolveur de la machine (`/etc/resolv.conf`). Pour le
-développement, `createLocalBrowser()` fait tourner le même moteur dans le
-processus (il faut `playwright`), ou `astratra-web-browser serve
---token-file … --unsafe-no-firewall` lance le service sur un poste sans
-pare-feu.
+`setup` vérifie d'abord la machine (Linux, systemd, nftables, AppArmor, Node,
+Chromium, résolveur DNS) et dit ce qui manque, puis écrit l'unité systemd, les
+règles nftables et l'unité qui les charge au démarrage (sans toucher aux autres
+règles de la machine), le profil AppArmor et la marche à suivre (`INSTALL.md` en
+anglais, `INSTALL.fr.md` en français). Les résolveurs DNS viennent de
+`/etc/resolv.conf` (`--dns` pour en donner d'autres).
+
+**Le jeton** est un secret propre à la
+machine, qui empêche les autres programmes du serveur d'utiliser le
+navigateur. `astratra-web-browser token --out /etc/astratra/browser-token
+--group astratra-browser` le tire au hasard (32 octets) et l'écrit à root, en
+mode 640, lisible par le groupe `astratra-browser`. On met dans ce groupe
+l'utilisateur de chaque application qui appelle le service ; elle le lit avec
+`createBrowserClient({ tokenFile })`. Changer le jeton, c'est réécrire le
+fichier : le service et les clients le relisent à chaque requête.
+
+Pour le développement, `createLocalBrowser()` fait tourner le même moteur dans
+le processus (il faut `playwright`) ; il refuse de démarrer quand
+`NODE_ENV=production`, sauf `allowInProduction: true`. Ou bien
+`astratra-web-browser serve --token-file … --unsafe-no-firewall` lance le
+service sur un poste sans pare-feu.
 
 `createBrowserPm2App` existe aussi, mais pm2 ne donne aucune des protections
 de systemd (utilisateur à part, système en lecture seule, mémoire bornée) :
 le pare-feu reste obligatoire, et pm2 doit tourner sous l'utilisateur du
 service.
+
+### Pour les utilisateurs du framework : quelle installation choisir
+
+Le paquet ne dépend d'aucun service d'Astratra : chacun fait tourner **son**
+navigateur, sur **sa** machine, avec **son** jeton.
+
+| Votre hébergement | Ce qu'il faut faire |
+|---|---|
+| Un serveur Linux à vous (VPS, dédié) avec systemd | Le service `astratra-web-browser`, installé par `setup` : la méthode conseillée, la seule avec toutes les protections. |
+| Un serveur Linux sans systemd (pm2 seul) | `createBrowserPm2App`, sous l'utilisateur du service, avec le pare-feu ; moins de protections (ni système en lecture seule, ni mémoire bornée par le noyau). |
+| Un hébergement sans accès root ou sans serveur (Vercel, Netlify, fonctions, Render, Heroku), un conteneur | Pas de navigateur en production pour l'instant : la recherche et `read_page` marchent sans lui. Le mode local ne remplace pas le service. |
+| Un poste de développement (macOS, Windows, Linux) | `createLocalBrowser()`. |
+
+- **Mettez votre propre identité.** Par défaut, tous les déploiements se
+  présentent comme `AstratraWebBrowser` avec la page GitHub du paquet : donnez
+  votre page avec `--info-url` (qui vous êtes, comment vous joindre), et, pour
+  signer vos requêtes, votre propre clé publiée sur votre domaine
+  (`keygen`, `--signing-key-file`, `--signature-agent`). Un site qui bloque le
+  nom `AstratraWebBrowser` dans son `robots.txt` est refusé pour tous.
+- **Seul Ubuntu 24.04 a été essayé** de bout en bout (pare-feu, AppArmor,
+  cloisonnement). Debian 12 et Ubuntu 22.04 devraient convenir ; `setup` dit
+  ce qui manque.
+- Vous répondez de votre usage : conditions des sites lus, `robots.txt` (le
+  paquet le respecte, ne le désactivez pas sans droit), données personnelles
+  des pages.
 
 ### Isolement
 

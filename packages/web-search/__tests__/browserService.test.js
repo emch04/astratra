@@ -275,6 +275,17 @@ describe('client sans service', () => {
     expect(() => createBrowserClient({ baseUrl: 'ftp://x' })).toThrow(/http/);
   });
 
+  test('moteur local : refusé en production sans allowInProduction', () => {
+    const before = process.env.NODE_ENV;
+    process.env.NODE_ENV = 'production';
+    try {
+      expect(() => createLocalBrowser({})).toThrow(/development[\s\S]*createBrowserClient[\s\S]*allowInProduction/);
+      expect(() => createLocalBrowser({ allowInProduction: true, playwright: { chromium: {} } })).not.toThrow();
+    } finally {
+      process.env.NODE_ENV = before;
+    }
+  });
+
   test('moteur local : même interface', async () => {
     const engine = fakeEngine({ open: async () => ({ status: 'busy' }) });
     const local = createLocalBrowser({ engine });

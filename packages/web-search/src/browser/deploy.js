@@ -10,9 +10,11 @@
  * - `createBrowserFirewall` : les règles nftables qui interdisent à
  *   l'utilisateur du service toute sortie vers une adresse non publique, sauf
  *   le résolveur DNS et le relais de sortie du service ;
+ * - `createBrowserFirewallUnit` : l'unité qui charge ces règles au démarrage ;
  * - `createBrowserAppArmorProfile` : le profil qui permet au binaire de
  *   Chromium de créer son espace de noms (Ubuntu 23.10 et suivants) ;
- * - `browserSetupFiles` : tout cela d'un coup, avec la marche à suivre.
+ * - `browserSetupFiles` : tout cela d'un coup, avec la marche à suivre
+ *   (INSTALL.md en anglais, INSTALL.fr.md en français).
  *
  * Le jeton et la clé de signature ne sont jamais écrits dans un fichier
  * généré (ces fichiers finissent dans git) : on passe leur CHEMIN.
@@ -135,8 +137,10 @@ function createBrowserSystemdUnit(options = {}) {
   const lines = [
     '[Unit]',
     `Description=${description}`,
-    'After=network-online.target nftables.service',
+    'After=network-online.target astratra-web-browser-firewall.service',
     'Wants=network-online.target',
+    '# The firewall rules are loaded first; without them the service refuses to start anyway.',
+    'Requires=astratra-web-browser-firewall.service',
     '',
     '[Service]',
     'Type=simple',
@@ -278,6 +282,35 @@ function createBrowserFirewall(options = {}) {
 }
 
 /**
+ * L'unité qui charge les règles du navigateur au démarrage de la machine,
+ * avant le service. Elle ne touche qu'à sa propre table (le fichier la
+ * supprime puis la recrée) : les autres règles de la machine (ufw, Docker,
+ * nftables.conf) restent telles quelles. `nftables.service` d'Ubuntu, lui,
+ * commence par tout effacer.
+ * @param {{ nftFile?: string, nft?: string }} [options]
+ */
+function createBrowserFirewallUnit(options = {}) {
+  const nftFile = absolute(options.nftFile ?? '/etc/astratra/astratra-web-browser.nft', 'nftFile');
+  const nft = absolute(options.nft ?? '/usr/sbin/nft', 'nft');
+  return [
+    '[Unit]',
+    'Description=Astratra integrated web browser: firewall rules',
+    'DefaultDependencies=no',
+    'Before=network-pre.target astratra-web-browser.service',
+    'Wants=network-pre.target',
+    '',
+    '[Service]',
+    'Type=oneshot',
+    'RemainAfterExit=yes',
+    `ExecStart=${quoteArg(nft)} -f ${quoteArg(nftFile)}`,
+    '',
+    '[Install]',
+    'WantedBy=multi-user.target',
+    ''
+  ].join('\n');
+}
+
+/**
  * Le profil AppArmor du binaire de Chromium (Ubuntu 23.10 et suivants
  * restreignent les espaces de noms non privilégiés : sans lui, le
  * cloisonnement de Chromium ne démarre pas, et le service refuse de démarrer).
@@ -310,26 +343,70 @@ function createBrowserAppArmorProfile(options = {}) {
 function browserSetupFiles(options = {}) {
   const user = options.user ?? 'navigateur';
   const proxyPort = options.proxyPort ?? 5009;
+  const group = safeValue(options.clientsGroup ?? 'astratra-browser', 'clientsGroup');
+  if (!NAME.test(group)) fail('clientsGroup: a group name (letters, digits, dash, underscore).');
   const files = {
     'astratra-web-browser.service': createBrowserSystemdUnit({ ...options, user, proxyPort }),
-    'astratra-web-browser.nft': createBrowserFirewall({ user, proxyPort, dnsServers: options.dnsServers, table: options.table })
+    'astratra-web-browser.nft': createBrowserFirewall({ user, proxyPort, dnsServers: options.dnsServers, table: options.table }),
+    'astratra-web-browser-firewall.service': createBrowserFirewallUnit({ nftFile: options.nftFile })
   };
+  const nftFile = options.nftFile ?? '/etc/astratra/astratra-web-browser.nft';
   if (options.chromiumPath) files['astratra-chromium.apparmor'] = createBrowserAppArmorProfile({ chromiumPath: options.chromiumPath });
-  const tokenFile = options.tokenFile;
+  const tokenFile = absolute(options.tokenFile, 'tokenFile');
+  const port = options.port ?? 5008;
+  const apparmor = Boolean(files['astratra-chromium.apparmor']);
   files['INSTALL.md'] = [
+    '# Astratra integrated browser — installation (as root)',
+    '',
+    `1. Service user: \`useradd --system --home-dir /var/lib/astratra-web-browser --shell /usr/sbin/nologin ${user}\``,
+    `2. Group of the applications allowed to call the service: \`groupadd --system ${group}\`,`,
+    `   then, for each user that runs such an application (the user of its pm2, systemd unit…): \`usermod -aG ${group} <user>\`.`,
+    '   A new group membership only applies to processes started afterwards: restart that application\'s process',
+    '   manager from a new session (for pm2: `pm2 kill` then `pm2 resurrect`, which restarts all its applications).',
+    `   Without a restart: \`setfacl -m u:<user>:r ${tokenFile}\` (package acl) after step 3.`,
+    `3. Token: \`astratra-web-browser token --out ${tokenFile} --group ${group}\``,
+    `   (owned by root, mode 640, readable by the group ${group}; systemd hands it to the service). Never commit it.`,
+    `   Its folder must stay traversable (\`chmod 755 ${path.dirname(tokenFile)}\`), or the applications cannot reach the file.`,
+    `4. Firewall: copy \`astratra-web-browser.nft\` to \`${nftFile}\` and \`astratra-web-browser-firewall.service\` to \`/etc/systemd/system/\`,`,
+    '   then `systemctl daemon-reload && systemctl enable --now astratra-web-browser-firewall`. This unit loads only its own',
+    '   table at boot, before the service; it leaves the machine\'s other rules (ufw, Docker, nftables.conf) alone.',
+    '   Do not enable nftables.service for this: it starts by flushing every rule.',
+    ...(apparmor
+      ? ['5. AppArmor (Ubuntu 23.10 and later): copy `astratra-chromium.apparmor` to `/etc/apparmor.d/astratra-chromium`,', '   then `apparmor_parser -r /etc/apparmor.d/astratra-chromium`.']
+      : ['5. AppArmor (Ubuntu 23.10 and later): rerun `setup` with `--chromium <path of chrome-headless-shell>` to get the profile.']),
+    '6. Service: copy `astratra-web-browser.service` to `/etc/systemd/system/`, then',
+    '   `systemctl daemon-reload && systemctl enable --now astratra-web-browser`.',
+    '7. Check: `journalctl -u astratra-web-browser -n 20` must show "isolation ok";',
+    `   \`curl -s -H "Authorization: Bearer $(cat ${tokenFile})" http://127.0.0.1:${port}/health\`.`,
+    `8. In each application: \`createBrowserClient({ baseUrl: 'http://127.0.0.1:${port}', tokenFile: '${tokenFile}' })\`.`,
+    '',
+    'The service refuses to start if it can reach the internal network: keep the firewall loaded.',
+    ''
+  ].join('\n');
+  files['INSTALL.fr.md'] = [
     '# Navigateur intégré Astratra — installation (en root)',
     '',
-    `1. Utilisateur système : \`useradd --system --home-dir /var/lib/astratra-web-browser --shell /usr/sbin/nologin ${user}\``,
-    `2. Jeton : \`astratra-web-browser token --out ${tokenFile}\` (fichier à root, mode 600 ; systemd le passe au service).`,
-    '3. Pare-feu : copier `astratra-web-browser.nft` dans `/etc/nftables.d/` (ou l\'inclure depuis `/etc/nftables.conf`),',
-    '   puis `nft -f /etc/nftables.d/astratra-web-browser.nft` et `systemctl enable nftables`.',
-    ...(files['astratra-chromium.apparmor']
-      ? ['4. AppArmor (Ubuntu 23.10 et suivants) : copier `astratra-chromium.apparmor` dans `/etc/apparmor.d/astratra-chromium`,', '   puis `apparmor_parser -r /etc/apparmor.d/astratra-chromium`.']
-      : ['4. AppArmor (Ubuntu 23.10 et suivants) : relancer `setup` avec `--chromium <chemin de chrome-headless-shell>` pour obtenir le profil.']),
-    '5. Service : copier `astratra-web-browser.service` dans `/etc/systemd/system/`, puis',
+    `1. Utilisateur du service : \`useradd --system --home-dir /var/lib/astratra-web-browser --shell /usr/sbin/nologin ${user}\``,
+    `2. Groupe des applications qui ont le droit d'appeler le service : \`groupadd --system ${group}\`,`,
+    `   puis, pour chaque utilisateur qui fait tourner une telle application (celui de son pm2, de son unité systemd…) : \`usermod -aG ${group} <utilisateur>\`.`,
+    '   Un nouveau groupe ne vaut que pour les processus lancés après : relancer le gestionnaire de cette application',
+    '   depuis une nouvelle session (pour pm2 : `pm2 kill` puis `pm2 resurrect`, qui relance toutes ses applications).',
+    `   Sans relance : \`setfacl -m u:<utilisateur>:r ${tokenFile}\` (paquet acl) après l'étape 3.`,
+    `3. Jeton : \`astratra-web-browser token --out ${tokenFile} --group ${group}\``,
+    `   (à root, mode 640, lisible par le groupe ${group} ; systemd le passe au service). Ne jamais le mettre dans git.`,
+    `   Son dossier doit rester traversable (\`chmod 755 ${path.dirname(tokenFile)}\`), sinon les applications n'atteignent pas le fichier.`,
+    `4. Pare-feu : copier \`astratra-web-browser.nft\` dans \`${nftFile}\` et \`astratra-web-browser-firewall.service\` dans \`/etc/systemd/system/\`,`,
+    '   puis `systemctl daemon-reload && systemctl enable --now astratra-web-browser-firewall`. Cette unité charge seulement sa',
+    '   propre table au démarrage, avant le service ; elle ne touche pas aux autres règles de la machine (ufw, Docker, nftables.conf).',
+    '   Ne pas activer nftables.service pour cela : il commence par effacer toutes les règles.',
+    ...(apparmor
+      ? ['5. AppArmor (Ubuntu 23.10 et suivants) : copier `astratra-chromium.apparmor` dans `/etc/apparmor.d/astratra-chromium`,', '   puis `apparmor_parser -r /etc/apparmor.d/astratra-chromium`.']
+      : ['5. AppArmor (Ubuntu 23.10 et suivants) : relancer `setup` avec `--chromium <chemin de chrome-headless-shell>` pour obtenir le profil.']),
+    '6. Service : copier `astratra-web-browser.service` dans `/etc/systemd/system/`, puis',
     '   `systemctl daemon-reload && systemctl enable --now astratra-web-browser`.',
-    '6. Contrôle : `journalctl -u astratra-web-browser -n 50` doit montrer « isolation ok » ;',
-    `   \`curl -s -H "Authorization: Bearer $(cat ${tokenFile})" http://127.0.0.1:${options.port ?? 5008}/health\`.`,
+    '7. Contrôle : `journalctl -u astratra-web-browser -n 20` doit montrer « isolation ok » ;',
+    `   \`curl -s -H "Authorization: Bearer $(cat ${tokenFile})" http://127.0.0.1:${port}/health\`.`,
+    `8. Dans chaque application : \`createBrowserClient({ baseUrl: 'http://127.0.0.1:${port}', tokenFile: '${tokenFile}' })\`.`,
     '',
     'Le service refuse de démarrer s\'il peut joindre le réseau interne : le pare-feu doit rester chargé.',
     ''
@@ -342,6 +419,7 @@ module.exports = {
   createBrowserSystemdUnit,
   createBrowserPm2App,
   createBrowserFirewall,
+  createBrowserFirewallUnit,
   createBrowserAppArmorProfile,
   browserSetupFiles,
   BROWSER_CLI: SCRIPT

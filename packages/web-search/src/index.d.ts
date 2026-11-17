@@ -499,7 +499,8 @@ export interface BrowserEngine {
   readonly userAgent: string;
 }
 export function createBrowserEngine(options?: BrowserEngineOptions): BrowserEngine;
-export function createLocalBrowser(options?: BrowserEngineOptions & { engine?: BrowserEngine }): BrowserBackend & { start(): Promise<unknown>; close(): Promise<void>; readonly kind: 'local' };
+/** Pour le développement : refuse NODE_ENV=production sans allowInProduction: true. */
+export function createLocalBrowser(options?: BrowserEngineOptions & { engine?: BrowserEngine; allowInProduction?: boolean }): BrowserBackend & { start(): Promise<unknown>; close(): Promise<void>; readonly kind: 'local' };
 export function browserUserAgent(options?: { version?: string; infoUrl?: string }): string;
 export const BROWSER_DEFAULTS: Readonly<{ maxContexts: number; queueMs: number; maxQueue: number; pageTimeoutMs: number; requestTimeoutMs: number; settleMs: number; maxRedirects: number; maxResourceBytes: number; maxTextChars: number; maxLinks: number; viewport: { width: number; height: number } }>;
 export const DEFAULT_INFO_URL: string;
@@ -573,8 +574,11 @@ export function createBrowserSystemdUnit(options: BrowserDeployOptions & {
 }): string;
 export function createBrowserPm2App(options: BrowserDeployOptions & { tokenFile: string; node?: string; script?: string; name?: string; cwd?: string; maxRestarts?: number; restartDelay?: number; killTimeout?: number; maxMemoryRestart?: string }): Record<string, unknown>;
 export function createBrowserFirewall(options?: { user?: string; proxyPort?: number; dnsServers?: string[]; table?: string }): string;
+/** L'unité systemd qui charge la seule table du navigateur au démarrage, avant le service. */
+export function createBrowserFirewallUnit(options?: { nftFile?: string; nft?: string }): string;
 export function createBrowserAppArmorProfile(options: { chromiumPath: string; name?: string }): string;
-export function browserSetupFiles(options: Parameters<typeof createBrowserSystemdUnit>[0] & { chromiumPath?: string; dnsServers?: string[]; table?: string }): Record<string, string>;
+/** clientsGroup : le groupe des applications qui lisent le jeton (défaut astratra-browser). */
+export function browserSetupFiles(options: Parameters<typeof createBrowserSystemdUnit>[0] & { chromiumPath?: string; dnsServers?: string[]; table?: string; clientsGroup?: string; nftFile?: string }): Record<string, string>;
 export const BROWSER_CLI: string;
 
 export const BLOCKED_IPV4: ReadonlyArray<readonly [string, number]>;

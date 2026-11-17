@@ -345,3 +345,37 @@ de bout en bout (les outils et les gardes sont vérifiés avec un modèle simul�
 et un modèle de garde simulé) ; l'entrée pm2 ; la signature Web Bot Auth
 auprès d'un vrai vérificateur (Cloudflare) : l'annuaire n'est publié nulle
 part.
+
+### Corrections du 17 novembre 2026 (le pack sert aussi à d'autres)
+
+Le pack est publié sur npm : chaque utilisateur du framework fait tourner son
+propre navigateur sur sa machine, avec son propre jeton ; rien ne dépend d'un
+VPS en particulier. Après relecture :
+
+- `createLocalBrowser` refuse `NODE_ENV=production` sans
+  `allowInProduction: true` : il n'a ni utilisateur à part, ni pare-feu, ni
+  contrôle d'isolement.
+- `setup` vérifie la machine et dit ce qui manque ; il lit les résolveurs DNS
+  dans `/etc/resolv.conf` ; `INSTALL.md` (anglais) et `INSTALL.fr.md`.
+- Le jeton est un secret de la machine.
+  En mode 600 à root, une application sous pm2 avec un autre utilisateur ne
+  pouvait pas le lire ; `token --group` l'écrit en mode 640 pour le groupe des
+  applications qui appellent le service (`astratra-browser` par défaut).
+- Le pare-feu ne survivait pas à un redémarrage (Ubuntu ne lit pas
+  `/etc/nftables.d/`, et `nftables.service` efface toutes les règles avant de
+  charger les siennes). L'unité `astratra-web-browser-firewall.service` charge
+  seulement la table du navigateur au démarrage, avant le service, qui l'exige
+  (`Requires=`).
+- README : quelle installation choisir selon l'hébergement (serveur Linux avec
+  systemd conseillé ; pas de navigateur en production sur un hébergement sans
+  serveur ou sans root pour l'instant) ; mettre sa propre identité d'agent.
+
+Vérifié sur Ubuntu 24.04 (Colima) : `setup` trouve tout (systemd, nftables,
+AppArmor, Node, Chromium, résolveur) ; jeton en 640 pour le groupe
+`astratra-browser` : l'utilisateur d'une application du groupe ouvre une page,
+un autre utilisateur ne lit pas le jeton (`token_unavailable`) ; le mode local
+refuse `NODE_ENV=production` ; après un redémarrage complet de la machine, le
+pare-feu est rechargé et le service démarre seul, « isolation ok ».
+
+Plus tard, à décider : une image de conteneur durcie (cloisonnement de
+Chromium et pare-feu dans le conteneur) pour les hébergeurs à conteneurs.

@@ -232,20 +232,57 @@ Install on a Linux server (Ubuntu 24, as root):
 npm install @astratra/web-search playwright
 PLAYWRIGHT_BROWSERS_PATH=/opt/ms-playwright npx playwright install --with-deps chromium-headless-shell
 npx astratra-web-browser setup --out ./browser --node "$(command -v node)" \
-  --token-file /etc/astratra/browser-token --browsers-path /opt/ms-playwright --dns 127.0.0.53
+  --token-file /etc/astratra/browser-token --browsers-path /opt/ms-playwright
 ```
 
-`setup` writes the systemd unit, the nftables rules, the AppArmor profile and
-`INSTALL.md` (creating the `navigateur` user, the token with
-`astratra-web-browser token`, loading the firewall and the profile, starting).
-`--dns` is the machine's resolver (`/etc/resolv.conf`). For development,
-`createLocalBrowser()` runs the same engine in-process (requires
-`playwright`), or `astratra-web-browser serve --token-file …
---unsafe-no-firewall` starts the service on a machine without the firewall.
+`setup` first checks the machine (Linux, systemd, nftables, AppArmor, Node,
+Chromium, DNS resolver) and says what is missing, then writes the systemd
+unit, the nftables rules and the unit that loads them at boot (leaving the
+machine's other rules alone), the AppArmor profile and the steps to follow
+(`INSTALL.md` in English, `INSTALL.fr.md` in French). DNS resolvers are read
+from `/etc/resolv.conf` (`--dns` to give others).
+
+**The token** is a secret of the machine, which
+keeps the server's other programs from using the browser.
+`astratra-web-browser token --out /etc/astratra/browser-token --group
+astratra-browser` draws it at random (32 bytes) and writes it owned by root,
+mode 640, readable by the `astratra-browser` group. Put in that group the user
+of each application that calls the service; it reads the token with
+`createBrowserClient({ tokenFile })`. To change the token, rewrite the file:
+the service and the clients read it again on every request.
+
+For development, `createLocalBrowser()` runs the same engine in-process
+(requires `playwright`); it refuses to start when `NODE_ENV=production`,
+unless `allowInProduction: true`. Or `astratra-web-browser serve --token-file
+… --unsafe-no-firewall` starts the service on a machine without the firewall.
 
 `createBrowserPm2App` exists too, but pm2 gives none of systemd's protections
 (own user, read-only system, bounded memory): the firewall stays mandatory,
 and pm2 must run as the service user.
+
+### For framework users: which setup to choose
+
+The package depends on no Astratra service: everyone runs **their own**
+browser, on **their own** machine, with **their own** token.
+
+| Your hosting | What to do |
+|---|---|
+| A Linux server of your own (VPS, dedicated) with systemd | The `astratra-web-browser` service, installed by `setup`: the recommended way, the only one with every protection. |
+| A Linux server without systemd (pm2 only) | `createBrowserPm2App`, as the service user, with the firewall; fewer protections (no read-only system, no kernel-bounded memory). |
+| Hosting without root access or without a server (Vercel, Netlify, functions, Render, Heroku), a container | No browser in production for now: search and `read_page` work without it. The local mode does not replace the service. |
+| A development machine (macOS, Windows, Linux) | `createLocalBrowser()`. |
+
+- **Use your own identity.** By default every deployment presents itself as
+  `AstratraWebBrowser` with the package's GitHub page: give your own page with
+  `--info-url` (who you are, how to reach you), and, to sign your requests,
+  your own key published on your domain (`keygen`, `--signing-key-file`,
+  `--signature-agent`). A site that blocks the `AstratraWebBrowser` name in its
+  `robots.txt` is refused for everyone.
+- **Only Ubuntu 24.04 was tried** end to end (firewall, AppArmor, sandbox).
+  Debian 12 and Ubuntu 22.04 should do; `setup` says what is missing.
+- You answer for your use: terms of the sites read, `robots.txt` (the package
+  respects it; do not turn that off without the right to), personal data on
+  the pages.
 
 ### Isolation
 

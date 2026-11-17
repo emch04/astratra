@@ -217,11 +217,21 @@ function createBrowserClient(options = {}) {
 }
 
 /**
- * Le moteur dans le processus, avec l'interface du client.
- * @param {object} [options]  les options de createBrowserEngine (ou `engine` déjà créé).
+ * Le moteur dans le processus, avec l'interface du client. Pour le
+ * développement et les tests : il n'a ni utilisateur à part, ni pare-feu, ni
+ * contrôle d'isolement. Il refuse donc de tourner quand NODE_ENV vaut
+ * `production`, sauf `allowInProduction: true` donné en connaissance de cause.
+ * @param {object} [options]  les options de createBrowserEngine (ou `engine` déjà créé), et allowInProduction.
  */
 function createLocalBrowser(options = {}) {
-  const engine = options.engine || createBrowserEngine(options);
+  if (process.env.NODE_ENV === 'production' && options.allowInProduction !== true && !options.engine) {
+    throw new Error('createLocalBrowser runs Chromium inside your application, without a separate user, firewall or isolation check: '
+      + 'it is meant for development. In production, run the astratra-web-browser service and use createBrowserClient '
+      + '(see the README, "Integrated browser"). To run it anyway, pass { allowInProduction: true }.');
+  }
+  const engineOptions = { ...options };
+  delete engineOptions.allowInProduction;
+  const engine = options.engine || createBrowserEngine(engineOptions);
   const wrap = (result) => {
     if (result.status === 'busy') return { ok: false, code: 'busy', retryable: true };
     if (result.status === 'invalid_input') return { ok: false, code: 'invalid_input', retryable: false, message: `${result.reason || 'request'} is invalid.` };
