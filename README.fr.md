@@ -112,7 +112,7 @@ liens.
 
 ## Paquets
 
-Les 45 paquets de [`packages/`](packages/) sont publiés sous le périmètre
+Les 44 paquets de [`packages/`](packages/) sont publiés sous le périmètre
 `@astratra`, sauf `create-astratra-app`, publié sous son propre nom. Les
 versions sont celles de chaque `package.json` ; l'historique de chaque paquet
 est dans [CHANGELOG.md](CHANGELOG.md).
