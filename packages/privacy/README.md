@@ -6,6 +6,48 @@ de garder.
 
 Aucune dépendance à l'exécution. Rien n'est stocké ni sauvegardé à ta place.
 
+## L'idée principale : anonymiser, pas supprimer
+
+Supprimer la ligne est le geste évident, et presque toujours le mauvais.
+
+Les notes d'un élève, les factures d'un client, les fiches de paie d'un salarié
+ont leur propre durée de conservation légale, et appartiennent à
+l'établissement, à l'entreprise, au fisc autant qu'à la personne. Supprimer le
+compte les emporte avec lui, ou les laisse orphelines et inexplicables.
+
+Ce que la loi demande, c'est que la personne cesse d'être **identifiable**. Les
+champs qui l'identifient partent, le reste demeure, et les dossiers restent
+cohérents.
+
+```js
+const { createAnonymizer } = require('@astratra/privacy');
+
+const anonymizer = createAnonymizer({
+  fields: {
+    fullName: 'redact',
+    email:    (_v, { token }) => `efface-${token}@invalid`,
+    phone:    'clear',
+  },
+  // Ce qu'une réécriture de champ ne peut pas exprimer : invalider les
+  // sessions, retirer les abonnements aux notifications, révoquer les jetons.
+  onAnonymised: async (compte) => {
+    compte.tokenVersion = (compte.tokenVersion || 0) + 1000;
+  },
+});
+
+await anonymizer.anonymise(compte);
+await compte.save();   // la persistance reste ta décision
+```
+
+Deux garde-fous que les tests fixent :
+
+**Un champ que la fiche ne porte pas est ignoré, jamais inventé.** Ajouter
+`parentPhone` à une fiche de salarié serait créer une donnée personnelle
+nouvelle au moment même de l'effacement.
+
+**C'est irréversible par construction.** Il n'y a pas d'annulation, et il ne
+doit pas y en avoir : une anonymisation réversible n'a rien anonymisé.
+
 ## L'effacement passe par un humain
 
 Un bouton de suppression irréversible en un clic est un cadeau pour qui

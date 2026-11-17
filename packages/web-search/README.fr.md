@@ -31,12 +31,13 @@ vient chacune. Ce paquet corrige les trois, et chacun se vérifie (voir
 ## Démarrage
 
 ```js
-const { createWebSearch, gatewayProvider, braveProvider, formatForModel } = require('@astratra/web-search');
+const { createWebSearch, braveProvider, tavilyProvider, formatForModel } = require('@astratra/web-search');
 
+// Les moteurs et leur ordre sont les tiens : le paquet n'en choisit aucun.
 const ws = createWebSearch({
   providers: [
-    gatewayProvider({ search: (demande, { signal }) => maPasserelle.rechercher(demande, { signal }) }),
-    braveProvider({ key: () => process.env.BRAVE_SEARCH_API_KEY })
+    braveProvider({ key: () => process.env.BRAVE_SEARCH_API_KEY }),
+    tavilyProvider({ key: () => process.env.TAVILY_API_KEY })
   ]
 });
 
@@ -76,7 +77,7 @@ formatForModel(trouve); // le texte pour le modèle : règles de citation, puis 
 
 | Fournisseur | Adresse | Notes |
 |---|---|---|
-| `gatewayProvider({ search })` | une passerelle de recherche à toi | Les clés des moteurs restent chez ta passerelle, qui compte le coût (`costPerCallUsd: null`). Les sites partent en opérateurs `site:`. |
+| `gatewayProvider({ search })` | une passerelle de recherche à toi : `search({ requete, nombre, langue?, pays?, periode? }, { signal })` rend `{ fournisseur, resultats: [{ titre, url, extrait, date? }] }` | Les clés des moteurs restent chez ta passerelle, qui compte le coût (`costPerCallUsd: null`). Les sites partent en opérateurs `site:`. |
 | `serperProvider({ key })` | `google.serper.dev` | Réutilise `searchSerper` de `@astratra/ai`. Pays (`gl`), langue (`hl`), période (`tbs`). |
 | `braveProvider({ key })` | `api.search.brave.com/res/v1/web/search` | Index indépendant. `extra_snippets` de la même page, `freshness`. Brave réserve le stockage des résultats aux forfaits qui l'incluent : le cache de ce moteur est d'une minute par défaut. |
 | `tavilyProvider({ key })` | `api.tavily.com/search` | Filtres de domaines natifs, `time_range`. `search_depth: 'basic'` (1 crédit) est fixé. La réponse générée (`answer`) n'est jamais demandée. |

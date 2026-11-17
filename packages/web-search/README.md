@@ -30,12 +30,13 @@ each one checkable (see [Evaluation](#evaluation)).
 ## Quick start
 
 ```js
-const { createWebSearch, gatewayProvider, braveProvider, formatForModel } = require('@astratra/web-search');
+const { createWebSearch, braveProvider, tavilyProvider, formatForModel } = require('@astratra/web-search');
 
+// The engines and their order are yours: none is chosen by the package.
 const ws = createWebSearch({
   providers: [
-    gatewayProvider({ search: (demande, { signal }) => maPasserelle.rechercher(demande, { signal }) }),
-    braveProvider({ key: () => process.env.BRAVE_SEARCH_API_KEY })
+    braveProvider({ key: () => process.env.BRAVE_SEARCH_API_KEY }),
+    tavilyProvider({ key: () => process.env.TAVILY_API_KEY })
   ]
 });
 
@@ -74,7 +75,7 @@ formatForModel(found);   // the text to give a model: citation rules, then the s
 
 | Provider | Endpoint | Notes |
 |---|---|---|
-| `gatewayProvider({ search })` | a search gateway of your own | The engine keys stay with your gateway, which counts the cost (`costPerCallUsd: null`). Sites are sent as `site:` operators. |
+| `gatewayProvider({ search })` | a search gateway of your own: `search({ requete, nombre, langue?, pays?, periode? }, { signal })` returns `{ fournisseur, resultats: [{ titre, url, extrait, date? }] }` | The engine keys stay with your gateway, which counts the cost (`costPerCallUsd: null`). Sites are sent as `site:` operators. |
 | `serperProvider({ key })` | `google.serper.dev` | Reuses `searchSerper` of `@astratra/ai`. Country (`gl`), language (`hl`), period (`tbs`). |
 | `braveProvider({ key })` | `api.search.brave.com/res/v1/web/search` | Independent index. `extra_snippets` of the same page, `freshness`. Brave reserves storing results to plans that include it: the cache of this engine is 1 minute by default. |
 | `tavilyProvider({ key })` | `api.tavily.com/search` | Native domain filters, `time_range`. `search_depth: 'basic'` (1 credit) is set explicitly. The generated `answer` is never requested. |

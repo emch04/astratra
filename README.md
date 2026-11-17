@@ -106,7 +106,7 @@ options and what it does not do. The table below links to them.
 
 ## Packages
 
-The 47 packages in [`packages/`](packages/) are all published under the
+The 45 packages in [`packages/`](packages/) are all published under the
 `@astratra` scope, except `create-astratra-app`, which is published under its
 own name. Versions are the ones in each `package.json`; the history of every
 package is in [CHANGELOG.md](CHANGELOG.md).

@@ -12,7 +12,7 @@
  * Rien n'est écrit sur stdout hors du protocole ; les clés ne sont jamais écrites.
  */
 
-const { createWebSearch, serperProvider, braveProvider, tavilyProvider, exaProvider, gatewayProvider } = require('./index');
+const { createWebSearch, serperProvider, braveProvider, tavilyProvider, exaProvider } = require('./index');
 const { createBrowserClient } = require('./browser/client');
 const { createMcpServer } = require('./mcp');
 

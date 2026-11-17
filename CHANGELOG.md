@@ -3,6 +3,14 @@
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Chaque package Astratra est versionné indépendamment.
 
+## 2026-11-17 — deux paquets de collecte et leur version Swift quittent le dépôt public
+
+### Retiré
+- Les deux paquets de collecte d'un tableau de bord privé et leur paquet Swift sortent d'Astratra : ils vivent maintenant dans un dépôt privé et ne seront plus publiés par ce dépôt. Les versions déjà sur npm restent installables. `Package.swift` et `swift/` disparaissent, ainsi que leurs lignes dans les tableaux des versions, le script de publication, l'intégration continue et `eslint.config.js`.
+- `@astratra/web-search` 1.2.0 (à publier) : plus de dépendance facultative vers ces paquets ; le serveur MCP ne lit plus les variables de leur passerelle. `gatewayProvider({ search })` reste, pour une passerelle de recherche à soi : `search` reçoit `{ requete, nombre, langue?, pays?, periode? }` et rend `{ fournisseur, resultats }`.
+- `@astratra/ai`, `@astratra/credentials`, `@astratra/privacy` : commentaires et documentation sans nom de produit.
+- La garde des noms (`npm run lint`) refuse aussi ce nom.
+
 ## 2026-11-17 — `@astratra/ai` 2.0.0 (à publier) : aucun modèle, aucune voix, aucun ordre choisi d'avance
 
 ### Versions
