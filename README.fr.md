@@ -160,6 +160,7 @@ est dans [CHANGELOG.md](CHANGELOG.md).
 | [`@astratra/loyalty`](packages/loyalty/README.md) | 1.1.0 | Cartes à tampons et cartes à quota mensuel, calculées sans base de données |
 | [`@astratra/wallet`](packages/wallet/README.md) | 1.2.1 | Cartes Apple Wallet et Google Wallet tenues à jour (fidélité, billets, embarquement) : signature, service web, lien d'ajout, retrait |
 | [`@astratra/pdf`](packages/pdf/README.md) | 1.1.0 | Primitives de mise en page PDFKit : texte qui tient dans sa case, tableaux paginés, planches de cartes avec QR vectoriel |
+| [`@astratra/qr`](packages/qr/README.md) | 1.0.0 | Codes QR sans dépendance, Node et navigateur : tous les modes, L/M/Q/H, versions 1 à 40, meilleur masque ; SVG, PNG, adresse data: |
 | [`@astratra/closure`](packages/closure/README.md) | 1.1.0 | Liste de clôture de période à points bloquants et reconnus, archive sans aucun identifiant |
 | [`@astratra/notify`](packages/notify/README.md) | 1.2.0 | Messages sortants : e-mail, SMS, push ; transport injecté, protégé contre l'injection d'en-têtes, ne lève jamais |
 

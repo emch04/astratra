@@ -3,6 +3,17 @@
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Chaque package Astratra est versionné indépendamment.
 
+## 2026-11-18 — `@astratra/qr` 1.0.0 (à publier) : les codes QR sans dépendance
+
+### Ajouté
+- Nouveau paquet `@astratra/qr` : `createQr`, `qrToSvg`, `qrToPng`, `qrToDataUrl`, pour Node et le navigateur (node:zlib n'est chargé que pour le PNG). Modes numérique, alphanumérique et octets (UTF-8), niveaux L, M, Q et H, versions 1 à 40, le meilleur des huit masques selon les pénalités de la norme. Pour les projets qui utilisaient qrcode ou uqr ; `createQr(texte).modules` a la forme de `qrcode.create(texte).modules`, que `drawQrMatrix` de `@astratra/pdf` dessine tel quel.
+- Une couleur qui n'en est pas une est refusée avant d'entrer dans le SVG (pas d'injection dans l'image), le titre est échappé, un texte trop long est refusé avant tout calcul.
+
+- Dépôt : `scripts/verifier-noms.js` lit aussi les fichiers nouveaux, pas encore ajoutés à git (hors `.gitignore`) ; un fichier créé puis validé dans la foulée passait sans être lu.
+
+### Essais
+- `packages/qr/__tests__/qr.test.js` : comparé module par module à uqr 0.1.3 (générateur de Nayuki) sur 155 cas enregistrés (`scripts/record-uqr-reference.cjs`) ; relu par un décodeur indépendant (qr-scanner, issu de jsQR, s'il est installé : `QR_DECODER_WORKER`) — 128 textes revenus à l'identique ; structure de la norme sur 300 codes ; PNG relu pixel par pixel, sommes de contrôle comprises ; couleurs piégées ; fuzz. `npm run verify:mutations` : 10 mutations, toutes tuées.
+
 ## 2026-11-18 — la double authentification sans otplib
 
 ### Ajouté

@@ -74,7 +74,7 @@ function imposeCards(doc, {
  * QR en carrés vectoriels (net à toute taille, contrairement à une image).
  * @param {object} doc
  * @param {{size: number, get(row: number, column: number): boolean|number}} modules
- *        la matrice, par exemple `require('qrcode').create(texte).modules`.
+ *        la matrice, par exemple `require('@astratra/qr').createQr(texte).modules` (ou celle de qrcode).
  * @param {number} size  côté du carré, zone de silence comprise.
  */
 function drawQrMatrix(doc, modules, x, y, size, { color = '#000000', background = '#ffffff', quietZone = 3, radius = 0 } = {}) {

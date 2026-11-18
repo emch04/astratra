@@ -46,7 +46,10 @@ function git(...args) {
 
 function verifier() {
   const fautes = [];
-  for (const fichier of git('ls-files', '-z').split('\0').filter(Boolean)) {
+  /* Les fichiers suivis, et aussi les nouveaux pas encore ajoutés (hors .gitignore) : sans eux, un fichier créé puis
+     validé dans la foulée passait le contrôle sans être lu (des vecteurs d'essai portaient le nom d'un projet). */
+  const fichiers = [...new Set([...git('ls-files', '-z').split('\0'), ...git('ls-files', '--others', '--exclude-standard', '-z').split('\0')].filter(Boolean))];
+  for (const fichier of fichiers) {
     const chemin = path.join(racine, fichier);
     if (!fs.existsSync(chemin) || fs.statSync(chemin).isDirectory()) continue;
     const contenu = fs.readFileSync(chemin);

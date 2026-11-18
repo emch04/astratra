@@ -1,0 +1,38 @@
+{
+  "name": "@astratra/qr",
+  "version": "1.0.0",
+  "description": "QR codes with no dependency, for Node and browsers: numeric, alphanumeric and byte (UTF-8) modes, error correction L/M/Q/H, versions 1 to 40, best mask by the standard's penalties; SVG, PNG and data URL output.",
+  "engines": {
+    "node": ">=22"
+  },
+  "main": "src/index.js",
+  "types": "src/index.d.ts",
+  "type": "commonjs",
+  "files": [
+    "src"
+  ],
+  "scripts": {
+    "test": "jest",
+    "verify:mutations": "node scripts/verify-qr-mutations.cjs"
+  },
+  "jest": {
+    "testMatch": [
+      "**/__tests__/**/*.test.js"
+    ]
+  },
+  "keywords": [
+    "astratra",
+    "qr",
+    "qrcode",
+    "svg",
+    "png"
+  ],
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  },
+  "devDependencies": {
+    "@astratra/testkit": "^2.0.0",
+    "jest": "30.4.2"
+  }
+}

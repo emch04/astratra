@@ -42,6 +42,7 @@ ORDER=(
   "@astratra/i18n-server"
   "@astratra/shipping"
   "@astratra/pdf"
+  "@astratra/qr"
   "@astratra/loyalty"
   "@astratra/wallet"
   "@astratra/closure"

@@ -125,7 +125,7 @@ export function imposeCards(doc: PdfDocumentLike, options: {
 export function drawCropMarks(doc: PdfDocumentLike, x: number, y: number, width: number, height: number,
   options?: { length?: number; gap?: number; color?: string }): void;
 
-/** A QR code as vector squares, from a module matrix (e.g. `require('qrcode').create(text).modules`). */
+/** A QR code as vector squares, from a module matrix (e.g. `require('@astratra/qr').createQr(text).modules`). */
 export function drawQrMatrix(doc: PdfDocumentLike, modules: { size: number; get(row: number, column: number): boolean | number },
   x: number, y: number, size: number,
   options?: { color?: string; background?: string | null; quietZone?: number; radius?: number }): void;

@@ -154,6 +154,7 @@ package is in [CHANGELOG.md](CHANGELOG.md).
 | [`@astratra/loyalty`](packages/loyalty/README.md) | 1.1.0 | Stamp cards and monthly-quota passes, computed without a database |
 | [`@astratra/wallet`](packages/wallet/README.md) | 1.2.1 | Apple Wallet and Google Wallet passes kept up to date (loyalty cards, event tickets, boarding passes): signing, web service, add-to-wallet links, removal |
 | [`@astratra/pdf`](packages/pdf/README.md) | 1.1.0 | PDFKit layout primitives: text that fits its box, paginated tables, card sheets with vector QR codes |
+| [`@astratra/qr`](packages/qr/README.md) | 1.0.0 | QR codes with no dependency, Node and browser: all modes, L/M/Q/H, versions 1 to 40, best mask; SVG, PNG, data URL |
 | [`@astratra/closure`](packages/closure/README.md) | 1.1.0 | Period closing checklist with blocking and acknowledged items, and an archive free of credentials |
 | [`@astratra/notify`](packages/notify/README.md) | 1.2.0 | Outbound e-mail, SMS and push: injected transport, header-injection safe, never throws |
 
