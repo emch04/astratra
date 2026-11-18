@@ -121,9 +121,9 @@ est dans [CHANGELOG.md](CHANGELOG.md).
 
 | Paquet | Version | Rôle |
 |---|---|---|
-| [`@astratra/core`](packages/core/README.md) | 1.3.0 | Réponses d'API, erreurs, journaux, identifiants de requête, configuration par variables d'environnement, jeton d'accès d'un compte de service Google |
+| [`@astratra/core`](packages/core/README.md) | 1.3.0 | Réponses d'API, erreurs, journaux, identifiants de requête, configuration par variables d'environnement, jeton d'accès d'un compte de service Google, téléversements, chaînes de validation des requêtes |
 | [`@astratra/security`](packages/security/README.md) | 1.15.1 | JWT et RBAC, limitation de débit (mémoire ou Redis), CSP, WAF heuristique, passkeys WebAuthn, HMAC entre services, journal d'audit chaîné |
-| [`@astratra/credentials`](packages/credentials/README.md) | 1.2.0 | Clés de service chiffrées en base, modifiables depuis l'interface sans redémarrage |
+| [`@astratra/credentials`](packages/credentials/README.md) | 1.2.1 | Clés de service chiffrées en base, modifiables depuis l'interface sans redémarrage |
 | [`@astratra/entitlements`](packages/entitlements/README.md) | 1.1.0 | Plans, fonctionnalités, gardes de facturation et de statut, isolation par locataire qui échoue fermée, invitations par lien, quotas et budgets d'IA |
 | [`@astratra/flags`](packages/flags/README.md) | 1.1.0 | Drapeaux de fonctionnalités et expériences déterministes : ciblage, déploiement progressif, fournisseur compatible OpenFeature |
 | [`@astratra/privacy`](packages/privacy/README.md) | 1.1.0 | Droit d'accès, droit à l'effacement avec validation humaine, anonymisation, nettoyage des journaux |

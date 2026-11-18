@@ -1,6 +1,5 @@
 const express = require('express');
-const { body } = require('express-validator');
-const { AppError, apiResponse, asyncHandler, validateMiddleware } = require('@astratra/core');
+const { AppError, apiResponse, asyncHandler, validateMiddleware, body } = require('@astratra/core');
 
 const sendNotificationValidation = [
   body('userId').trim().notEmpty().withMessage('userId is required'),

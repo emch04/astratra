@@ -115,9 +115,9 @@ package is in [CHANGELOG.md](CHANGELOG.md).
 
 | Package | Version | What it does |
 |---|---|---|
-| [`@astratra/core`](packages/core/README.md) | 1.3.0 | API responses, errors, logs, request IDs, environment configuration, Google service account access tokens |
+| [`@astratra/core`](packages/core/README.md) | 1.3.0 | API responses, errors, logs, request IDs, environment configuration, Google service account access tokens, uploads, request validation chains |
 | [`@astratra/security`](packages/security/README.md) | 1.15.1 | JWT and RBAC, rate limiting (memory or Redis), CSP, heuristic WAF, WebAuthn passkeys, HMAC between services, chained audit log |
-| [`@astratra/credentials`](packages/credentials/README.md) | 1.2.0 | Encrypted service keys stored in your database, editable from the interface without a restart |
+| [`@astratra/credentials`](packages/credentials/README.md) | 1.2.1 | Encrypted service keys stored in your database, editable from the interface without a restart |
 | [`@astratra/entitlements`](packages/entitlements/README.md) | 1.1.0 | Plans, features, billing and status guards, tenant isolation that fails closed, invitations by link, AI quotas and budgets |
 | [`@astratra/flags`](packages/flags/README.md) | 1.1.0 | Deterministic feature flags and experiments: targeting, gradual rollout, OpenFeature-compatible provider |
 | [`@astratra/privacy`](packages/privacy/README.md) | 1.1.0 | Right of access, right to erasure with human approval, anonymisation, log redaction |

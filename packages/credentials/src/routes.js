@@ -9,8 +9,7 @@
  * out. Every response describes a key; none carries one.
  */
 const express = require('express');
-const { body, param } = require('express-validator');
-const { apiResponse, asyncHandler, validateMiddleware } = require('@astratra/core');
+const { apiResponse, asyncHandler, validateMiddleware, body, param } = require('@astratra/core');
 
 const NOOP_LOGGER = { info() {} };
 

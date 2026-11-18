@@ -22,7 +22,6 @@
     "expo-haptics": "native-ui (appairage)",
     "expo-linear-gradient": "native-ui (appairage)",
     "express": "credentials, saas-kit, wallet ; appairage d'agent et core",
-    "express-validator": "core, credentials, saas-kit — à remplacer par un module à nous",
     "ignore": "repomap : règles .gitignore",
     "mongodb": "conscience (appairage)",
     "mongoose": "store-mongo (appairage)",

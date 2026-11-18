@@ -290,7 +290,7 @@ l'identifiant de l'URL — un identifiant d'installation se devine.
 
 `POST /auth/login`, `POST /users`, `PATCH /settings/:key` et
 `POST /notifications/send` valident leur payload via
-`validateMiddleware` (`@astratra/core`) et `express-validator` avant
+`validateMiddleware` et les chaînes de validation de `@astratra/core` avant
 d'appeler ton store — email au bon format, champs requis réellement présents
 (pas juste "truthy"), longueurs raisonnables sur les champs texte libres
 (titre, message). Une entrée invalide renvoie `400` avant même de toucher

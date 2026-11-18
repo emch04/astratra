@@ -1,8 +1,7 @@
 const express = require('express');
 const crypto = require('crypto');
 const { signJwt } = require('@astratra/security');
-const { body } = require('express-validator');
-const { apiResponse, AppError, asyncHandler, validateMiddleware } = require('@astratra/core');
+const { apiResponse, AppError, asyncHandler, validateMiddleware, body } = require('@astratra/core');
 const { clearSessionCookie, createWebauthnService, setSessionCookie } = require('@astratra/security');
 const { pickPublicUser } = require('../utils');
 

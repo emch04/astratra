@@ -23,5 +23,6 @@ module.exports = {
   loadEnv,
   ...require('./idempotency'),
   ...require('./googleServiceAccount'),
-  ...require('./upload')
+  ...require('./upload'),
+  ...require('./validation')
 };

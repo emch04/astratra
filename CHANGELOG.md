@@ -3,6 +3,19 @@
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Chaque package Astratra est versionné indépendamment.
 
+## 2026-11-18 — la validation des requêtes sans express-validator
+
+### Ajouté
+- `@astratra/core` 1.3.0 (à publier) : `body`, `param`, `query`, `header`, `cookie`, `check`, `validationResult`, `matchedData` (src/validation.js et src/validators.js), à la place d'express-validator et de validator.js. Mêmes chaînes, mêmes erreurs `{ type, value, msg, path, location }`, mêmes nettoyages écrits dans la requête, mêmes jokers (`items.*.name`, `**`), même `optional`, `bail`, `if`, `not`, `hide` qu'express-validator 7.3.2 ; les vérifications et nettoyages qu'utilisent Astratra et les projets (dont isEmail et normalizeEmail portés de validator.js 13.15 avec leurs options). `validateMiddleware` s'en sert. Code repris sous licence MIT : `packages/core/THIRD-PARTY-NOTICES.md`.
+- Plus sûr qu'express-validator : aucun chemin ni joker vers `__proto__`, `constructor` ou `prototype` n'est lu ou écrit, seules les propriétés propres sont lues ; un corps JSON comme `{"v":{"toString":0}}` ou `{"v":[[{"toString":1}]]}` (TypeError) et un texte à demi-caractère Unicode (URIError) faisaient planter express-validator, ils sont ici simplement invalides ; `withMessage` sans validateur lève une erreur claire. oneOf, checkSchema, checkExact et les validateurs rares (isURL, isISO8601…) ne sont pas repris.
+
+### Changé
+- `@astratra/credentials` 1.2.1 et `@astratra/saas-kit` 2.1.1 (à publier) : leurs validations viennent de `@astratra/core` (^1.3.0) ; express-validator n'est plus une dépendance d'Astratra (44 → 43 dépendances décidées).
+- `create-astratra-app` 1.12.1 (à publier) : la brique `credentials` demande `@astratra/credentials` ^1.2.1.
+
+### Essais
+- `packages/core/__tests__/validation.test.js` (10), avec `@astratra/testkit/security` : comparé à express-validator 7.3.2 et validator 13.15.35 sur 7 391 cas enregistrés (`scripts/record-express-validator-reference.cjs` ; vérifications et options, adresses difficiles, nettoyages sur valeurs et tableaux, normalisation des adresses, optional, exists, not, bail, if, messages, emplacements, jokers, chemins imbriqués, hide, matchedData, les chaînes réelles de credentials et saas-kit, 400 chaînes au hasard) — mêmes erreurs, même requête nettoyée et mêmes données retenues partout, sauf les 42 cas où express-validator plante ; chaînes dans un vrai serveur Express ; pollution de prototype ; fuzz de toutes les vérifications ; temps linéaire d'isEmail, isFQDN, isIP et isLength sur des entrées hostiles ; expressions régulières. Le fuzz a trouvé les deux plantages d'express-validator. `npm run verify:mutations` dans core : 21 mutations de la validation, toutes tuées (une survivait d'abord : `not()` avec une fonction asynchrone).
+
 ## 2026-11-18 — `@astratra/s3` 1.0.0 (à publier) : S3 sans le SDK AWS
 
 ### Ajouté

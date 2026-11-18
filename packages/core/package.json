@@ -9,11 +9,17 @@
   "types": "src/index.d.ts",
   "type": "commonjs",
   "files": [
-    "src"
+    "src",
+    "THIRD-PARTY-NOTICES.md"
   ],
+  "jest": {
+    "testMatch": [
+      "**/__tests__/**/*.test.js"
+    ]
+  },
   "scripts": {
     "test": "jest",
-    "verify:mutations": "node scripts/verify-google-mutations.cjs && node scripts/verify-upload-mutations.cjs"
+    "verify:mutations": "node scripts/verify-google-mutations.cjs && node scripts/verify-upload-mutations.cjs && node scripts/verify-validation-mutations.cjs"
   },
   "keywords": [
     "astratra",
@@ -32,11 +38,9 @@
       "optional": true
     }
   },
-  "dependencies": {
-    "express-validator": "7.3.2"
-  },
   "devDependencies": {
     "@astratra/testkit": "^2.0.0",
+    "express": "^4.18.3 || ^5.0.0",
     "jest": "30.4.2"
   }
 }

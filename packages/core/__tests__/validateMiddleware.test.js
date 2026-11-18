@@ -1,5 +1,4 @@
-const { body } = require('express-validator');
-const { validateMiddleware } = require('../src');
+const { body, validateMiddleware } = require('../src');
 
 function createResponse() {
   return {

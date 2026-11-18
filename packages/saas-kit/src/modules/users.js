@@ -1,6 +1,5 @@
 const express = require('express');
-const { body, param } = require('express-validator');
-const { apiResponse, AppError, asyncHandler, validateMiddleware } = require('@astratra/core');
+const { apiResponse, AppError, asyncHandler, validateMiddleware, body, param } = require('@astratra/core');
 const { sanitizeUser, toPagination } = require('../utils');
 
 /**

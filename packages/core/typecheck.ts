@@ -104,3 +104,15 @@ async function exerciseIdempotency(): Promise<void> {
 }
 
 void exerciseIdempotency;
+
+// La validation par chaînes.
+import { body as checkBody, param as checkParam, validationResult as resultOf, matchedData as dataOf, type ValidationChain } from './src/index';
+const chains: ValidationChain[] = [checkBody('email').trim().isEmail().normalizeEmail().withMessage('adresse invalide'), checkParam('id').isMongoId(), checkBody('age').optional({ values: 'falsy' }).isInt({ min: 13 }).toInt()];
+validateMiddleware(chains);
+async function checkRequest(req: unknown): Promise<void> {
+  for (const chain of chains) await chain.run(req);
+  const errors = resultOf(req).array({ onlyFirstError: true });
+  const data: Record<string, unknown> = dataOf(req, { locations: ['body'] });
+  void [errors[0]?.path, data];
+}
+void checkRequest;

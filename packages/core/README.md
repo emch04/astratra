@@ -22,7 +22,9 @@ const {
   errorMiddleware,      // gestionnaire d'erreurs Express — masque message/stack en production, logge les 5xx via req.log ou console
   notFoundMiddleware,   // gestionnaire 404 Express via apiResponse
   requestIdMiddleware,  // attache req.requestId (header X-Request-Id, respecte un id entrant)
-  validateMiddleware,   // (validations) => exécute des validations express-validator, 400 si échec
+  validateMiddleware,   // (validations) => lance des chaînes de validation, 400 si échec
+  body, param, query, header, cookie, check, // chaînes de validation, comme express-validator
+  validationResult, matchedData,
   loadEnv,               // (schema) => lit process.env avec valeurs par défaut/requis/transform/validate
   idempotencyMiddleware, // (options) => une écriture rejouée avec la même clé ne s'exécute qu'une fois
   createIdempotency,     // (options) => le même moteur, hors HTTP (tâches, files, RPC)
@@ -202,6 +204,49 @@ app.post('/photos', upload.single('photo'), (req, res) => {
 - Un corps interrompu, des en-têtes trop longs ou une frontière absente sont des
   erreurs 400, jamais une attente sans fin ; au-delà de la limite totale, le
   reste du corps n'est pas gardé.
+
+## Valider une requête
+
+Les chaînes de validation, à la manière d'express-validator 7, sans dépendance : mêmes méthodes, mêmes erreurs,
+mêmes nettoyages écrits dans la requête. Un projet qui utilisait express-validator change seulement son `require`.
+
+```js
+const { body, param, validationResult, matchedData, validateMiddleware } = require('@astratra/core');
+
+router.post('/inscription',
+  body('email').trim().isEmail().normalizeEmail().withMessage('Adresse invalide'),
+  body('age').optional().isInt({ min: 13 }).toInt(),
+  body('password').isLength({ min: 12 }).hide(),           // l'erreur ne renvoie pas le mot de passe
+  body('enfants.*.nom').trim().notEmpty(),                  // chaque élément d'un tableau
+  (req, res) => {
+    const result = validationResult(req);
+    if (!result.isEmpty()) return res.status(400).json({ errors: result.array() });
+    return res.json(matchedData(req));                       // seulement les champs validés
+  });
+
+router.patch('/reglages/:key', validateMiddleware([param('key').trim().notEmpty().isLength({ max: 200 })]), handler);
+```
+
+Vérifications : `exists`, `notEmpty`, `isEmpty`, `isString`, `isArray`, `isObject`, `isBoolean`, `isEmail`,
+`isLength`, `isInt`, `isFloat`, `isNumeric`, `isIn`, `isMongoId`, `isUUID`, `isHexadecimal`, `isIP`, `isFQDN`,
+`isByteLength`, `contains`, `equals`, `matches`, `custom`. Nettoyages : `trim`, `ltrim`, `rtrim`, `escape`,
+`unescape`, `normalizeEmail`, `toInt`, `toFloat`, `toBoolean`, `toDate`, `toLowerCase`, `toUpperCase`, `stripLow`,
+`blacklist`, `whitelist`, `toArray`, `default`, `replace`, `customSanitizer`. Et `optional`, `not`, `bail`, `if`,
+`withMessage`, `hide`. Une méthode absente (`isURL`…) échoue au démarrage de l'application, pas à la première
+requête.
+
+Plus sûr qu'express-validator :
+
+- **Aucune écriture sur un prototype** : un champ ou un joker vers `__proto__`, `constructor` ou `prototype`
+  n'est jamais lu ni écrit, et seules les propriétés propres de la requête sont lues.
+- **Aucune requête ne fait planter la validation** : un corps JSON comme `{"v":{"toString":0}}` ou
+  `{"v":[[{"toString":1}]]}`, ou un texte avec un demi-caractère Unicode, faisait lever une exception à
+  express-validator (une erreur 500) ; ici la valeur est simplement invalide.
+
+Dans Express 5, `req.query` est recalculé à chaque lecture : un nettoyage ne s'y écrit pas (pas plus qu'avec
+express-validator). La valeur nettoyée se lit dans `matchedData(req)`.
+
+Le code vient en partie de validator.js et d'express-validator (licence MIT) : voir `THIRD-PARTY-NOTICES.md`.
 
 ## Tests
 

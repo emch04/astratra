@@ -286,3 +286,96 @@ export class UploadError extends Error {
   statusCode: number;
 }
 export const UPLOAD_DEFAULT_LIMITS: Required<UploadLimits>;
+
+/* La validation des requêtes par chaînes (comme express-validator 7). */
+export type ValidationLocation = 'body' | 'cookies' | 'headers' | 'params' | 'query';
+export interface FieldValidationError {
+  type: 'field';
+  /** Absent avec hide(), remplacé avec hide(valeur). */
+  value?: unknown;
+  msg: unknown;
+  path: string;
+  location: ValidationLocation;
+}
+export interface FieldMeta {
+  req: any;
+  location: ValidationLocation;
+  path: string;
+  pathValues: unknown[];
+}
+export type FieldMessage = unknown | ((value: unknown, meta: FieldMeta) => unknown);
+export interface ValidationResult {
+  array(options?: { onlyFirstError?: boolean }): FieldValidationError[];
+  mapped(): Record<string, FieldValidationError>;
+  formatWith<T>(formatter: (error: FieldValidationError) => T): { array(options?: { onlyFirstError?: boolean }): T[]; mapped(): Record<string, T>; isEmpty(): boolean; throw(): void };
+  isEmpty(): boolean;
+  throw(): void;
+}
+export interface ValidationChain {
+  (req: any, res: any, next: (error?: unknown) => void): Promise<void>;
+  run(req: any, options?: { dryRun?: boolean }): Promise<ValidationResult>;
+  not(): ValidationChain;
+  withMessage(message: FieldMessage): ValidationChain;
+  custom(validator: (value: any, meta: FieldMeta) => unknown): ValidationChain;
+  exists(options?: { values?: 'undefined' | 'null' | 'falsy'; checkNull?: boolean; checkFalsy?: boolean }): ValidationChain;
+  optional(options?: boolean | { values?: 'undefined' | 'null' | 'falsy'; nullable?: boolean; checkFalsy?: boolean }): ValidationChain;
+  bail(options?: { level?: 'chain' | 'request' }): ValidationChain;
+  if(condition: ValidationChain | ((value: any, meta: FieldMeta) => unknown)): ValidationChain;
+  hide(hiddenValue?: string): ValidationChain;
+  isArray(options?: { min?: number; max?: number }): ValidationChain;
+  isObject(options?: { strict?: boolean }): ValidationChain;
+  isString(): ValidationChain;
+  isBoolean(options?: { strict?: boolean; loose?: boolean }): ValidationChain;
+  notEmpty(options?: { ignore_whitespace?: boolean }): ValidationChain;
+  isEmpty(options?: { ignore_whitespace?: boolean }): ValidationChain;
+  contains(elem: unknown, options?: { ignoreCase?: boolean; minOccurrences?: number }): ValidationChain;
+  equals(comparison: string): ValidationChain;
+  isByteLength(options?: { min?: number; max?: number }): ValidationChain;
+  isEmail(options?: { allow_display_name?: boolean; require_display_name?: boolean; allow_utf8_local_part?: boolean; require_tld?: boolean; allow_ip_domain?: boolean; domain_specific_validation?: boolean; blacklisted_chars?: string; host_blacklist?: (string | RegExp)[]; host_whitelist?: (string | RegExp)[]; ignore_max_length?: boolean; allow_underscores?: boolean }): ValidationChain;
+  isFQDN(options?: { require_tld?: boolean; allow_underscores?: boolean; allow_trailing_dot?: boolean; allow_numeric_tld?: boolean; allow_wildcard?: boolean; ignore_max_length?: boolean }): ValidationChain;
+  isFloat(options?: { min?: number; max?: number; gt?: number; lt?: number; locale?: string }): ValidationChain;
+  isHexadecimal(): ValidationChain;
+  isIP(version?: 4 | 6 | '4' | '6'): ValidationChain;
+  isIn(values: readonly unknown[] | Record<string, unknown> | string): ValidationChain;
+  isInt(options?: { min?: number; max?: number; gt?: number; lt?: number; allow_leading_zeroes?: boolean }): ValidationChain;
+  isLength(options?: { min?: number; max?: number; discreteLengths?: number[] }): ValidationChain;
+  isMongoId(): ValidationChain;
+  isNumeric(options?: { no_symbols?: boolean; locale?: string }): ValidationChain;
+  isUUID(version?: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 'all' | 'nil' | 'max' | 'loose' | string | number): ValidationChain;
+  matches(pattern: RegExp | string, modifiers?: string): ValidationChain;
+  trim(chars?: string): ValidationChain;
+  ltrim(chars?: string): ValidationChain;
+  rtrim(chars?: string): ValidationChain;
+  escape(): ValidationChain;
+  unescape(): ValidationChain;
+  normalizeEmail(options?: Record<string, boolean>): ValidationChain;
+  stripLow(keepNewLines?: boolean): ValidationChain;
+  toBoolean(strict?: boolean): ValidationChain;
+  toDate(): ValidationChain;
+  toFloat(): ValidationChain;
+  toInt(radix?: number): ValidationChain;
+  blacklist(chars: string): ValidationChain;
+  whitelist(chars: string): ValidationChain;
+  toLowerCase(): ValidationChain;
+  toUpperCase(): ValidationChain;
+  toArray(): ValidationChain;
+  default(value: unknown): ValidationChain;
+  replace(valuesToReplace: unknown, newValue: unknown): ValidationChain;
+  customSanitizer(sanitizer: (value: any, meta: FieldMeta) => unknown): ValidationChain;
+}
+export type ValidationChainFactory = (fields?: string | string[], message?: FieldMessage) => ValidationChain;
+export const body: ValidationChainFactory;
+export const param: ValidationChainFactory;
+export const query: ValidationChainFactory;
+export const header: ValidationChainFactory;
+export const cookie: ValidationChainFactory;
+export const check: ValidationChainFactory;
+export const validationResult: ((req: any) => ValidationResult) & { withDefaults<T>(options?: { formatter?: (error: FieldValidationError) => T }): (req: any) => ValidationResult };
+export function matchedData(req: any, options?: { onlyValidData?: boolean; includeOptionals?: boolean; locations?: ValidationLocation[] }): Record<string, any>;
+export class Result implements ValidationResult {
+  array(options?: { onlyFirstError?: boolean }): FieldValidationError[];
+  mapped(): Record<string, FieldValidationError>;
+  formatWith<T>(formatter: (error: FieldValidationError) => T): any;
+  isEmpty(): boolean;
+  throw(): void;
+}

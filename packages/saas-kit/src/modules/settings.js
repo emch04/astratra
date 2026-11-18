@@ -1,6 +1,5 @@
 const express = require('express');
-const { body, param } = require('express-validator');
-const { apiResponse, asyncHandler, validateMiddleware } = require('@astratra/core');
+const { apiResponse, asyncHandler, validateMiddleware, body, param } = require('@astratra/core');
 
 const updateSettingValidation = [
   param('key').trim().notEmpty().isLength({ max: 200 }).withMessage('key must be between 1 and 200 characters'),
