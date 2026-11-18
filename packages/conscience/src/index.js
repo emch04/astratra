@@ -15,12 +15,16 @@ const { GovernorError } = require('./governor/util');
 
 const { createMongoConscienceStore, mongoConscienceIndexes } = require('./mongo');
 
+// Des noms seuls dans l'objet exporté : Node les lit sans exécuter le fichier, pour les imports nommés d'un module ES.
+const { OUTCOME_STATUSES, CORRECTION_CLASSES, LESSON_STATUSES, EVIDENCE_DEGREES, EVIDENCE_KINDS, PROVENANCE_KINDS } = records;
+const RECORD_KINDS = records.KINDS;
+
 module.exports = {
   createMongoConscienceStore, mongoConscienceIndexes,
   createConscience, createMemoryConscienceStore, createPostgresConscienceStore, postgresConscienceSchema,
   frameStoredText, frameRecordsForModel, wordDelta, matchesFilter,
   ConscienceError, GovernorError, assertGovernorReady, isGovernor,
-  RECORD_KINDS: records.KINDS, OUTCOME_STATUSES: records.OUTCOME_STATUSES, CORRECTION_CLASSES: records.CORRECTION_CLASSES,
-  LESSON_STATUSES: records.LESSON_STATUSES, EVIDENCE_DEGREES: records.EVIDENCE_DEGREES, EVIDENCE_KINDS: records.EVIDENCE_KINDS,
-  PROVENANCE_KINDS: records.PROVENANCE_KINDS, ERASURE_MODES
+  RECORD_KINDS, OUTCOME_STATUSES, CORRECTION_CLASSES,
+  LESSON_STATUSES, EVIDENCE_DEGREES, EVIDENCE_KINDS,
+  PROVENANCE_KINDS, ERASURE_MODES
 };

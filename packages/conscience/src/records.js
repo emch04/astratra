@@ -214,7 +214,8 @@ function selfModel(input) {
   };
 }
 
+const normalize = { decision, prediction, outcome, correction, lesson, self_model: selfModel };
 module.exports = {
   KINDS, OUTCOME_STATUSES, CORRECTION_CLASSES, LESSON_STATUSES, EVIDENCE_DEGREES, EVIDENCE_KINDS, PROVENANCE_KINDS,
-  scopeOf, normalize: { decision, prediction, outcome, correction, lesson, self_model: selfModel }
+  scopeOf, normalize
 };

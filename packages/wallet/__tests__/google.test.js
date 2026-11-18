@@ -1,6 +1,7 @@
 const crypto = require('node:crypto');
 const fs = require('node:fs');
 const path = require('node:path');
+const { URLSearchParams } = require('node:url');
 const { createGoogleWallet, signSaveJwt } = require('../src');
 
 const CLE = fs.readFileSync(path.join(__dirname, 'fixtures', 'pass-test.key'), 'utf8');
@@ -81,5 +82,40 @@ describe('ce que Google refuse', () => {
     panne = false;
     await wallet.ensureClass(definition);
     expect(appels).toEqual(['PATCH', 'PATCH']);
+  });
+});
+
+/* Le vrai chemin, sans remplacer le client : le jeton du compte de service vient de @astratra/core (plus de
+   google-auth-library), puis la carte est créée chez un faux Google. */
+describe('Google Wallet par le jeton de @astratra/core', () => {
+  const reponse = (status, corps) => ({ ok: status >= 200 && status < 300, status, headers: new Map(), json: async () => corps, text: async () => JSON.stringify(corps) });
+
+  test('le jeton est échangé une fois, la carte absente est créée (PATCH 404 puis POST), avec le jeton', async () => {
+    const appels = [];
+    const fetch = async (url, init) => {
+      appels.push({ url, method: init.method, authorization: init.headers && init.headers.authorization });
+      if (url === 'https://oauth2.googleapis.com/token') {
+        const assertion = new URLSearchParams(init.body).get('assertion');
+        const [h, c, s] = assertion.split('.');
+        expect(crypto.verify('RSA-SHA256', Buffer.from(`${h}.${c}`), PUBLIQUE, Buffer.from(s, 'base64url'))).toBe(true);
+        expect(JSON.parse(Buffer.from(c, 'base64url')).scope).toBe('https://www.googleapis.com/auth/wallet_object.issuer');
+        return reponse(200, { access_token: 'jeton-wallet', expires_in: 3599 });
+      }
+      if (init.method === 'PATCH') return reponse(404, { error: { message: 'absente' } });
+      return reponse(200, JSON.parse(init.body));
+    };
+    const wallet = createGoogleWallet({ issuerId: '3388', credentials, fetch });
+    await wallet.upsertObject({ id: '3388.carte-1', classId: '3388.C-1' });
+    await wallet.upsertObject({ id: '3388.carte-2', classId: '3388.C-1' });
+    expect(appels.filter((a) => a.url.endsWith('/token'))).toHaveLength(1);
+    expect(appels.filter((a) => !a.url.endsWith('/token')).map((a) => `${a.method} ${a.authorization}`)).toEqual(['PATCH Bearer jeton-wallet', 'POST Bearer jeton-wallet', 'PATCH Bearer jeton-wallet', 'POST Bearer jeton-wallet']);
+  });
+
+  test('un compte de service à l’adresse d’échange hors de Google est refusé à la première carte, sans rien envoyer', async () => {
+    const appels = [];
+    const fetch = async (url) => { appels.push(url); return reponse(200, {}); };
+    const wallet = createGoogleWallet({ issuerId: '3388', credentials: { ...credentials, token_uri: 'https://jetons.example.test/token' }, fetch });
+    await expect(wallet.upsertObject({ id: '3388.x', classId: '3388.C' })).rejects.toMatchObject({ code: 'GOOGLE_TOKEN_URI_REFUSED' });
+    expect(appels).toEqual([]);
   });
 });

@@ -1,25 +1,29 @@
-const client = require('./client');
 const { createEndpointBreaker, ModelsCircuitOpenError } = require('./breaker');
-const deploy = require('./deploy');
-const pricing = require('./pricing');
 const manifest = require('./manifest');
 const fetcher = require('./fetcher');
 const ready = require('./ready');
 
+// Des noms seuls et des « ...require() » dans l'objet exporté : Node les lit sans exécuter le fichier, pour les
+// imports nommés d'un module ES.
+const { loadManifest, manifestProblems, MANIFEST_PATH } = manifest;
+const listModelFiles = manifest.listFiles;
+const { fetchModels, checkModels, ManifestIncompleteError, ChecksumError } = fetcher;
+const { assertModelsReady, ModelsNotReadyError } = ready;
+
 module.exports = {
-  ...client,
+  ...require('./client'),
   createEndpointBreaker,
   ModelsCircuitOpenError,
-  ...deploy,
-  ...pricing,
-  loadManifest: manifest.loadManifest,
-  manifestProblems: manifest.manifestProblems,
-  listModelFiles: manifest.listFiles,
-  MANIFEST_PATH: manifest.MANIFEST_PATH,
-  fetchModels: fetcher.fetchModels,
-  checkModels: fetcher.checkModels,
-  ManifestIncompleteError: fetcher.ManifestIncompleteError,
-  ChecksumError: fetcher.ChecksumError,
-  assertModelsReady: ready.assertModelsReady,
-  ModelsNotReadyError: ready.ModelsNotReadyError
+  ...require('./deploy'),
+  ...require('./pricing'),
+  loadManifest,
+  manifestProblems,
+  listModelFiles,
+  MANIFEST_PATH,
+  fetchModels,
+  checkModels,
+  ManifestIncompleteError,
+  ChecksumError,
+  assertModelsReady,
+  ModelsNotReadyError
 };

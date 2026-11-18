@@ -1,8 +1,7 @@
 /* global fetch */
 const fs = require('fs');
-const { URLSearchParams } = require('url');
 const { ToolingError } = require('../errors');
-const { signJwt } = require('./jwt');
+const { createGoogleServiceAccountAuth } = require('@astratra/core');
 
 const PLAY_SCOPE = 'https://www.googleapis.com/auth/androidpublisher';
 const DEFAULT_TOKEN_URI = 'https://oauth2.googleapis.com/token';
@@ -90,39 +89,25 @@ function createGooglePlayClient(options = {}) {
     }
   }
 
+  /* Le jeton d'accès vient de @astratra/core (une seule écriture pour Google Wallet, Google Play, Firebase) : gardé
+     jusqu'à cinq minutes avant son échéance, adresse d'échange limitée à Google. Ses erreurs gardent ici leurs codes. */
+  let googleAuth = null;
   async function getAccessToken() {
-    const issuedAt = Math.floor(now() / 1000);
-    const assertion = signJwt({
-      algorithm: 'RS256',
-      payload: {
-        iss: serviceAccount.client_email,
-        scope: PLAY_SCOPE,
-        aud: serviceAccount.token_uri || DEFAULT_TOKEN_URI,
-        iat: issuedAt,
-        exp: issuedAt + 3600
-      },
-      privateKey: serviceAccount.private_key
-    });
-
-    const response = await send(serviceAccount.token_uri || DEFAULT_TOKEN_URI, {
-      method: 'POST',
-      headers: { 'content-type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({
-        grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer',
-        assertion
-      }).toString()
-    });
-
-    if (!response.ok) {
-      throw new ToolingError('PLAY_TOKEN_REFUSED', `Google a refuse la cle du compte de service (${response.status}).`, 401);
+    try {
+      if (!googleAuth) googleAuth = createGoogleServiceAccountAuth({ credentials: serviceAccount, scopes: [PLAY_SCOPE], fetch: fetchImpl, now });
+      return await googleAuth.getAccessToken();
+    } catch (error) {
+      if (error && error.code === 'GOOGLE_UNREACHABLE') {
+        throw new ToolingError('PLAY_NETWORK', `Google Play injoignable (${error.message.replace(/^Google could not be reached \((.*)\)\.$/, '$1')}).`, 502);
+      }
+      if (error && error.code === 'GOOGLE_TOKEN_REFUSED') {
+        throw new ToolingError('PLAY_TOKEN_REFUSED', error.httpStatus ? `Google a refuse la cle du compte de service (${error.httpStatus}).` : 'Google n\'a pas rendu de jeton d\'acces.', 401);
+      }
+      if (error && typeof error.code === 'string' && error.code.startsWith('GOOGLE_')) {
+        throw new ToolingError('PLAY_KEY_INVALID', 'La cle du compte de service est illisible ou son adresse d\'echange (token_uri) n\'est pas chez Google.', 400);
+      }
+      throw error;
     }
-
-    const body = await response.json().catch(() => ({}));
-    if (!body || typeof body.access_token !== 'string') {
-      throw new ToolingError('PLAY_TOKEN_REFUSED', 'Google n\'a pas rendu de jeton d\'acces.', 401);
-    }
-
-    return body.access_token;
   }
 
   async function call(code, token, url, init = {}) {

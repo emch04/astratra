@@ -26,7 +26,8 @@ const {
   loadEnv,               // (schema) => lit process.env avec valeurs par défaut/requis/transform/validate
   idempotencyMiddleware, // (options) => une écriture rejouée avec la même clé ne s'exécute qu'une fois
   createIdempotency,     // (options) => le même moteur, hors HTTP (tâches, files, RPC)
-  createMemoryIdempotencyStore
+  createMemoryIdempotencyStore,
+  createGoogleServiceAccountAuth // ({ credentials, scopes }) => { getAccessToken, request } — jeton d'un compte de service Google
 } = require('@astratra/core');
 ```
 
@@ -142,6 +143,34 @@ partagé entre instances.
   « en cours » jusqu'à expiration : on préfère un `409` à un double paiement.
 - Il ne protège pas les webhooks d'un prestataire de paiement : voir
   `@astratra/payments`, qui les reconnaît par l'identifiant d'événement.
+
+## Jeton d'un compte de service Google
+
+Le jeton d'accès d'un compte de service Google (Wallet, Play, Firebase…), sans
+google-auth-library : un JWT signé en RS256 avec la clé du compte, échangé contre
+un jeton d'accès (RFC 7523).
+
+```js
+const { createGoogleServiceAccountAuth } = require('@astratra/core');
+
+const google = createGoogleServiceAccountAuth({
+  credentials: JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON),
+  scopes: ['https://www.googleapis.com/auth/wallet_object.issuer']
+});
+const token = await google.getAccessToken();
+const { data } = await google.request({ method: 'GET', url: 'https://walletobjects.googleapis.com/walletobjects/v1/issuer' });
+```
+
+- Le jeton est gardé jusqu'à cinq minutes avant son échéance ; des demandes
+  simultanées partagent un seul échange. `request()` rejoue une fois après un 401
+  avec un jeton neuf ; une réponse d'erreur lève `GoogleAuthError`
+  (`GOOGLE_API_ERROR`, avec `response.status` et `response.data`).
+- L'adresse d'échange (`token_uri`) n'est acceptée qu'en https sur
+  `googleapis.com` : un fichier de compte de service modifié ne peut pas envoyer
+  l'assertion signée ailleurs. `allowedTokenUris` en permet une autre (émulateur).
+- Une clé collée avec des `\n` écrits en toutes lettres est acceptée. Aucun
+  message d'erreur ne reprend la clé, l'assertion ou le jeton ; chaque appel à
+  Google a un délai (`timeoutMs`, 15 s).
 
 ## Tests
 

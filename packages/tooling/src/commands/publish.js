@@ -705,9 +705,12 @@ async function runPublishCheckIos(rootDir, config, options = {}) {
   }
 }
 
+// Des noms seuls et des « ...require() » dans l'objet exporté : Node les lit sans exécuter le fichier, pour les
+// imports nommés d'un module ES.
+const PUBLISH_TARGETS = Object.keys(TARGETS);
 module.exports = {
   PUBLISH_DEFAULTS,
-  PUBLISH_TARGETS: Object.keys(TARGETS),
+  PUBLISH_TARGETS,
   DESKTOP_TARGETS,
   resolvePublishConfig,
   runPublish,

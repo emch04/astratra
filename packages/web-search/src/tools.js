@@ -229,6 +229,9 @@ function registryTools(ws, { roles, defaults, maxChars = 10_000, browser } = {})
   }));
 }
 
+// Des noms seuls et des « ...require() » dans l'objet exporté : Node les lit sans exécuter le fichier, pour les
+// imports nommés d'un module ES.
+const TOOL_SCHEMAS = { web_search: SEARCH_SCHEMA, read_page: READ_SCHEMA, browse_page: BROWSE_SCHEMA, search_site: SITE_SEARCH_SCHEMA };
 module.exports = {
   toolDefinitions,
   nativeTools,
@@ -236,5 +239,5 @@ module.exports = {
   runTool,
   searchArgs,
   toolList,
-  TOOL_SCHEMAS: { web_search: SEARCH_SCHEMA, read_page: READ_SCHEMA, browse_page: BROWSE_SCHEMA, search_site: SITE_SEARCH_SCHEMA }
+  TOOL_SCHEMAS
 };

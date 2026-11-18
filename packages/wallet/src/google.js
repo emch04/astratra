@@ -1,5 +1,5 @@
 const crypto = require('node:crypto');
-const { GoogleAuth } = require('google-auth-library');
+const { createGoogleServiceAccountAuth } = require('@astratra/core');
 
 const API_BASE = 'https://walletobjects.googleapis.com/walletobjects/v1';
 const SCOPE = 'https://www.googleapis.com/auth/wallet_object.issuer';
@@ -45,17 +45,20 @@ function signSaveJwt(payload, credentials, { now = new Date(), origins } = {}) {
  * @param {object} options.credentials   JSON du compte de service (client_email, private_key).
  * @param {'loyalty'|'generic'|'offer'|'giftCard'|'eventTicket'|'flight'|'transit'} [options.kind='loyalty']
  * @param {(options: object) => Promise<object>} [options.request]  remplace le client HTTP (tests).
+ * @param {Function} [options.fetch]  remplace fetch pour le jeton et les appels (tests).
  */
-function createGoogleWallet({ issuerId, credentials, kind = 'loyalty', request }) {
+function createGoogleWallet({ issuerId, credentials, kind = 'loyalty', request, fetch }) {
   const type = KINDS[kind];
   if (!type) throw new Error(`Type de carte Google inconnu : ${kind}`);
-  const auth = request ? null : new GoogleAuth({ credentials, scopes: [SCOPE] });
+  // Le jeton d'accès vient de @astratra/core (sans google-auth-library), préparé au premier appel : un compte de
+  // service mal formé se signale à la première carte, comme avant, sans empêcher le démarrage de l'application.
+  let auth = null;
   const classesPretes = new Map();
 
   async function requete(options) {
     if (request) return request(options);
-    const client = await auth.getClient();
-    return client.request(options);
+    if (!auth) auth = createGoogleServiceAccountAuth({ credentials, scopes: [SCOPE], ...(fetch ? { fetch } : {}) });
+    return auth.request(options);
   }
 
   const idOf = (suffix) => `${issuerId}.${String(suffix).replace(/[^\w.-]/g, '_')}`;

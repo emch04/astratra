@@ -3,6 +3,23 @@
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Chaque package Astratra est versionné indépendamment.
 
+## 2026-11-18 — le jeton Google sans google-auth-library ; imports nommés en module ES réparés dans huit paquets
+
+### Ajouté
+- `@astratra/core` 1.3.0 (à publier) : `createGoogleServiceAccountAuth({ credentials, scopes })`, le jeton d'accès d'un compte de service Google (RFC 7523) écrit sans dépendance : `getAccessToken()` (gardé jusqu'à cinq minutes avant son échéance, un seul échange pour des demandes simultanées) et `request()` (JSON, un nouvel essai avec un jeton neuf après un 401, `GoogleAuthError` `GOOGLE_API_ERROR` avec `response.status` et `response.data`). L'adresse d'échange (`token_uri`) n'est acceptée qu'en https sur googleapis.com : un fichier de compte de service modifié ne peut pas envoyer l'assertion signée ailleurs. Délai sur chaque appel (15 s), aucune erreur ne reprend la clé, l'assertion ni le jeton. Aussi `readGoogleServiceAccount`, `signServiceAccountAssertion`, `isGoogleTokenUri`, `GoogleAuthError`.
+
+### Changé
+- `@astratra/wallet` 1.2.1 (à publier) : Google Wallet obtient son jeton par `@astratra/core` ; google-auth-library n'est plus une dépendance (24 paquets de moins pour qui installe wallet). Option `fetch` pour les essais.
+- `@astratra/tooling` 1.7.1 (à publier) : Google Play prend son jeton de `@astratra/core` (une seule écriture au lieu de deux) ; ses codes d'erreur restent les mêmes (`PLAY_TOKEN_REFUSED`, `PLAY_NETWORK`, `PLAY_KEY_INVALID` pour une clé illisible ou une adresse d'échange hors de Google).
+
+### Corrigé
+- Imports nommés depuis un module ES (`import { createLogger } from '@astratra/core'`) : Node devine les noms d'un paquet CommonJS en lisant son fichier, et une valeur écrite comme une expression dans l'objet exporté (`require('./x')`, `module.prop`, un objet en ligne, `Object.assign`) arrêtait cette lecture. Exports invisibles en module ES : core (22 sur 23), models (32 sur 35), agent (10), conscience (7), wallet (7), tooling (6), web-search (1), testkit (10, et `payloads` de l'entrée security). Chaque objet exporté est écrit en noms seuls et en `...require()`, sans rien changer à ce qui est exporté. Versions : `@astratra/agent` 1.4.2, `@astratra/conscience` 1.5.2, `@astratra/models` 1.3.1, `@astratra/web-search` 1.2.1 (à publier), plus core, wallet, tooling et testkit ci-dessus.
+- `npm run lint` le vérifie désormais (`scripts/verifier-imports-es.js`) : pour l'entrée de chaque paquet et ses entrées publiées à côté (`@astratra/testkit/security`), chaque nom que `require()` donne doit être un import nommé.
+- README : le tableau des versions annonçait encore `@astratra/web-search` 1.1.0.
+
+### Essais
+- `packages/core/__tests__/googleServiceAccount.test.js` (65), avec `@astratra/testkit/security` : assertion vérifiée par une autre implémentation (jsonwebtoken) et comparée à une signature écrite à la main ; cache et renouvellement ; 50 demandes simultanées pour un seul échange ; 401 puis nouvel essai ; comptes de service mal formés et fuzz ; 40 adresses d'échange piégées (dont le catalogue SSRF) refusées ; Google qui refuse, injoignable ou figé ; aucun secret dans les erreurs ni les journaux. `npm run verify:mutations` dans core : 10 mutations, toutes tuées.
+
 ## 2026-11-18 — `@astratra/security` 1.15.1 : le limiteur de requêtes sans dépendance
 
 ### Changé

@@ -4,8 +4,12 @@ const runner = require('./runner');
 const store = require('./store');
 const report = require('./report');
 
+// Des noms seuls dans l'objet exporté : Node les lit sans exécuter le fichier, pour les imports nommés d'un module ES.
+const { createShadowRunner } = runner;
+const SHADOW_CONCLUSIONS = report.CONCLUSIONS;
+const { createMemoryShadowStore, createPostgresShadowStore, postgresShadowSchema, shadowEraser } = store;
 module.exports = {
-  createShadowRunner: runner.createShadowRunner, SHADOW_CONCLUSIONS: report.CONCLUSIONS,
-  createMemoryShadowStore: store.createMemoryShadowStore, createPostgresShadowStore: store.createPostgresShadowStore,
-  postgresShadowSchema: store.postgresShadowSchema, shadowEraser: store.shadowEraser
+  createShadowRunner, SHADOW_CONCLUSIONS,
+  createMemoryShadowStore, createPostgresShadowStore,
+  postgresShadowSchema, shadowEraser
 };

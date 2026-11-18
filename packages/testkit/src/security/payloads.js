@@ -223,28 +223,30 @@ const passwords = ['', ' ', 'password', '123456', 'azerty', 'a'.repeat(1025), 'p
 
 const all = () => [...sqlInjection, ...xss, ...templateInjection, ...pathTraversal, ...commandInjection, ...headerInjection, ...unicode, ...numericStrings, ...ssrfUrls, ...filenames, ...emails, ...passwords];
 
-module.exports = {
-  payloads: {
-    sqlInjection,
-    xss,
-    templateInjection,
-    pathTraversal,
-    commandInjection,
-    headerInjection,
-    unicode,
-    invalidUtf8,
-    numbers,
-    numericStrings,
-    noSqlOperators,
-    prototypePollution,
-    prototypeKeys,
-    ssrfUrls,
-    ipv6SameSubnet,
-    ipSpoofHeaders,
-    filenames,
-    emails,
-    contentTypes,
-    passwords,
-    all,
-  },
+// Des noms seuls et des « ...require() » dans l'objet exporté : Node les lit sans exécuter le fichier, pour les
+// imports nommés d'un module ES.
+const payloads = {
+  sqlInjection,
+  xss,
+  templateInjection,
+  pathTraversal,
+  commandInjection,
+  headerInjection,
+  unicode,
+  invalidUtf8,
+  numbers,
+  numericStrings,
+  noSqlOperators,
+  prototypePollution,
+  prototypeKeys,
+  ssrfUrls,
+  ipv6SameSubnet,
+  ipSpoofHeaders,
+  filenames,
+  emails,
+  contentTypes,
+  passwords,
+  all,
 };
+
+module.exports = { payloads };

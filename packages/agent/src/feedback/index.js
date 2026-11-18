@@ -1,7 +1,10 @@
 'use strict';
 const model = require('./model');
+// Des noms seuls dans l'objet exporté : Node les lit sans exécuter le fichier, pour les imports nommés d'un module ES.
+const { RATINGS, FEEDBACK_REASONS, FeedbackError, scrubPersonalData } = model;
+const { createMemoryFeedbackStore } = require('./stores');
 module.exports = {
-  RATINGS: model.RATINGS, FEEDBACK_REASONS: model.FEEDBACK_REASONS, FeedbackError: model.FeedbackError, scrubPersonalData: model.scrubPersonalData,
-  createMemoryFeedbackStore: require('./stores').createMemoryFeedbackStore,
+  RATINGS, FEEDBACK_REASONS, FeedbackError, scrubPersonalData,
+  createMemoryFeedbackStore,
   ...require('./postgres'), ...require('./service'), ...require('./router')
 };

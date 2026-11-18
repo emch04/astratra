@@ -115,7 +115,7 @@ package is in [CHANGELOG.md](CHANGELOG.md).
 
 | Package | Version | What it does |
 |---|---|---|
-| [`@astratra/core`](packages/core/README.md) | 1.2.0 | API responses, errors, logs, request IDs, environment configuration |
+| [`@astratra/core`](packages/core/README.md) | 1.3.0 | API responses, errors, logs, request IDs, environment configuration, Google service account access tokens |
 | [`@astratra/security`](packages/security/README.md) | 1.15.1 | JWT and RBAC, rate limiting (memory or Redis), CSP, heuristic WAF, WebAuthn passkeys, HMAC between services, chained audit log |
 | [`@astratra/credentials`](packages/credentials/README.md) | 1.2.0 | Encrypted service keys stored in your database, editable from the interface without a restart |
 | [`@astratra/entitlements`](packages/entitlements/README.md) | 1.1.0 | Plans, features, billing and status guards, tenant isolation that fails closed, invitations by link, AI quotas and budgets |
@@ -129,16 +129,16 @@ package is in [CHANGELOG.md](CHANGELOG.md).
 | Package | Version | What it does |
 |---|---|---|
 | [`@astratra/ai`](packages/ai/README.md) | 2.0.0 | Multi-provider AI routing with quotas and fallback, tool registry, agent loop, risk levels with confirmation, local llama.cpp provider |
-| [`@astratra/agent`](packages/agent/README.md) | 1.4.1 | Durable tasks, budgets, plans, completion checks, context summaries, consumption tracking, user feedback (👍/👎), a timed task scheduler and an approval queue for proposed actions |
-| [`@astratra/models`](packages/models/README.md) | 1.3.0 | Local CPU model service (embeddings, reranking, NLI, entities, speech-to-text) and its Node client; price catalogue and cost calculation |
-| [`@astratra/conscience`](packages/conscience/README.md) | 1.5.1 | Documented memory of an agent's decisions (outcomes, corrections, lessons with evidence, self-model, lineage, erasure) under a deterministic governor without any language model |
+| [`@astratra/agent`](packages/agent/README.md) | 1.4.2 | Durable tasks, budgets, plans, completion checks, context summaries, consumption tracking, user feedback (👍/👎), a timed task scheduler and an approval queue for proposed actions |
+| [`@astratra/models`](packages/models/README.md) | 1.3.1 | Local CPU model service (embeddings, reranking, NLI, entities, speech-to-text) and its Node client; price catalogue and cost calculation |
+| [`@astratra/conscience`](packages/conscience/README.md) | 1.5.2 | Documented memory of an agent's decisions (outcomes, corrections, lessons with evidence, self-model, lineage, erasure) under a deterministic governor without any language model |
 | [`@astratra/memory`](packages/memory/README.md) | 2.1.1 | Per-person memories for an assistant: hybrid recall, duplicate merging, undoable corrections, PostgreSQL store |
 | [`@astratra/rag`](packages/rag/README.md) | 1.1.0 | Document retrieval: chunking, injected embeddings, hybrid search, source verification, document reading through an optional service |
 | [`@astratra/voice`](packages/voice/README.md) | 1.2.0 | Server-side text-to-speech (Piper, ffmpeg), versioned caches, provider chain with key rotation, local transcription |
 | [`@astratra/live`](packages/live/README.md) | 1.1.1 | Real-time voice call sessions and client protocol helpers |
 | [`@astratra/app-guide`](packages/app-guide/README.md) | 1.1.0 | Role-aware in-app guide generated from the screen configuration, with coverage checks |
 | [`@astratra/repomap`](packages/repomap/README.md) | 1.1.0 | Weighted symbol map of a repository, for exploring code within a token budget |
-| [`@astratra/web-search`](packages/web-search/README.md) | 1.1.0 | Web search for agents: several engines with fallback, rank fusion without content mixing (one entry = one page = one site), verbatim passages, SSRF-safe page reading, an isolated integrated browser (JavaScript pages, links, site search), tool definitions and an MCP server |
+| [`@astratra/web-search`](packages/web-search/README.md) | 1.2.1 | Web search for agents: several engines with fallback, rank fusion without content mixing (one entry = one page = one site), verbatim passages, SSRF-safe page reading, an isolated integrated browser (JavaScript pages, links, site search), tool definitions and an MCP server |
 
 ### Business logic
 
@@ -152,7 +152,7 @@ package is in [CHANGELOG.md](CHANGELOG.md).
 | [`@astratra/srs`](packages/srs/README.md) | 1.1.0 | Spaced repetition on FSRS: cards, grading, due dates, daily queue, statistics |
 | [`@astratra/fhir`](packages/fhir/README.md) | 1.1.0 | FHIR R4 helpers on the official Medplum types: minimal validation, references, builders |
 | [`@astratra/loyalty`](packages/loyalty/README.md) | 1.1.0 | Stamp cards and monthly-quota passes, computed without a database |
-| [`@astratra/wallet`](packages/wallet/README.md) | 1.2.0 | Apple Wallet and Google Wallet passes kept up to date (loyalty cards, event tickets, boarding passes): signing, web service, add-to-wallet links, removal |
+| [`@astratra/wallet`](packages/wallet/README.md) | 1.2.1 | Apple Wallet and Google Wallet passes kept up to date (loyalty cards, event tickets, boarding passes): signing, web service, add-to-wallet links, removal |
 | [`@astratra/pdf`](packages/pdf/README.md) | 1.1.0 | PDFKit layout primitives: text that fits its box, paginated tables, card sheets with vector QR codes |
 | [`@astratra/closure`](packages/closure/README.md) | 1.1.0 | Period closing checklist with blocking and acknowledged items, and an archive free of credentials |
 | [`@astratra/notify`](packages/notify/README.md) | 1.2.0 | Outbound e-mail, SMS and push: injected transport, header-injection safe, never throws |
@@ -177,7 +177,7 @@ package is in [CHANGELOG.md](CHANGELOG.md).
 
 | Package | Version | What it does |
 |---|---|---|
-| [`@astratra/tooling`](packages/tooling/README.md) | 1.7.0 | Workspace audit (secrets, routes, translations), test runner, deployment with rollback, app publishing, AI evaluation |
+| [`@astratra/tooling`](packages/tooling/README.md) | 1.7.1 | Workspace audit (secrets, routes, translations), test runner, deployment with rollback, app publishing, AI evaluation |
 | [`@astratra/testkit`](packages/testkit/README.md) | 2.0.0 | Security tests with no dependency (fuzzing, attack catalogue, ReDoS, resource bombs, differential, standard vectors, constant time, secrets in logs, authorization matrix, races, faults, mutations, lockfile), disposable MongoDB or PostgreSQL test databases, reproducible per-country fake data, guard against production databases |
 
 The example [`examples/dashboard-ui`](examples/dashboard-ui/README.md) shows

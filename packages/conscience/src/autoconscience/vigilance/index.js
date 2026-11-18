@@ -9,15 +9,25 @@ const lessonTests = require('./lessonTests');
 const library = require('./library');
 const store = require('./store');
 
+// Des noms seuls dans l'objet exporté : Node les lit sans exécuter le fichier, pour les imports nommés d'un module ES.
+const { detectDrift, snapshotWindow, populationStabilityIndex, differenceInterval, DRIFT_RECOMMENDATIONS } = drift;
+const { createFollowUps, followUpEraser, FOLLOW_UP_STATUSES } = followups;
+const { abstentionPolicy, shouldAbstain, ABSTENTION_DEFAULT_THRESHOLD } = abstention;
+const { generateAdversarialCases, ADVERSARIAL_CATEGORIES } = adversary;
+const { reviewByRoles, REVIEW_ROLES, REVIEW_SCOPES } = roles;
+const { lessonToScenario } = lessonTests;
+const { createScenarioLibrary, SCENARIO_CATEGORIES, CANDIDATE_STATUSES } = library;
+const scenarioToTestkit = library.toScenario;
+const { createMemoryVigilanceStore, createPostgresVigilanceStore, postgresVigilanceSchema } = store;
 module.exports = {
-  detectDrift: drift.detectDrift, snapshotWindow: drift.snapshotWindow, populationStabilityIndex: drift.populationStabilityIndex,
-  differenceInterval: drift.differenceInterval, DRIFT_RECOMMENDATIONS: drift.DRIFT_RECOMMENDATIONS,
-  createFollowUps: followups.createFollowUps, followUpEraser: followups.followUpEraser, FOLLOW_UP_STATUSES: followups.FOLLOW_UP_STATUSES,
-  abstentionPolicy: abstention.abstentionPolicy, shouldAbstain: abstention.shouldAbstain, ABSTENTION_DEFAULT_THRESHOLD: abstention.ABSTENTION_DEFAULT_THRESHOLD,
-  generateAdversarialCases: adversary.generateAdversarialCases, ADVERSARIAL_CATEGORIES: adversary.ADVERSARIAL_CATEGORIES,
-  reviewByRoles: roles.reviewByRoles, REVIEW_ROLES: roles.REVIEW_ROLES, REVIEW_SCOPES: roles.REVIEW_SCOPES,
-  lessonToScenario: lessonTests.lessonToScenario,
-  createScenarioLibrary: library.createScenarioLibrary, scenarioToTestkit: library.toScenario,
-  SCENARIO_CATEGORIES: library.SCENARIO_CATEGORIES, CANDIDATE_STATUSES: library.CANDIDATE_STATUSES,
-  createMemoryVigilanceStore: store.createMemoryVigilanceStore, createPostgresVigilanceStore: store.createPostgresVigilanceStore, postgresVigilanceSchema: store.postgresVigilanceSchema
+  detectDrift, snapshotWindow, populationStabilityIndex,
+  differenceInterval, DRIFT_RECOMMENDATIONS,
+  createFollowUps, followUpEraser, FOLLOW_UP_STATUSES,
+  abstentionPolicy, shouldAbstain, ABSTENTION_DEFAULT_THRESHOLD,
+  generateAdversarialCases, ADVERSARIAL_CATEGORIES,
+  reviewByRoles, REVIEW_ROLES, REVIEW_SCOPES,
+  lessonToScenario,
+  createScenarioLibrary, scenarioToTestkit,
+  SCENARIO_CATEGORIES, CANDIDATE_STATUSES,
+  createMemoryVigilanceStore, createPostgresVigilanceStore, postgresVigilanceSchema
 };

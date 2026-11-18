@@ -252,6 +252,8 @@ export function createGoogleWallet(options: {
   credentials: { client_email: string; private_key: string };
   kind?: GoogleKind;
   request?: (options: Record<string, unknown>) => Promise<unknown>;
+  /** Remplace fetch pour le jeton du compte de service et les appels à Google (essais). */
+  fetch?: typeof fetch;
 }): GoogleWallet;
 
 export function signSaveJwt(

@@ -100,17 +100,23 @@ async function runReflection(options) { return evaluateOutcomes(options); }
 function createEvaluator(options) {
   return Object.freeze({ evaluate: (input) => evaluateOutcomes({ ...options, ...input, governor: options.governor, conscience: options.conscience }) });
 }
-module.exports = { runReflection, evaluateOutcomes, createEvaluator, AVAILABLE_FROM,
-  wilsonInterval: statistics.wilsonInterval, honestStatistics: statistics.honestStatistics,
-  calibratePredictions: statistics.calibratePredictions, scoreErrorCosts: statistics.scoreErrorCosts, ...signals, ...lessons };
 
 // P3 experiments (first half); append-only integration with the evaluation core.
 const { createSandbox } = require('./experiments/sandbox');
 const { replayDecisions } = require('./experiments/replay');
 const { createHoldout } = require('./experiments/holdout');
 const { proposeExperiment, runExperiment } = require('./experiments/laboratory');
-Object.assign(module.exports, { createSandbox, replayDecisions, createHoldout, proposeExperiment, runExperiment });
-/* P3 · vigilance (2/2): drift, follow-ups, abstention, night adversary, multi-role review, lessons turned into tests. */
-Object.assign(module.exports, require('./vigilance'));
-/* P4 · shadow mode: a candidate approved by humans processes real requests in silence, in the sandbox, and is compared with the stable strategy. */
-Object.assign(module.exports, require('./shadow'));
+
+// Des noms seuls et des « ...require() » dans l'objet exporté : Node les lit sans exécuter le fichier, pour les imports
+// nommés d'un module ES. L'ordre est celui d'avant (les ajouts successifs) : P2, P3 expériences, vigilance, ombre.
+const { wilsonInterval, honestStatistics, calibratePredictions, scoreErrorCosts } = statistics;
+module.exports = {
+  runReflection, evaluateOutcomes, createEvaluator, AVAILABLE_FROM,
+  wilsonInterval, honestStatistics, calibratePredictions, scoreErrorCosts,
+  ...require('./signals'), ...require('./lessons'),
+  createSandbox, replayDecisions, createHoldout, proposeExperiment, runExperiment,
+  /* P3 · vigilance (2/2): drift, follow-ups, abstention, night adversary, multi-role review, lessons turned into tests. */
+  ...require('./vigilance'),
+  /* P4 · shadow mode: a candidate approved by humans processes real requests in silence, in the sandbox, and is compared with the stable strategy. */
+  ...require('./shadow')
+};

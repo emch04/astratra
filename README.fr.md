@@ -121,7 +121,7 @@ est dans [CHANGELOG.md](CHANGELOG.md).
 
 | Paquet | Version | Rôle |
 |---|---|---|
-| [`@astratra/core`](packages/core/README.md) | 1.2.0 | Réponses d'API, erreurs, journaux, identifiants de requête, configuration par variables d'environnement |
+| [`@astratra/core`](packages/core/README.md) | 1.3.0 | Réponses d'API, erreurs, journaux, identifiants de requête, configuration par variables d'environnement, jeton d'accès d'un compte de service Google |
 | [`@astratra/security`](packages/security/README.md) | 1.15.1 | JWT et RBAC, limitation de débit (mémoire ou Redis), CSP, WAF heuristique, passkeys WebAuthn, HMAC entre services, journal d'audit chaîné |
 | [`@astratra/credentials`](packages/credentials/README.md) | 1.2.0 | Clés de service chiffrées en base, modifiables depuis l'interface sans redémarrage |
 | [`@astratra/entitlements`](packages/entitlements/README.md) | 1.1.0 | Plans, fonctionnalités, gardes de facturation et de statut, isolation par locataire qui échoue fermée, invitations par lien, quotas et budgets d'IA |
@@ -135,16 +135,16 @@ est dans [CHANGELOG.md](CHANGELOG.md).
 | Paquet | Version | Rôle |
 |---|---|---|
 | [`@astratra/ai`](packages/ai/README.md) | 2.0.0 | Routage multi-fournisseur avec quotas et repli, registre d'outils, boucle d'agent, niveaux de risque avec confirmation, fournisseur llama.cpp local |
-| [`@astratra/agent`](packages/agent/README.md) | 1.4.1 | Tâches durables, budgets, plans, vérifications de fin, résumés de contexte, suivi de la consommation, retours utilisateur (👍/👎), ordonnanceur de tâches à heure fixe et file d'actions en attente d'approbation |
-| [`@astratra/models`](packages/models/README.md) | 1.3.0 | Service local de modèles sur CPU (vecteurs, reclassement, NLI, entités, transcription) et son client Node ; catalogue des prix et calcul du coût |
-| [`@astratra/conscience`](packages/conscience/README.md) | 1.5.1 | Mémoire documentée des décisions d'un agent (résultats, corrections, leçons avec preuves, modèle de soi, traçabilité, effacement) sous un gouverneur déterministe sans aucun modèle de langage |
+| [`@astratra/agent`](packages/agent/README.md) | 1.4.2 | Tâches durables, budgets, plans, vérifications de fin, résumés de contexte, suivi de la consommation, retours utilisateur (👍/👎), ordonnanceur de tâches à heure fixe et file d'actions en attente d'approbation |
+| [`@astratra/models`](packages/models/README.md) | 1.3.1 | Service local de modèles sur CPU (vecteurs, reclassement, NLI, entités, transcription) et son client Node ; catalogue des prix et calcul du coût |
+| [`@astratra/conscience`](packages/conscience/README.md) | 1.5.2 | Mémoire documentée des décisions d'un agent (résultats, corrections, leçons avec preuves, modèle de soi, traçabilité, effacement) sous un gouverneur déterministe sans aucun modèle de langage |
 | [`@astratra/memory`](packages/memory/README.md) | 2.1.1 | Souvenirs par personne pour un assistant : rappel hybride, fusion des doublons, corrections annulables, magasin PostgreSQL |
 | [`@astratra/rag`](packages/rag/README.md) | 1.1.0 | Recherche dans des documents : découpage, vecteurs injectés, recherche mixte, vérification des sources, lecture de documents par un service optionnel |
 | [`@astratra/voice`](packages/voice/README.md) | 1.2.0 | Synthèse vocale côté serveur (Piper, ffmpeg), caches versionnés, chaîne de fournisseurs avec rotation des clés, transcription locale |
 | [`@astratra/live`](packages/live/README.md) | 1.1.1 | Sessions d'appel vocal en temps réel et aides au protocole côté client |
 | [`@astratra/app-guide`](packages/app-guide/README.md) | 1.1.0 | Guide d'usage filtré par rôle, généré depuis la configuration des écrans, avec contrôle de couverture |
 | [`@astratra/repomap`](packages/repomap/README.md) | 1.1.0 | Carte pondérée des symboles d'un dépôt, pour explorer du code dans un budget de jetons |
-| [`@astratra/web-search`](packages/web-search/README.md) | 1.1.0 | Recherche web pour les agents : plusieurs moteurs avec repli, fusion des classements sans mélange des contenus (une entrée = une page = un site), passages mot pour mot, lecture des pages protégée contre le SSRF, navigateur intégré isolé (pages en JavaScript, liens, recherche interne d'un site), définitions d'outils et serveur MCP |
+| [`@astratra/web-search`](packages/web-search/README.md) | 1.2.1 | Recherche web pour les agents : plusieurs moteurs avec repli, fusion des classements sans mélange des contenus (une entrée = une page = un site), passages mot pour mot, lecture des pages protégée contre le SSRF, navigateur intégré isolé (pages en JavaScript, liens, recherche interne d'un site), définitions d'outils et serveur MCP |
 
 ### Métier
 
@@ -158,7 +158,7 @@ est dans [CHANGELOG.md](CHANGELOG.md).
 | [`@astratra/srs`](packages/srs/README.md) | 1.1.0 | Répétition espacée sur FSRS : cartes, notation, échéances, file du jour, statistiques |
 | [`@astratra/fhir`](packages/fhir/README.md) | 1.1.0 | Aides FHIR R4 sur les types officiels Medplum : validation minimale, références, constructeurs |
 | [`@astratra/loyalty`](packages/loyalty/README.md) | 1.1.0 | Cartes à tampons et cartes à quota mensuel, calculées sans base de données |
-| [`@astratra/wallet`](packages/wallet/README.md) | 1.2.0 | Cartes Apple Wallet et Google Wallet tenues à jour (fidélité, billets, embarquement) : signature, service web, lien d'ajout, retrait |
+| [`@astratra/wallet`](packages/wallet/README.md) | 1.2.1 | Cartes Apple Wallet et Google Wallet tenues à jour (fidélité, billets, embarquement) : signature, service web, lien d'ajout, retrait |
 | [`@astratra/pdf`](packages/pdf/README.md) | 1.1.0 | Primitives de mise en page PDFKit : texte qui tient dans sa case, tableaux paginés, planches de cartes avec QR vectoriel |
 | [`@astratra/closure`](packages/closure/README.md) | 1.1.0 | Liste de clôture de période à points bloquants et reconnus, archive sans aucun identifiant |
 | [`@astratra/notify`](packages/notify/README.md) | 1.2.0 | Messages sortants : e-mail, SMS, push ; transport injecté, protégé contre l'injection d'en-têtes, ne lève jamais |
@@ -183,7 +183,7 @@ est dans [CHANGELOG.md](CHANGELOG.md).
 
 | Paquet | Version | Rôle |
 |---|---|---|
-| [`@astratra/tooling`](packages/tooling/README.md) | 1.7.0 | Audit de l'espace de travail (secrets, routes, traductions), lanceur de tests, déploiement avec retour arrière, publication d'applications, évaluation d'IA |
+| [`@astratra/tooling`](packages/tooling/README.md) | 1.7.1 | Audit de l'espace de travail (secrets, routes, traductions), lanceur de tests, déploiement avec retour arrière, publication d'applications, évaluation d'IA |
 | [`@astratra/testkit`](packages/testkit/README.md) | 2.0.0 | Essais de sécurité sans dépendance (fuzz, catalogue d'attaques, ReDoS, bombes de ressources, différentiel, vecteurs officiels, temps constant, secrets dans les journaux, matrice d'autorisations, courses, pannes, mutations, verrou npm), bases de test MongoDB ou PostgreSQL jetables, fausses données reproductibles par pays, garde contre les bases de production |
 
 L'exemple [`examples/dashboard-ui`](examples/dashboard-ui/README.md) montre

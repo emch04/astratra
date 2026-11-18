@@ -192,3 +192,45 @@ export function decideIdempotency(input: {
 export function hashIdempotencyPayload(payload: unknown): string;
 export function isValidIdempotencyKey(key: unknown, pattern?: RegExp): boolean;
 export const IDEMPOTENCY_TTL_MS: number;
+
+/** Le jeton d'accès d'un compte de service Google (RFC 7523), sans google-auth-library. */
+export interface GoogleServiceAccountCredentials {
+  client_email: string;
+  private_key: string;
+  token_uri?: string;
+  project_id?: string;
+  [key: string]: unknown;
+}
+export interface GoogleServiceAccountAuthOptions {
+  credentials: GoogleServiceAccountCredentials | string;
+  /** Une ou plusieurs portées https://. */
+  scopes: string[];
+  /** Un compte à emprunter (délégation à l'échelle du domaine). */
+  subject?: string;
+  fetch?: typeof fetch;
+  now?: () => number;
+  /** Délai de chaque appel à Google (15 000 ms). */
+  timeoutMs?: number;
+  /** Adresses d'échange permises à la place de googleapis.com (essais, émulateur). */
+  allowedTokenUris?: string[];
+}
+export interface GoogleServiceAccountAuth {
+  /** Gardé jusqu'à cinq minutes avant son échéance ; des demandes simultanées partagent un seul échange. */
+  getAccessToken(options?: { forceRefresh?: boolean }): Promise<string>;
+  /** Un appel JSON à une API Google ; un 401 renouvelle le jeton et rejoue une fois. */
+  request<T = unknown>(options: { method?: string; url: string; data?: unknown; headers?: Record<string, string>; signal?: AbortSignal }): Promise<{ status: number; data: T; headers: unknown }>;
+  clientEmail: string;
+  projectId?: string;
+}
+export function createGoogleServiceAccountAuth(options: GoogleServiceAccountAuthOptions): GoogleServiceAccountAuth;
+export function readGoogleServiceAccount(credentials: GoogleServiceAccountCredentials | string, options?: { allowedTokenUris?: string[] }): { clientEmail: string; privateKey: import('node:crypto').KeyObject; tokenUri: string; projectId?: string };
+export function signServiceAccountAssertion(account: { clientEmail: string; privateKey: import('node:crypto').KeyObject; tokenUri: string }, options: { scopes: string[]; subject?: string; nowSeconds?: number }): string;
+/** https, sur googleapis.com ou un de ses sous-domaines, sans identifiants ni autre port. */
+export function isGoogleTokenUri(value: string): boolean;
+export class GoogleAuthError extends Error {
+  code: 'GOOGLE_CREDENTIALS_INVALID' | 'GOOGLE_TOKEN_URI_REFUSED' | 'GOOGLE_SCOPES_INVALID' | 'GOOGLE_NO_FETCH' | 'GOOGLE_UNREACHABLE' | 'GOOGLE_TOKEN_REFUSED' | 'GOOGLE_URL_INVALID' | 'GOOGLE_API_ERROR';
+  status?: number;
+  httpStatus?: number;
+  response?: { status: number; data: unknown };
+}
+export const GOOGLE_TOKEN_URI: string;
