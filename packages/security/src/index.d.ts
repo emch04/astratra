@@ -1083,3 +1083,23 @@ export class JsonWebTokenError extends Error {}
 export class TokenExpiredError extends JsonWebTokenError { expiredAt: Date }
 export class NotBeforeError extends JsonWebTokenError { date: Date }
 export const JWT_ALGORITHMS: JwtAlgorithm[];
+
+/** La double authentification par code à six chiffres (TOTP, RFC 6238), sans otplib. */
+export interface TotpOptions { digits?: number; algorithm?: 'sha1' | 'sha256' | 'sha512'; period?: number }
+export function generateTotpSecret(options?: { bytes?: number }): string;
+export function hotp(secret: string | Buffer, counter: number, options?: TotpOptions): string;
+export function totp(secret: string | Buffer, options?: TotpOptions & { epoch?: number }): string;
+export function verifyTotp(options: TotpOptions & {
+  secret: string | Buffer;
+  token: unknown;
+  /** Secondes ; maintenant par défaut. */
+  epoch?: number;
+  /** Secondes de décalage admises (30 par défaut : un pas avant ou après). */
+  epochTolerance?: number;
+  /** Le timeStep du dernier code accepté : un pas égal ou antérieur est refusé (code rejoué). */
+  afterStep?: number | null;
+}): { valid: true; delta: number; timeStep: number; epoch: number } | { valid: false; reason: 'format' | 'mismatch' | 'replay'; timeStep?: number };
+export function totpUri(options: TotpOptions & { issuer: string; label: string; secret: string | Buffer }): string;
+export function base32Encode(buffer: Buffer): string;
+export function base32Decode(text: string): Buffer;
+export class TotpError extends Error {}

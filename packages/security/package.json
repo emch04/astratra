@@ -13,7 +13,7 @@
   ],
   "scripts": {
     "test": "jest",
-    "verify:mutations": "node scripts/verify-rate-limit-mutations.cjs && node scripts/verify-jwt-mutations.cjs"
+    "verify:mutations": "node scripts/verify-rate-limit-mutations.cjs && node scripts/verify-jwt-mutations.cjs && node scripts/verify-totp-mutations.cjs"
   },
   "jest": {
     "testMatch": [

@@ -3,6 +3,15 @@
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Chaque package Astratra est versionné indépendamment.
 
+## 2026-11-18 — la double authentification sans otplib
+
+### Ajouté
+- `@astratra/security` 1.15.1 (à publier) : `generateTotpSecret`, `totp`, `hotp`, `verifyTotp`, `totpUri`, `base32Encode`, `base32Decode` (src/totp.js, node:crypto seul), pour les projets qui utilisaient otplib. Mêmes codes, mêmes vérifications et mêmes adresses `otpauth://` qu'otplib 13.5.0 sur des vecteurs enregistrés (`scripts/record-otp-reference.cjs` : 96 codes, 324 vérifications, 4 adresses), et les vecteurs des RFC 4226 et 6238.
+- `afterStep` refuse un code déjà servi ; tous les pas de la fenêtre sont comparés en temps constant ; un code mal formé est invalide au lieu de lever (une exception non attrapée ferait un 500 dans une route de connexion) ; un émetteur ou un compte contenant « : » est refusé (otplib rendait une adresse ambiguë).
+
+### Essais
+- `__tests__/totp.test.js` (15), avec `@astratra/testkit/security` : RFC 4226 et 6238, base32 (exemples de la RFC 4648 et aller-retour en propriété), différentiel otplib, code rejoué, fenêtre, codes mal formés, temps constant (faux chiffre au début ou à la fin ; vrai code reconnu au premier ou au dernier pas), fuzz, essais au hasard, expressions régulières (une expression `=+$` qui s'emballait, remplacée par une boucle). `npm run verify:mutations` : 8 mutations, toutes tuées (l'arrêt au premier pas trouvé survivait d'abord : l'essai de temps ne prenait que de faux codes).
+
 ## 2026-11-18 — le téléversement de fichiers sans multer
 
 ### Ajouté

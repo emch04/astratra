@@ -383,6 +383,30 @@ reproduire.
 
 Un identifiant ne doit jamais pouvoir être lu comme du contenu.
 
+## Double authentification (codes à six chiffres)
+
+Les codes des applications d'authentification (TOTP, RFC 6238), sans otplib :
+mêmes codes, mêmes vérifications et mêmes adresses `otpauth://` qu'otplib 13 sur
+des vecteurs enregistrés, et les vecteurs des RFC 4226 et 6238.
+
+```js
+const { generateTotpSecret, totpUri, verifyTotp } = require('@astratra/security');
+
+const secret = generateTotpSecret();                         // 32 caractères base32 (160 bits), à garder chiffré
+const uri = totpUri({ issuer: 'Mon App', label: user.email, secret }); // à montrer en QR code
+
+const result = verifyTotp({ secret, token: req.body.code, afterStep: user.dernierPas });
+if (!result.valid) return refuser();
+user.dernierPas = result.timeStep;                           // le même code ne sert pas deux fois
+```
+
+- Un pas de décalage admis par défaut (`epochTolerance: 30`) ; `afterStep` refuse
+  un code déjà servi ; tous les pas de la fenêtre sont comparés en temps constant.
+- Un code mal formé est simplement invalide (otplib levait une exception) ; un
+  émetteur ou un compte contenant « : » est refusé (l'adresse serait ambiguë).
+- Six chiffres font un million de codes : limitez les essais de la route
+  (`createAccountLimiter`), sinon un robot finit par trouver.
+
 ## Codes uniques
 
 ```js
