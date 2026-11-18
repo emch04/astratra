@@ -94,6 +94,22 @@ const standardVectors = {
     },
   ],
   /**
+   * Les exemples de signature S3 (AWS Signature Version 4) de la documentation d'AWS (« Examples: Signature
+   * Calculations », clés d'exemple publiques, 24 mai 2013, us-east-1) : GET avec plage, PUT, sous-ressource, liste, et
+   * un lien signé. `expected` est la signature.
+   */
+  sigV4S3Aws: (() => {
+    const credentials = { accessKeyId: 'AKIAIOSFODNN7EXAMPLE', secretAccessKey: 'wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY' };
+    const base = { credentials, region: 'us-east-1', service: 's3', date: '2013-05-24T00:00:00Z', host: 'examplebucket.s3.amazonaws.com' };
+    return [
+      { id: 'AWS GET Object (plage)', input: { ...base, kind: 'header', method: 'GET', key: 'test.txt', query: {}, headers: { range: 'bytes=0-9' }, payload: '' }, expected: 'f0e8bdb87c964420e857bd35b5d6ed310bd44f0170aba48dd91039c6036bdb41' },
+      { id: 'AWS PUT Object', input: { ...base, kind: 'header', method: 'PUT', key: 'test$file.text', query: {}, headers: { date: 'Fri, 24 May 2013 00:00:00 GMT', 'x-amz-storage-class': 'REDUCED_REDUNDANCY' }, payload: 'Welcome to Amazon S3.' }, expected: '98ad721746da40c64f1a55b78f14c238d841ea1380cd77a1b5971af0ece108bd' },
+      { id: 'AWS GET Bucket Lifecycle', input: { ...base, kind: 'header', method: 'GET', key: '', query: { lifecycle: '' }, headers: {}, payload: '' }, expected: 'fea454ca298b7da1c68078a5d1bdbfbbe0d65c699e0f91ac7a200a0136783543' },
+      { id: 'AWS GET Bucket (liste)', input: { ...base, kind: 'header', method: 'GET', key: '', query: { 'max-keys': '2', prefix: 'J' }, headers: {}, payload: '' }, expected: '34b48302e7b5fa45bde8084f4b7868a86f0a534bc59db6670ed5711ef69dc6f7' },
+      { id: 'AWS lien signé', input: { ...base, kind: 'presign', method: 'GET', key: 'test.txt', query: {}, headers: {}, expiresIn: 86400 }, expected: 'aeeed9bbccd4d02ee5c0109b86d86835f995330da4c265957d157751f604d404' },
+    ];
+  })(),
+  /**
    * RFC 8291, section 5 et annexe A : un message Web Push chiffré (aes128gcm, RFC 8188). Le chiffrement doit rendre
    * ces octets exactement avec ce sel et cette clé du serveur ; le déchiffrement, avec la clé de l'appareil, le texte.
    */

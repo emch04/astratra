@@ -1,0 +1,40 @@
+{
+  "name": "@astratra/s3",
+  "version": "1.0.0",
+  "description": "An S3 client with no dependency, for AWS S3, Cloudflare R2, MinIO, SeaweedFS and compatible services: put, get (range, stream), head, delete, batch delete, list, presigned GET and PUT URLs; AWS Signature V4 with node:crypto.",
+  "engines": {
+    "node": ">=22"
+  },
+  "main": "src/index.js",
+  "types": "src/index.d.ts",
+  "type": "commonjs",
+  "files": [
+    "src"
+  ],
+  "scripts": {
+    "test": "jest",
+    "verify:mutations": "node scripts/verify-s3-mutations.cjs"
+  },
+  "jest": {
+    "testMatch": [
+      "**/__tests__/**/*.test.js"
+    ]
+  },
+  "keywords": [
+    "astratra",
+    "s3",
+    "r2",
+    "minio",
+    "object-storage",
+    "presigned-url",
+    "sigv4"
+  ],
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  },
+  "devDependencies": {
+    "@astratra/testkit": "^2.0.0",
+    "jest": "30.4.2"
+  }
+}

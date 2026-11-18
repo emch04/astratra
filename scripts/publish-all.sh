@@ -43,6 +43,7 @@ ORDER=(
   "@astratra/shipping"
   "@astratra/pdf"
   "@astratra/qr"
+  "@astratra/s3"
   "@astratra/loyalty"
   "@astratra/wallet"
   "@astratra/closure"

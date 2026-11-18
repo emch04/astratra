@@ -1,0 +1,15 @@
+# gitleaks : les règles par défaut, plus deux exceptions étroites pour des valeurs d'essai connues.
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Vecteurs de référence enregistrés une fois par les scripts scripts/record-*-reference.cjs : clés, secrets et jetons jetables, tirés pour l'essai et jamais utilisés ailleurs."
+paths = [
+  '''packages/[a-z0-9-]+/__tests__/fixtures/[a-z0-9-]+-reference\.json$''',
+]
+
+[[allowlists]]
+description = "Les vecteurs publiés des normes (RFC 4226, 6238, 7515, 8291, exemples S3 d'AWS), recopiés dans le pack de tests."
+paths = [
+  '''packages/testkit/src/security/vectors\.js$''',
+]

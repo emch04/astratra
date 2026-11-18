@@ -3,6 +3,16 @@
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Chaque package Astratra est versionné indépendamment.
 
+## 2026-11-18 — `@astratra/s3` 1.0.0 (à publier) : S3 sans le SDK AWS
+
+### Ajouté
+- Nouveau paquet `@astratra/s3` : `createS3Client({ endpoint, region, accessKeyId, secretAccessKey, bucket })` avec `putObject`, `getObject` (plage, `maxBytes`), `getObjectStream`, `headObject`, `deleteObject`, `deleteObjects`, `listObjects`, `iterateObjects`, `presignUrl` (GET, PUT, HEAD, DELETE) et `describeRequest` ; `signRequest` et `presignQuery` (AWS Signature V4) ; un lecteur XML sans DOCTYPE ni entités. Pour AWS S3, Cloudflare R2, MinIO, SeaweedFS ; pour les projets qui utilisaient `@aws-sdk/client-s3` et `@aws-sdk/s3-request-presigner`. Les erreurs ont la forme de celles du SDK (`name` = code S3, `$metadata.httpStatusCode`).
+- Plus strict que le SDK : clé vide, absolue, avec « . », « .. » ou un caractère de contrôle refusée ; nom de compartiment selon les règles d'AWS ; http:// seulement vers la machine elle-même ; délai de 30 s ; objet en mémoire plafonné (100 Mio par défaut, refusé dès l'annonce de sa taille) ; erreur et liste lues jusqu'à 1 Mio ; redirection jamais suivie ; en-têtes sans retour à la ligne, métadonnées de 2 Ko au plus ; lien de 7 jours au plus ; une entrée qui n'est pas un objet refusée. Les listes demandent les clés encodées (`encoding-type=url`). Un lien de dépôt signe le type de contenu (le SDK ne le signe pas, et ajoute une somme CRC32 du corps vide qui fait échouer un vrai dépôt) ; aucune somme CRC n'est ajoutée.
+- `@astratra/testkit` 2.0.0 (à publier) : `standardVectors.sigV4S3Aws`, les cinq exemples de signature S3 de la documentation d'AWS.
+
+### Essais
+- `packages/s3/__tests__/s3.test.js` (20), avec `@astratra/testkit/security` : les exemples d'AWS ; comparé au SDK AWS v3 (client-s3 3.1138.0, signature-v4 5.7.3) sur des réponses enregistrées (`scripts/record-aws-sdk-reference.cjs`) — 160 en-têtes Authorization et 160 liens signés identiques à l'octet, 300 requêtes construites (hôte, chemin, requête, en-têtes) identiques hors `x-id`, 40 liens de getSignedUrl aux mêmes paramètres hors écarts voulus, 39 réponses lues aux mêmes résultats (listes, suppression groupée, erreurs ; un écart voulu : « Forbidden » au lieu d'« Unknown ») ; un vrai service (SeaweedFS dans Colima, `S3_TEST_ENDPOINT`) : clés difficiles en aller-retour, pages, préfixes communs, plage, flux de 5 Mio, plafond, condition, suppressions, liens en lecture, dépôt au type imposé, lien expiré ou modifié refusé, mauvaise clé refusée ; faux service : objet trop grand annoncé ou non, erreur immense, service muet, redirection, XML piégé (XXE, bombe d'entités, profondeur, taille), clés encodées ; propriété et fuzz du lecteur XML ; clés, compartiments, adresses, en-têtes et plages piégés ; fuzz de toutes les opérations (le secret n'apparaît jamais). Le fuzz a trouvé trois défauts, corrigés avant la validation : une entrée `null`, un préfixe à demi-caractère Unicode et une métadonnée sans valeur faisaient planter. `npm run verify:mutations` dans s3 : 23 mutations, toutes tuées (une survivait d'abord : la limite totale des métadonnées).
+
 ## 2026-11-18 — `@astratra/notify` 1.3.0 (à publier) : Web Push sans web-push
 
 ### Ajouté
