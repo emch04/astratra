@@ -22,6 +22,7 @@ DRY=0
 [ "${1:-}" = "--dry-run" ] && DRY=1
 
 ORDER=(
+  "@astratra/testkit"
   "@astratra/core"
   "@astratra/security"
   "@astratra/rag"
@@ -66,7 +67,6 @@ ORDER=(
   "@astratra/ledger"
   "@astratra/repomap"
   "@astratra/srs"
-  "@astratra/testkit"
   "@astratra/web-search"
   "create-astratra-app"
 )

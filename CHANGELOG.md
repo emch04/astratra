@@ -11,7 +11,7 @@ Chaque package Astratra est versionné indépendamment.
 
 ### Changé
 - `@astratra/ai` 2.0.1 (à publier) : `connectMcpServer` utilise `@astratra/mcp` ; `@modelcontextprotocol/sdk` n'est plus une dépendance.
-- `create-astratra-app` 1.12.1 (à publier) : le projet généré demande `@astratra/ai` ^2.0.1.
+- `create-astratra-app` 1.12.2 (à publier) : le projet généré demande `@astratra/ai` ^2.0.1.
 - `@astratra/web-search` 1.2.1 (à publier) : le serveur MCP (`@astratra/web-search/mcp`, `astratra-web-search-mcp`) utilise `@astratra/mcp` ; le SDK n'est plus une dépendance facultative. Le SDK ne reste installé dans le dépôt que par promptfoo, outil d'évaluation de développement (42 dépendances décidées).
 
 ### Essais
@@ -25,7 +25,7 @@ Chaque package Astratra est versionné indépendamment.
 
 ### Changé
 - `@astratra/credentials` 1.2.1 et `@astratra/saas-kit` 2.1.1 (à publier) : leurs validations viennent de `@astratra/core` (^1.3.0) ; express-validator n'est plus une dépendance d'Astratra (44 → 43 dépendances décidées).
-- `create-astratra-app` 1.12.1 (à publier) : la brique `credentials` demande `@astratra/credentials` ^1.2.1.
+- `create-astratra-app` 1.12.2 (à publier) : la brique `credentials` demande `@astratra/credentials` ^1.2.1.
 
 ### Essais
 - `packages/core/__tests__/validation.test.js` (10), avec `@astratra/testkit/security` : comparé à express-validator 7.3.2 et validator 13.15.35 sur 7 391 cas enregistrés (`scripts/record-express-validator-reference.cjs` ; vérifications et options, adresses difficiles, nettoyages sur valeurs et tableaux, normalisation des adresses, optional, exists, not, bail, if, messages, emplacements, jokers, chemins imbriqués, hide, matchedData, les chaînes réelles de credentials et saas-kit, 400 chaînes au hasard) — mêmes erreurs, même requête nettoyée et mêmes données retenues partout, sauf les 42 cas où express-validator plante ; chaînes dans un vrai serveur Express ; pollution de prototype ; fuzz de toutes les vérifications ; temps linéaire d'isEmail, isFQDN, isIP et isLength sur des entrées hostiles ; expressions régulières. Le fuzz a trouvé les deux plantages d'express-validator. `npm run verify:mutations` dans core : 21 mutations de la validation, toutes tuées (une survivait d'abord : `not()` avec une fonction asynchrone).
@@ -45,7 +45,7 @@ Chaque package Astratra est versionné indépendamment.
 ### Ajouté
 - `createWebPushTransport({ vapid, ttl, urgency, topic })` : un transport prêt pour `createPushSender`, qui chiffre le message pour le navigateur (RFC 8291, aes128gcm de la RFC 8188), le signe (VAPID, RFC 8292) et le remet au service de notification (RFC 8030), avec node:crypto et node:https. `sendWebPush`, `buildWebPushRequest`, `generateVapidKeys`, `vapidAuthorization`, `encryptWebPush`, `decryptWebPush`, `WebPushError`, `KNOWN_PUSH_HOSTS`. Pour les projets qui utilisaient web-push : `sendWebPush` prend les mêmes arguments que `webpush.sendNotification` (`vapidDetails`, `TTL`, `timeout` compris) et rend les mêmes résultats et les mêmes erreurs.
 - Plus strict que web-push 3.6.7 : adresse d'abonnement en https://, sans identifiants, sur un service de notification connu (`extraHosts` pour un autre) ; délai de 30 s par défaut, réponse lue jusqu'à 64 Kio, redirection jamais suivie ; message de plus de 3 993 octets (limite de la RFC 8291) et clé d'appareil hors de la courbe refusés ; clés VAPID vérifiées ensemble à la création ; TTL entier ; en-têtes gérés non remplaçables et valeurs sans retour à la ligne ; échéance VAPID dans les 24 h à venir. L'en-tête VAPID est gardé par service et refait quand il lui reste moins d'une heure. Ni « aesgcm » (brouillon de 2016), ni clé GCM (service fermé en 2019), ni option `proxy` (un `agent` HTTPS à la place).
-- `create-astratra-app` 1.12.1 (à publier) : la brique `notify` demande `@astratra/notify` ^1.3.0.
+- `create-astratra-app` 1.12.2 (à publier) : la brique `notify` demande `@astratra/notify` ^1.3.0.
 - `@astratra/testkit` 2.0.0 (à publier) : `standardVectors.webPushRfc8291`, l'exemple de la RFC 8291 avec ses valeurs intermédiaires.
 
 ### Essais
@@ -137,7 +137,7 @@ Chaque package Astratra est versionné indépendamment.
 
 ### Corrigé
 - `@astratra/security` 1.15.1 (à publier) : `createAuthMiddleware` refuse un jeton émis dans le futur (`iat` plus loin que `clockTolerance`, une minute par défaut) et un `iat` qui n'est pas un nombre. Un serveur à l'horloge en avance produisait des jetons qui échappaient à « déconnecter partout », qui révoque ce qui a été émis avant la déconnexion. Trouvé par les jetons piégés de `@astratra/testkit/security` (`__tests__/securityKit.test.js` : chaque variante falsifiée d'un jeton refusée, lecteur de jetons passé au fuzz).
-- `create-astratra-app` 1.12.1 (à publier) demande `@astratra/security` ^1.15.1.
+- `create-astratra-app` 1.12.2 (à publier) demande `@astratra/security` ^1.15.1.
 - `@astratra/security` 1.15.1 : `createCsrfMiddleware` compare le jeton envoyé et celui du cookie en temps constant (`crypto.timingSafeEqual`) ; un en-tête absent, vide ou répété est refusé comme avant. Tests ajoutés (longueur différente, un caractère changé, en-tête répété, caractère non ASCII).
 
 ### Dépendances (dépôt)
