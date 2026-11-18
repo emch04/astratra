@@ -253,37 +253,86 @@ export function createCsrfMiddleware(options?: CsrfMiddlewareOptions): RequestHa
 export function createCsrfCookiePrimer(options?: Pick<CsrfMiddlewareOptions, 'name' | 'sameSite' | 'secure' | 'path' | 'domain' | 'skip'>): RequestHandler;
 
 export interface RateLimitStore {
-  init?(options: unknown): unknown;
-  increment?(...args: unknown[]): unknown;
-  decrement?(...args: unknown[]): unknown;
-  resetKey?(...args: unknown[]): unknown;
-  resetAll?(...args: unknown[]): unknown;
-  get?(...args: unknown[]): unknown;
-  shutdown?(...args: unknown[]): unknown;
+  /** Reçoit la fenêtre du limiteur ({ windowMs }) à sa création. */
+  init?(options: { windowMs: number }): unknown;
+  /** Compte une requête pour la clé : le nombre dans la fenêtre et sa fin. */
+  increment(key: string): Awaitable<{ totalHits: number; resetTime?: Date }>;
+  decrement?(key: string): unknown;
+  resetKey?(key: string): unknown;
+  resetAll?(): unknown;
+  get?(key: string): Awaitable<{ totalHits: number; resetTime?: Date } | undefined>;
+  shutdown?(): unknown;
+  localKeys?: boolean;
+  prefix?: string;
 }
+
+export interface RateLimitInfo { limit: number; used: number; remaining: number; resetTime: Date; key: string }
 
 export interface RateLimitOptions {
   windowMs?: number;
   max?: number;
-  skip?: (req: RequestLike) => boolean | Promise<boolean>;
+  skip?: (req: RequestLike, res?: ResponseLike) => boolean | Promise<boolean>;
   standardHeaders?: boolean | string;
   legacyHeaders?: boolean;
+  /** Sans effet depuis la 1.15.1 (le limiteur n'est plus express-rate-limit) ; accepté pour ne rien casser. */
   validate?: Record<string, unknown> | boolean;
   message?: unknown;
   store?: RateLimitStore;
   redisUrl?: string;
 }
 
+/** Le limiteur lui-même (sans dépendance) : fenêtre fixe par clé, magasin interchangeable, en-têtes RateLimit-*. */
+export interface CreateRateLimitOptions {
+  windowMs?: number;
+  limit?: number | ((req: any, res: any) => number | Promise<number>);
+  max?: number | ((req: any, res: any) => number | Promise<number>);
+  keyGenerator?: (req: any, res: any) => string | Promise<string>;
+  skip?: (req: any, res: any) => boolean | Promise<boolean>;
+  message?: unknown | ((req: any, res: any) => unknown);
+  statusCode?: number;
+  handler?: (req: any, res: any, next: (error?: unknown) => void, options: CreateRateLimitOptions & { statusCode: number; limit: number; windowMs: number }) => unknown;
+  standardHeaders?: boolean;
+  legacyHeaders?: boolean;
+  store?: RateLimitStore;
+  /** Faux par défaut : un magasin en panne donne next(erreur), jamais un passage sans compter. */
+  passOnStoreError?: boolean;
+  requestPropertyName?: string;
+  skipSuccessfulRequests?: boolean;
+  skipFailedRequests?: boolean;
+  requestWasSuccessful?: (req: any, res: any) => boolean;
+  /** Le bloc IPv6 qui compte pour une seule adresse (56 par défaut) ; false pour l'adresse exacte. */
+  ipv6Subnet?: number | false;
+}
+export type RateLimitMiddleware = RequestHandler & {
+  resetKey(key: string): unknown;
+  getKey(key: string): unknown;
+  store: RateLimitStore;
+};
+export function createRateLimit(options?: CreateRateLimitOptions): RateLimitMiddleware;
+export function createMemoryRateLimitStore(options?: { maxKeys?: number }): RateLimitStore;
+/** La clé d'une adresse : IPv4 telle quelle (même écrite en IPv6), IPv6 par bloc (/56 par défaut). */
+export function rateLimitKeyForIp(address: string, subnet?: number | false): string;
+
 export interface RedisRateLimitStoreOptions {
-  /** URL de connexion Redis. */
+  /** URL de connexion Redis (le paquet `redis` doit être installé). */
   redisUrl?: string;
-  /** Préfixe Redis librement défini par le projet consommateur. */
+  /** Préfixe Redis librement défini par le projet (« rl: » par défaut). */
   prefix?: string;
+  /** Une connexion du projet : sendCommand(['EVAL', …]) (node-redis : client.sendCommand ; ioredis : (args) => client.call(...args)). */
+  sendCommand?: (args: string[]) => Promise<unknown>;
+  /** Un client node-redis du projet. */
+  client?: { sendCommand(args: string[]): Promise<unknown> };
+  /** Clés hachées en SHA-256 (vrai par défaut) : ni adresse ni e-mail en clair dans Redis. */
+  hashKeys?: boolean;
+  /** Au-delà, une commande compte comme une panne (1 000 ms par défaut). */
+  commandTimeoutMs?: number;
+  /** Après une panne, compte en mémoire pendant ce temps avant de réessayer Redis (2 000 ms par défaut). */
+  retryAfterMs?: number;
 }
 
 /**
- * Crée un store express-rate-limit Redis avec bascule mémoire si Redis est
- * indisponible. Le préfixe est optionnel et entièrement défini par le projet.
+ * Crée un magasin Redis (compteur et expiration en une seule opération, clés hachées). Tant que Redis ne répond pas,
+ * le compte se fait en mémoire de ce serveur : la limite reste appliquée.
  */
 export function createRedisRateLimitStore(options?: RedisRateLimitStoreOptions): RateLimitStore | undefined;
 

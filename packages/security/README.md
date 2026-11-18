@@ -432,12 +432,28 @@ un corps (`content-length` non nul ou `transfer-encoding`) : avec Express 5,
 Fournir son propre `keyGenerator` contourne complètement ce point.
 ```
 
-### Store Redis namespacé
+### Le limiteur, sans dépendance
 
-Par défaut, `redisUrl` seul suffit à activer un store Redis partagé entre
-tous les limiteurs. Pour isoler les compteurs par domaine (connexion,
-réservation, avis...) sur la même instance Redis, construis le store avec
-un préfixe et passe-le via `options.store` :
+Depuis la 1.15.1, le limiteur est écrit dans ce paquet (`createRateLimit`), sans
+express-rate-limit ni rate-limit-redis. Mêmes options, mêmes réponses (429, en-têtes
+`RateLimit-*` et `Retry-After`), même clé par adresse (une adresse IPv6 compte pour
+tout son bloc /56, comme avant : vérifié sur 500 adresses contre l'ancienne
+bibliothèque). Un magasin en panne ne laisse jamais passer sans compter :
+`next(erreur)`, sauf `passOnStoreError: true`.
+
+```js
+const { createRateLimit, createMemoryRateLimitStore, rateLimitKeyForIp } = require('@astratra/security');
+
+app.post('/codes', createRateLimit({ windowMs: 10 * 60 * 1000, max: 5, keyGenerator: (req) => req.body.telephone }));
+```
+
+### Store Redis
+
+`redisUrl` seul suffit : chaque sorte de limiteur a alors son espace de clés
+(`rl:api:`, `rl:login:`, `rl:account:`), pour que les requêtes ordinaires ne
+remplissent pas le compteur de la connexion. Pour isoler les compteurs par domaine
+(connexion, réservation, avis...), construis le store avec un préfixe et passe-le
+via `options.store` :
 
 ```js
 const { createApiLimiter, createLoginLimiter, createRedisRateLimitStore } = require('@astratra/security');
@@ -448,19 +464,22 @@ const loginStore = createRedisRateLimitStore({
 });
 app.use('/auth', createLoginLimiter({ store: loginStore }));
 
-const bookingStore = createRedisRateLimitStore({
-  redisUrl: process.env.REDIS_URL,
-  prefix: 'mon-app:rate:reservation:'
-});
+// Ou une connexion du projet : sendCommand (node-redis : client.sendCommand ; ioredis : (args) => client.call(...args)).
+const bookingStore = createRedisRateLimitStore({ client: redisClient, prefix: 'mon-app:rate:reservation:' });
 app.use('/bookings', createApiLimiter({ store: bookingStore }));
 ```
 
-`prefix` est entièrement libre et défini par le projet consommateur — Astratra
-ne connaît aucun nom de domaine métier. Si Redis n'est pas joignable au
-démarrage ou perd la connexion, le store bascule automatiquement sur un
-store en mémoire process (mêmes garanties que le store par défaut sans
-`prefix`), donc aucune configuration additionnelle n'est nécessaire pour
-gérer l'indisponibilité de Redis.
+- Le compteur et son expiration s'écrivent en une seule opération (script Lua) :
+  une panne entre les deux ne laisse jamais un compteur sans fin.
+- Les clés sont hachées (SHA-256) : ni adresse ni e-mail en clair dans Redis.
+- Tant que Redis ne répond pas (au démarrage, coupé, ou figé sans répondre), le
+  compte se fait en mémoire de ce serveur : la limite reste appliquée. Une
+  commande sans réponse au-delà de `commandTimeoutMs` (1 s) compte comme une
+  panne ; Redis est réessayé après `retryAfterMs` (2 s). Au retour de Redis, le
+  compte en mémoire et celui de Redis ne s'additionnent pas : une adresse peut
+  obtenir jusqu'à deux fois la limite au moment de la bascule, jamais plus.
+- `prefix` est entièrement libre et défini par le projet consommateur — Astratra
+  ne connaît aucun nom de domaine métier.
 
 ## WAF
 

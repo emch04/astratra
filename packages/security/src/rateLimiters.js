@@ -1,6 +1,10 @@
-const rateLimit = require('express-rate-limit');
 const { createLogger } = require('@astratra/core');
 const { bodyLeftUnparsed } = require('./requestBody');
+const { createRateLimit, createMemoryRateLimitStore, ipKey, requestIp } = require('./rateLimit');
+
+// Exportés sous ce nom : la clé d'une adresse pour un limiteur écrit par le projet.
+const rateLimitKeyForIp = ipKey;
+const { createRedisRateLimitStore: createRedisStoreWithOptions } = require('./redisRateLimitStore');
 
 const logger = createLogger('rate-limiters');
 
@@ -19,15 +23,11 @@ const DEFAULT_ACCOUNT_MESSAGE = {
   message: 'Too many attempts for this account. Please try again later.'
 };
 
-const getIp = (req) => req.ip || req.connection?.remoteAddress || '';
+const getIp = requestIp;
 
-// Une adresse IPv6 compte pour tout son bloc /56, comme la clé par défaut
-// d'express-rate-limit 8 : sinon chacun change d'adresse dans son bloc et
-// repart avec un compteur neuf. IPv4 reste l'adresse exacte.
-const clientKey = (req) => {
-  const ip = getIp(req);
-  return typeof rateLimit.ipKeyGenerator === 'function' && ip ? rateLimit.ipKeyGenerator(ip) : ip;
-};
+// Une adresse IPv6 compte pour tout son bloc /56 : sinon chacun change d'adresse
+// dans son bloc et repart avec un compteur neuf. IPv4 reste l'adresse exacte.
+const clientKey = (req) => ipKey(getIp(req));
 
 const skipLocalhost = (req) => {
   const ip = getIp(req);
@@ -42,138 +42,16 @@ const sendLimitResponse = async (req, res, next, options, onBlocked, context) =>
   return res.status(options.statusCode).json(options.message);
 };
 
-const createMemoryStore = () => {
-  const MemoryStore = rateLimit.MemoryStore;
-  return typeof MemoryStore === 'function' ? new MemoryStore() : null;
-};
-
-const createFailoverStore = (redisStore, memoryStore, connectPromise) => {
-  let activeStore = memoryStore || redisStore;
-  let initOptions = null;
-  const initializedStores = new WeakSet();
-
-  const initializeStore = (store) => {
-    if (!store || initializedStores.has(store)) return;
-    if (initOptions && typeof store.init === 'function') {
-      store.init(initOptions);
-    }
-    initializedStores.add(store);
-  };
-
-  const useStore = (store) => {
-    activeStore = store || memoryStore || redisStore;
-    initializeStore(activeStore);
-  };
-
-  connectPromise.then(
-    () => useStore(redisStore),
-    () => useStore(memoryStore)
-  );
-
-  const callActiveStore = (method, args) => {
-    const fn = activeStore && activeStore[method];
-    if (typeof fn !== 'function') return undefined;
-    return fn.apply(activeStore, args);
-  };
-
-  return {
-    init(options) {
-      initOptions = options;
-      initializeStore(activeStore);
-    },
-    increment(...args) {
-      return callActiveStore('increment', args);
-    },
-    decrement(...args) {
-      return callActiveStore('decrement', args);
-    },
-    resetKey(...args) {
-      return callActiveStore('resetKey', args);
-    },
-    resetAll(...args) {
-      return callActiveStore('resetAll', args);
-    },
-    get(...args) {
-      return callActiveStore('get', args);
-    },
-    shutdown(...args) {
-      if (redisStore && typeof redisStore.shutdown === 'function') {
-        redisStore.shutdown(...args);
-      }
-      if (memoryStore && typeof memoryStore.shutdown === 'function') {
-        memoryStore.shutdown(...args);
-      }
-    }
-  };
-};
-
-const createRedisStore = (redisUrl, prefix) => {
-  if (!redisUrl) return undefined;
-
-  let RedisModule;
-  let RateLimitRedisModule;
-  try {
-    RedisModule = require('redis');
-    RateLimitRedisModule = require('rate-limit-redis');
-  } catch (_error) {
-    return undefined;
-  }
-
-  const RedisStore = RateLimitRedisModule.RedisStore || RateLimitRedisModule.default || RateLimitRedisModule;
-  if (typeof RedisStore !== 'function' || typeof RedisModule.createClient !== 'function') {
-    return undefined;
-  }
-
-  try {
-    const client = RedisModule.createClient({ url: redisUrl });
-    if (client && typeof client.on === 'function') {
-      client.on('error', () => {});
-    }
-
-    const memoryStore = createMemoryStore();
-    const connectPromise = Promise.resolve(client.connect()).catch(() => {
-      if (client && client.isOpen && typeof client.disconnect === 'function') {
-        client.disconnect().catch(() => {});
-      }
-      throw new Error('Redis rate limit store unavailable');
-    });
-
-    /* Une promesse qui se resout toujours : elle dit si la connexion a abouti,
-       elle n'echoue jamais. Sans elle, chaque commande en attente deviendrait
-       un second consommateur de connectPromise, et donc un second rejet. */
-    const connected = connectPromise.then(() => true, () => false);
-
-    /* rate-limit-redis charge son script d'increment DEPUIS son constructeur,
-       avant que la connexion soit ouverte, et n'attend pas la promesse qu'il
-       obtient. Envoyer directement rejetait donc contre un client ferme, et ce
-       rejet n'appartenait a personne : Node tuait le processus au demarrage,
-       meme avec un Redis parfaitement disponible.
-
-       Attendre ici transforme cette premiere commande en commande mise en file.
-       Et quand la connexion a echoue, le failover a deja bascule sur le store
-       memoire : ce store-ci ne sera jamais interroge, sa commande de demarrage
-       n'a plus rien a envoyer et se resout sans rien casser. */
-    const redisStore = new RedisStore({
-      ...(prefix ? { prefix } : {}),
-      sendCommand: async (...args) => {
-        if (!(await connected)) return undefined;
-        return client.sendCommand(args);
-      }
-    });
-
-    return createFailoverStore(redisStore, memoryStore, connectPromise);
-  } catch (_error) {
-    return createMemoryStore() || undefined;
-  }
-};
-
 // Store Redis générique : le namespace est choisi par le projet consommateur.
 // Astratra ne connaît donc aucun domaine métier (auth, commandes, réservations…).
-const createRedisRateLimitStore = ({ redisUrl, prefix } = {}) => createRedisStore(redisUrl, prefix);
+const createRedisRateLimitStore = (options = {}) => createRedisStoreWithOptions(options);
 
-const resolveStore = (options) => {
+/* Avec redisUrl seul, chaque sorte de limiteur a son espace de clés : sous un même préfixe, la clé (l'adresse) était
+   la même pour la limite de l'API et pour celle de la connexion. Les requêtes ordinaires remplissaient alors le
+   compteur de la connexion (10 par défaut), et la personne ne pouvait plus se connecter. */
+const resolveStore = (options, kind) => {
   if (options.store) return options.store;
-  return createRedisStore(options.redisUrl);
+  return createRedisStoreWithOptions({ redisUrl: options.redisUrl, prefix: `rl:${kind}:` });
 };
 
 const withOptionalStore = (limiterOptions, store) => {
@@ -193,25 +71,23 @@ const defaultApiSkip = () => (process.env.NODE_ENV === 'production' ? undefined 
 const createApiLimiter = (options = {}) => {
   const fallback = options.max || 300;
   const { area } = options;
-  return rateLimit(withOptionalStore({
+  return createRateLimit(withOptionalStore({
     windowMs: options.windowMs || 15 * 60 * 1000,
     max: area ? (req) => area(req)?.max || fallback : fallback,
     ...(area ? { keyGenerator: (req) => `${area(req)?.name || 'default'}:${clientKey(req)}` } : {}),
     skip: options.skip ?? defaultApiSkip(),
     standardHeaders: options.standardHeaders ?? true,
     legacyHeaders: options.legacyHeaders ?? false,
-    validate: options.validate || { ip: false },
     message: options.message || DEFAULT_API_MESSAGE
-  }, resolveStore(options)));
+  }, resolveStore(options, 'api')));
 };
 
-const createLoginLimiter = (options = {}) => rateLimit(withOptionalStore({
+const createLoginLimiter = (options = {}) => createRateLimit(withOptionalStore({
   windowMs: options.windowMs || 15 * 60 * 1000,
   max: options.max || 10,
   skip: options.skip,
   standardHeaders: options.standardHeaders ?? true,
   legacyHeaders: options.legacyHeaders ?? false,
-  validate: options.validate || { ip: false },
   message: options.message || DEFAULT_LOGIN_MESSAGE,
   handler: (req, res, next, limitOptions) => sendLimitResponse(
     req,
@@ -221,7 +97,7 @@ const createLoginLimiter = (options = {}) => rateLimit(withOptionalStore({
     options.onBlocked,
     { ip: getIp(req), req }
   )
-}, resolveStore(options)));
+}, resolveStore(options, 'login')));
 
 // Avertit une seule fois par processus (fonction partagée par toute instance
 // de createAccountLimiter utilisant la clé par défaut) : le problème est un
@@ -255,13 +131,12 @@ const defaultAccountKeyGenerator = (req) => {
 const createAccountLimiter = (options = {}) => {
   const keyGenerator = options.keyGenerator || defaultAccountKeyGenerator;
 
-  return rateLimit(withOptionalStore({
+  return createRateLimit(withOptionalStore({
     windowMs: options.windowMs || 30 * 60 * 1000,
     max: options.max || 20,
     skip: options.skip,
     standardHeaders: options.standardHeaders ?? true,
     legacyHeaders: options.legacyHeaders ?? false,
-    validate: options.validate || { ip: false },
     keyGenerator,
     message: options.message || DEFAULT_ACCOUNT_MESSAGE,
     handler: (req, res, next, limitOptions) => {
@@ -276,10 +151,15 @@ const createAccountLimiter = (options = {}) => {
         { identifier, ip: getIp(req), req }
       );
     }
-  }, resolveStore(options)));
+  }, resolveStore(options, 'account')));
 };
 
+// Des noms seuls dans cet objet (pas d'expression) : Node lit ces exports sans exécuter le fichier pour les imports
+// nommés d'un module ES (import { createRateLimit } from '@astratra/security').
 module.exports = {
+  createRateLimit,
+  createMemoryRateLimitStore,
+  rateLimitKeyForIp,
   createRedisRateLimitStore,
   createApiLimiter,
   createLoginLimiter,

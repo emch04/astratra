@@ -22,7 +22,6 @@
     "expo-haptics": "native-ui (appairage)",
     "expo-linear-gradient": "native-ui (appairage)",
     "express": "credentials, saas-kit, wallet ; appairage d'agent et core",
-    "express-rate-limit": "security : limite des requêtes — à remplacer par un module à nous",
     "express-validator": "core, credentials, saas-kit — à remplacer par un module à nous",
     "google-auth-library": "wallet : jeton Google — à remplacer par un module à nous",
     "ignore": "repomap : règles .gitignore",
@@ -33,7 +32,6 @@
     "pg": "store-postgres (appairage)",
     "playwright": "prerender, web-search (appairage)",
     "promptfoo": "tooling : évaluation des modèles (appairage, facultatif)",
-    "rate-limit-redis": "security (appairage) — part avec express-rate-limit",
     "react": "react, native-ui, saas-kit-ui (appairage)",
     "react-dom": "saas-kit-ui (appairage)",
     "react-native": "native-ui (appairage)",
@@ -50,5 +48,13 @@
     "y-protocols": "collab : protocole Yjs",
     "yjs": "collab : CRDT"
   },
-  "installScripts": ["cpu-features", "esbuild", "fsevents", "mongodb-memory-server", "protobufjs", "ssh2", "unrs-resolver"]
+  "installScripts": [
+    "cpu-features",
+    "esbuild",
+    "fsevents",
+    "mongodb-memory-server",
+    "protobufjs",
+    "ssh2",
+    "unrs-resolver"
+  ]
 }

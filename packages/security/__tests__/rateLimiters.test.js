@@ -1,119 +1,121 @@
-const rateLimit = require('express-rate-limit');
-
-jest.mock('express-rate-limit', () => {
-  const limiter = jest.fn((options) => options);
-  // La vraie fonction : c'est elle qui regroupe les adresses IPv6 par bloc.
-  limiter.ipKeyGenerator = jest.requireActual('express-rate-limit').ipKeyGenerator;
-  return limiter;
-});
-
 const { createAccountLimiter, createApiLimiter, createLoginLimiter } = require('../src');
 
-const createRes = () => {
-  const res = {};
-  res.status = jest.fn(() => res);
-  res.json = jest.fn(() => res);
+/* Les limiteurs essayés pour de vrai (plus de simulation d'express-rate-limit) : une requête factice passe dans le
+   middleware, et l'on regarde le statut, les en-têtes et l'appel à next(). */
+const fakeReq = (overrides = {}) => ({ ip: '203.0.113.10', method: 'GET', path: '/', headers: {}, ...overrides });
+const fakeRes = () => {
+  const res = { statusCode: 200, headers: {}, headersSent: false, body: undefined };
+  res.status = jest.fn((code) => { res.statusCode = code; return res; });
+  res.json = jest.fn((body) => { res.body = body; return res; });
+  res.send = jest.fn((body) => { res.body = body; return res; });
+  res.setHeader = (name, value) => { res.headers[name.toLowerCase()] = value; };
   return res;
+};
+const hit = async (limiter, req = fakeReq()) => {
+  const res = fakeRes();
+  let nextArg = 'not called';
+  await limiter(req, res, (arg) => { nextArg = arg; });
+  return { passed: nextArg === undefined, error: nextArg instanceof Error ? nextArg : undefined, status: res.statusCode, headers: res.headers, body: res.body, req };
 };
 
 describe('rateLimiters', () => {
   const originalNodeEnv = process.env.NODE_ENV;
 
-  beforeEach(() => {
-    rateLimit.mockClear();
-    process.env.NODE_ENV = originalNodeEnv;
-  });
-
-  afterAll(() => {
+  afterEach(() => {
     if (originalNodeEnv === undefined) delete process.env.NODE_ENV;
     else process.env.NODE_ENV = originalNodeEnv;
   });
 
-  test('createApiLimiter skips localhost by default only outside production', () => {
-    process.env.NODE_ENV = 'development';
-    const limiter = createApiLimiter();
-
-    expect(rateLimit).toHaveBeenCalledWith(expect.objectContaining({
-      windowMs: 15 * 60 * 1000,
-      max: 300,
-      standardHeaders: true,
-      legacyHeaders: false,
-      validate: { ip: false }
-    }));
-    expect(limiter.skip({ ip: '127.0.0.1' })).toBe(true);
-    expect(limiter.skip({ ip: '203.0.113.10' })).toBe(false);
-    expect(limiter.store).toBeUndefined();
-
-    rateLimit.mockClear();
+  test('createApiLimiter : 300 requêtes par défaut, puis 429 avec le message et Retry-After', async () => {
     process.env.NODE_ENV = 'production';
-    const productionLimiter = createApiLimiter();
-
-    expect(productionLimiter.skip).toBeUndefined();
+    const limiter = createApiLimiter();
+    let last;
+    for (let i = 0; i < 300; i++) last = await hit(limiter);
+    expect(last.passed).toBe(true);
+    expect(last.headers['ratelimit-limit']).toBe('300');
+    expect(last.headers['ratelimit-remaining']).toBe('0');
+    expect(last.headers['ratelimit-policy']).toBe('300;w=900');
+    expect(last.headers['x-ratelimit-limit']).toBeUndefined();
+    const blocked = await hit(limiter);
+    expect(blocked.passed).toBe(false);
+    expect(blocked.status).toBe(429);
+    expect(blocked.body).toEqual({ success: false, message: 'Too many requests.' });
+    expect(Number(blocked.headers['retry-after'])).toBeGreaterThan(890);
+    // Une autre adresse garde son compteur.
+    expect((await hit(limiter, fakeReq({ ip: '203.0.113.99' }))).passed).toBe(true);
   });
 
-  test('createApiLimiter gives each area its own counter and, when it says so, its own limit', () => {
-    const limiter = createApiLimiter({
-      max: 300,
-      area: (req) => (req.path === '/big' ? { name: 'big', max: 2000 } : { name: 'other' })
-    });
-    const from = (path, ip) => ({ path, ip });
-    expect(limiter.max(from('/big', '1.1.1.1'))).toBe(2000);
-    expect(limiter.max(from('/small', '1.1.1.1'))).toBe(300);
-    expect(limiter.keyGenerator(from('/big', '1.1.1.1'))).toBe('big:1.1.1.1');
-    expect(limiter.keyGenerator(from('/small', '1.1.1.1'))).toBe('other:1.1.1.1');
-    expect(limiter.keyGenerator(from('/big', '2.2.2.2'))).toBe('big:2.2.2.2');
+  test('createApiLimiter ne compte pas la machine elle-même hors production, la compte en production', async () => {
+    process.env.NODE_ENV = 'development';
+    const dev = createApiLimiter({ max: 1 });
+    for (let i = 0; i < 5; i++) expect((await hit(dev, fakeReq({ ip: '127.0.0.1' }))).passed).toBe(true);
+    expect((await hit(dev, fakeReq({ ip: '203.0.113.10' }))).passed).toBe(true);
+    expect((await hit(dev, fakeReq({ ip: '203.0.113.10' }))).passed).toBe(false);
+    process.env.NODE_ENV = 'production';
+    const prod = createApiLimiter({ max: 1 });
+    expect((await hit(prod, fakeReq({ ip: '127.0.0.1' }))).passed).toBe(true);
+    expect((await hit(prod, fakeReq({ ip: '127.0.0.1' }))).status).toBe(429);
   });
 
-  test('createApiLimiter with an area counts a whole IPv6 block, not each address of it', () => {
-    const limiter = createApiLimiter({ area: () => ({ name: 'zone' }) });
-    const key = (ip) => limiter.keyGenerator({ path: '/', ip });
-    // Changer d'adresse dans son propre bloc /56 ne donne pas un compteur neuf.
-    expect(key('2001:db8:1:2::1')).toBe(key('2001:db8:1:3::99'));
-    expect(key('2001:db8:1:2::1')).toBe('zone:2001:db8:1::/56');
-    // Un autre bloc garde le sien.
-    expect(key('2001:db8:2::1')).not.toBe(key('2001:db8:1:2::1'));
-    // IPv4, même écrite en IPv6, reste l'adresse exacte.
-    expect(key('::ffff:1.1.1.1')).toBe('zone:1.1.1.1');
+  test('createApiLimiter donne à chaque zone son compteur et, quand elle le dit, sa limite', async () => {
+    process.env.NODE_ENV = 'production';
+    const limiter = createApiLimiter({ max: 2, area: (req) => (req.path === '/big' ? { name: 'big', max: 4 } : { name: 'other' }) });
+    for (let i = 0; i < 4; i++) expect((await hit(limiter, fakeReq({ path: '/big' }))).passed).toBe(true);
+    expect((await hit(limiter, fakeReq({ path: '/big' }))).status).toBe(429);
+    // La zone « other » n'a pas été touchée par les requêtes de « big ».
+    const other = await hit(limiter, fakeReq({ path: '/small' }));
+    expect(other.passed).toBe(true);
+    expect(other.req.rateLimit).toEqual(expect.objectContaining({ limit: 2, used: 1, remaining: 1, key: 'other:203.0.113.10' }));
   });
 
-  test('createApiLimiter without an area keeps one counter, and the default key', () => {
-    const limiter = createApiLimiter({ max: 50 });
-    expect(limiter.max).toBe(50);
-    expect(limiter.keyGenerator).toBeUndefined();
+  test('createApiLimiter compte tout un bloc IPv6 /56, et IPv4 écrite en IPv6 comme IPv4', async () => {
+    process.env.NODE_ENV = 'production';
+    const limiter = createApiLimiter({ max: 1, area: () => ({ name: 'zone' }) });
+    expect((await hit(limiter, fakeReq({ ip: '2001:db8:1:2::1' }))).req.rateLimit.key).toBe('zone:2001:db8:1::/56');
+    expect((await hit(limiter, fakeReq({ ip: '2001:db8:1:3::99' }))).status).toBe(429);
+    expect((await hit(limiter, fakeReq({ ip: '2001:db8:2::1' }))).passed).toBe(true);
+    expect((await hit(limiter, fakeReq({ ip: '::ffff:1.1.1.1' }))).req.rateLimit.key).toBe('zone:1.1.1.1');
   });
 
-  test('createApiLimiter uses an explicitly provided store before Redis configuration', () => {
-    const store = { increment: jest.fn() };
-    const limiter = createApiLimiter({ redisUrl: 'redis://localhost:6379', store });
-
+  test('createApiLimiter prend le magasin donné avant la configuration Redis, et l’initialise avec sa fenêtre', async () => {
+    process.env.NODE_ENV = 'production';
+    const store = { init: jest.fn(), increment: jest.fn(async () => ({ totalHits: 1, resetTime: new Date(Date.now() + 1000) })) };
+    const limiter = createApiLimiter({ redisUrl: 'redis://localhost:6379', store, windowMs: 60_000 });
     expect(limiter.store).toBe(store);
+    expect(store.init).toHaveBeenCalledWith({ windowMs: 60_000 });
+    await hit(limiter);
+    expect(store.increment).toHaveBeenCalledWith('203.0.113.10');
   });
 
-  test('createLoginLimiter calls onBlocked and returns configured response', async () => {
+  test('createLoginLimiter appelle onBlocked et rend la réponse configurée', async () => {
     const onBlocked = jest.fn();
-    const limiter = createLoginLimiter({ onBlocked, message: { error: 'blocked' } });
-    const req = { ip: '203.0.113.10' };
-    const res = createRes();
-
-    await limiter.handler(req, res, jest.fn(), { statusCode: 429, message: limiter.message });
-
-    expect(onBlocked).toHaveBeenCalledWith({ ip: '203.0.113.10', req });
-    expect(res.status).toHaveBeenCalledWith(429);
-    expect(res.json).toHaveBeenCalledWith({ error: 'blocked' });
+    const limiter = createLoginLimiter({ onBlocked, max: 1, message: { error: 'blocked' } });
+    const req = fakeReq({ ip: '203.0.113.20' });
+    expect((await hit(limiter, req)).passed).toBe(true);
+    const blocked = await hit(limiter, req);
+    expect(onBlocked).toHaveBeenCalledWith({ ip: '203.0.113.20', req });
+    expect(blocked.status).toBe(429);
+    expect(blocked.body).toEqual({ error: 'blocked' });
   });
 
-  test('createAccountLimiter keys by normalized identifier and reports blocked context', async () => {
+  test('createLoginLimiter : 10 essais par défaut', async () => {
+    const limiter = createLoginLimiter();
+    for (let i = 0; i < 10; i++) expect((await hit(limiter)).passed).toBe(true);
+    const blocked = await hit(limiter);
+    expect(blocked.status).toBe(429);
+    expect(blocked.body).toEqual({ success: false, message: 'Too many login attempts. Please try again later.' });
+  });
+
+  test('createAccountLimiter compte par identifiant normalisé et rend le contexte du blocage', async () => {
     const onBlocked = jest.fn();
-    const limiter = createAccountLimiter({ onBlocked });
-    const req = { ip: '203.0.113.11', body: { email: 'USER@Example.COM' } };
-    const res = createRes();
-
-    expect(limiter.keyGenerator(req)).toBe('user@example.com');
-
-    await limiter.handler(req, res, jest.fn(), { statusCode: 429, message: limiter.message });
-
-    expect(onBlocked).toHaveBeenCalledWith({ identifier: 'USER@Example.COM', ip: '203.0.113.11', req });
-    expect(res.status).toHaveBeenCalledWith(429);
+    const limiter = createAccountLimiter({ onBlocked, max: 1 });
+    expect((await hit(limiter, fakeReq({ ip: '203.0.113.11', body: { email: 'USER@Example.COM' } }))).req.rateLimit.key).toBe('user@example.com');
+    // Même compte, autre adresse : toujours le même compteur.
+    const req = fakeReq({ ip: '198.51.100.7', body: { email: 'user@example.com' } });
+    const blocked = await hit(limiter, req);
+    expect(blocked.status).toBe(429);
+    expect(onBlocked).toHaveBeenCalledWith({ identifier: 'user@example.com', ip: '198.51.100.7', req });
+    expect(blocked.body).toEqual({ success: false, message: 'Too many attempts for this account. Please try again later.' });
   });
 
   // Régression : monté avant express.json(), req.body vaut undefined et
@@ -123,213 +125,80 @@ describe('rateLimiters', () => {
   // exact, voir waf.js) : aucun test existant sur ce fichier n'exerçait un
   // req.body non défini.
   describe('createAccountLimiter avec req.body non parsé (mauvais ordre des middlewares)', () => {
-    test('retombe sur la clé "unknown" au lieu de planter, mais avertit', () => {
+    test('retombe sur la clé "unknown" au lieu de planter, mais avertit', async () => {
       const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
       process.env.NODE_ENV = 'development'; // le logger est un no-op en 'test'
 
       const limiter = createAccountLimiter({});
-      const req = { ip: '203.0.113.12', body: undefined, headers: { 'content-length': '48' } };
+      const result = await hit(limiter, fakeReq({ ip: '203.0.113.12', body: undefined, headers: { 'content-length': '48' } }));
 
-      expect(limiter.keyGenerator(req)).toBe('unknown');
+      expect(result.req.rateLimit.key).toBe('unknown');
       expect(warnSpy).toHaveBeenCalledTimes(1);
       expect(warnSpy.mock.calls[0][0]).toMatch(/express\.json|unknown/i);
 
       warnSpy.mockRestore();
     });
 
-    test('une requête sans corps (Express 5 laisse req.body à undefined) ne fait pas avertir', () => {
+    test('une requête sans corps (Express 5 laisse req.body à undefined) ne fait pas avertir', async () => {
       jest.resetModules();
       const { createAccountLimiter: fresh } = require('../src');
       const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
       process.env.NODE_ENV = 'development';
 
-      expect(fresh({}).keyGenerator({ ip: '203.0.113.14', body: undefined, headers: {} })).toBe('unknown');
+      expect((await hit(fresh({}), fakeReq({ ip: '203.0.113.14', body: undefined, headers: {} }))).req.rateLimit.key).toBe('unknown');
       expect(warnSpy).not.toHaveBeenCalled();
 
       warnSpy.mockRestore();
     });
 
-    test('un keyGenerator personnalisé contourne complètement ce défaut', () => {
+    test('un keyGenerator personnalisé contourne complètement ce défaut', async () => {
       const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
       process.env.NODE_ENV = 'development';
 
       const customKeyGenerator = jest.fn(() => 'clé-personnalisée');
       const limiter = createAccountLimiter({ keyGenerator: customKeyGenerator });
-      const req = { ip: '203.0.113.13', body: undefined };
 
-      expect(limiter.keyGenerator(req)).toBe('clé-personnalisée');
+      expect((await hit(limiter, fakeReq({ ip: '203.0.113.13', body: undefined }))).req.rateLimit.key).toBe('clé-personnalisée');
       expect(warnSpy).not.toHaveBeenCalled();
 
       warnSpy.mockRestore();
     });
   });
 
-  describe('Redis store integration', () => {
-    const loadWithRedisMocks = ({ connect, redisStoreIncrement = jest.fn() }) => {
-      jest.resetModules();
+  test('avec redisUrl seul, les limites de l’API, de la connexion et des comptes ne partagent pas leurs compteurs', () => {
+    const url = 'redis://127.0.0.1:1';
+    const limiters = [createApiLimiter({ redisUrl: url }), createLoginLimiter({ redisUrl: url }), createAccountLimiter({ redisUrl: url })];
+    try {
+      expect(limiters.map((l) => l.store.prefix)).toEqual(['rl:api:', 'rl:login:', 'rl:account:']);
+    } finally {
+      for (const limiter of limiters) limiter.store.shutdown();
+    }
+  });
 
-      const rateLimitMock = jest.fn((options) => options);
-      const memoryStoreIncrement = jest.fn(async () => ({ totalHits: 1, resetTime: new Date('2026-08-08T00:00:00.000Z') }));
-      rateLimitMock.MemoryStore = jest.fn(function MemoryStore() {
-        this.increment = memoryStoreIncrement;
-        this.init = jest.fn();
-      });
-
-      const fakeClient = {
-        connect,
-        on: jest.fn(),
-        sendCommand: jest.fn()
-      };
-      const redisStore = {
-        increment: redisStoreIncrement,
-        init: jest.fn()
-      };
-      const RedisStore = jest.fn(() => redisStore);
-
-      jest.doMock('express-rate-limit', () => rateLimitMock);
-      jest.doMock('redis', () => ({ createClient: jest.fn(() => fakeClient) }), { virtual: true });
-      jest.doMock('rate-limit-redis', () => ({ RedisStore }), { virtual: true });
-
-      const {
-        createApiLimiter: createApiLimiterWithMocks,
-        createRedisRateLimitStore: createRedisRateLimitStoreWithMocks
-      } = require('../src');
-      return {
-        createApiLimiter: createApiLimiterWithMocks,
-        createRedisRateLimitStore: createRedisRateLimitStoreWithMocks,
-        fakeClient,
-        memoryStoreIncrement,
-        rateLimitMock,
-        RedisStore,
-        redisStore
-      };
+  test('avec redisUrl seul, des requêtes ordinaires ne bloquent pas la connexion (Redis partagé)', async () => {
+    process.env.NODE_ENV = 'production';
+    const { createRedisRateLimitStore } = require('../src');
+    const data = new Map();
+    // Un faux Redis partagé : même serveur pour les deux limiteurs, comme en production.
+    const sendCommand = async (args) => {
+      if (args[0] === 'DEL') return data.delete(args[1]) ? 1 : 0;
+      const key = args[3];
+      const value = (data.get(key) || 0) + 1;
+      data.set(key, value);
+      return [value, 60_000];
     };
+    const api = createApiLimiter({ store: createRedisRateLimitStore({ sendCommand, prefix: 'rl:api:' }) });
+    const login = createLoginLimiter({ store: createRedisRateLimitStore({ sendCommand, prefix: 'rl:login:' }) });
+    for (let i = 0; i < 20; i++) expect((await hit(api)).passed).toBe(true);
+    expect((await hit(login)).passed).toBe(true);
+  });
 
-    afterEach(() => {
-      jest.dontMock('express-rate-limit');
-      jest.dontMock('redis');
-      jest.dontMock('rate-limit-redis');
-      jest.resetModules();
-    });
-
-    test('createApiLimiter delegates to Redis store when Redis connects', async () => {
-      const redisStoreIncrement = jest.fn(async () => ({ totalHits: 2, resetTime: new Date('2026-08-08T00:00:00.000Z') }));
-      const { createApiLimiter: createLimiter, fakeClient, RedisStore } = loadWithRedisMocks({
-        connect: jest.fn().mockResolvedValue(),
-        redisStoreIncrement
-      });
-
-      const limiter = createLimiter({ redisUrl: 'redis://localhost:6379' });
-      await new Promise((resolve) => setImmediate(resolve));
-      await limiter.store.increment('api:key');
-
-      expect(fakeClient.connect).toHaveBeenCalled();
-      expect(RedisStore).toHaveBeenCalled();
-      expect(redisStoreIncrement).toHaveBeenCalledWith('api:key');
-    });
-
-    test('createRedisRateLimitStore transmet le préfixe défini par le projet', async () => {
-      const { createRedisRateLimitStore: createStore, RedisStore } = loadWithRedisMocks({
-        connect: jest.fn().mockResolvedValue()
-      });
-
-      createStore({ redisUrl: 'redis://localhost:6379', prefix: 'application:rate:admin:' });
-      await new Promise((resolve) => setImmediate(resolve));
-
-      expect(RedisStore).toHaveBeenCalledWith(expect.objectContaining({
-        prefix: 'application:rate:admin:'
-      }));
-    });
-
-    /*
-     * Le vrai RedisStore emet son script d'increment DEPUIS SON CONSTRUCTEUR,
-     * et le vrai client redis rejette tant qu'il n'est pas connecte. Le mock
-     * ci-dessus ne fait ni l'un ni l'autre : c'est pourquoi ce defaut a vecu
-     * dans le paquet sans qu'aucun test ne le voie.
-     *
-     * Celui-ci reproduit les deux comportements. Sans le correctif, l'appel du
-     * constructeur produit un rejet que personne ne possede — et Node tue le
-     * processus au demarrage, meme quand Redis fonctionne parfaitement.
-     */
-    const loadWithRealisticRedisMocks = ({ connect }) => {
-      jest.resetModules();
-
-      const rateLimitMock = jest.fn((options) => options);
-      rateLimitMock.MemoryStore = jest.fn(function MemoryStore() {
-        this.increment = jest.fn(async () => ({ totalHits: 1, resetTime: new Date('2026-08-08T00:00:00.000Z') }));
-        this.init = jest.fn();
-      });
-
-      let connected = false;
-      const fakeClient = {
-        connect: jest.fn(async () => {
-          await connect();
-          connected = true;
-        }),
-        on: jest.fn(),
-        isOpen: false,
-        disconnect: jest.fn(async () => {}),
-        sendCommand: jest.fn(async () => {
-          if (!connected) {
-            const error = new Error('The client is closed');
-            error.name = 'ClientClosedError';
-            throw error;
-          }
-          return 'sha1-of-increment-script';
-        })
-      };
-
-      // Ce que fait rate-limit-redis : charger son script dans le constructeur,
-      // sans attendre la promesse retournee.
-      const scriptLoads = [];
-      const RedisStore = jest.fn(function RedisStore(options) {
-        scriptLoads.push(options.sendCommand('SCRIPT', 'LOAD', 'return 1'));
-        this.increment = jest.fn();
-        this.init = jest.fn();
-      });
-
-      jest.doMock('express-rate-limit', () => rateLimitMock);
-      jest.doMock('redis', () => ({ createClient: jest.fn(() => fakeClient) }), { virtual: true });
-      jest.doMock('rate-limit-redis', () => ({ RedisStore }), { virtual: true });
-
-      const { createRedisRateLimitStore: createStore } = require('../src');
-      return { createStore, fakeClient, scriptLoads };
-    };
-
-    test('la commande emise par le constructeur du store attend la connexion au lieu de rejeter', async () => {
-      const { createStore, scriptLoads } = loadWithRealisticRedisMocks({
-        connect: jest.fn().mockResolvedValue()
-      });
-
-      createStore({ redisUrl: 'redis://localhost:6379', prefix: 'application:rate:api:' });
-
-      expect(scriptLoads).toHaveLength(1);
-      await expect(scriptLoads[0]).resolves.toBe('sha1-of-increment-script');
-    });
-
-    test('un Redis injoignable ne laisse pas non plus de rejet sans proprietaire', async () => {
-      const { createStore, scriptLoads } = loadWithRealisticRedisMocks({
-        connect: jest.fn().mockRejectedValue(new Error('redis unavailable'))
-      });
-
-      createStore({ redisUrl: 'redis://localhost:6379' });
-
-      // Le store Redis ne sera jamais choisi par le failover : sa commande de
-      // demarrage n'a plus rien a envoyer, et se resout sans rien casser.
-      await expect(scriptLoads[0]).resolves.toBeUndefined();
-    });
-
-    test('createApiLimiter falls back to memory store when Redis connect rejects', async () => {
-      const { createApiLimiter: createLimiter, memoryStoreIncrement, redisStore } = loadWithRedisMocks({
-        connect: jest.fn().mockRejectedValue(new Error('redis unavailable'))
-      });
-
-      const limiter = createLimiter({ redisUrl: 'redis://localhost:6379' });
-      await new Promise((resolve) => setImmediate(resolve));
-      await limiter.store.increment('api:key');
-
-      expect(redisStore.increment).not.toHaveBeenCalled();
-      expect(memoryStoreIncrement).toHaveBeenCalledWith('api:key');
-    });
+  test('sans redisUrl ni magasin, chaque limiteur a son propre compteur en mémoire', async () => {
+    process.env.NODE_ENV = 'production';
+    const a = createApiLimiter({ max: 1 });
+    const b = createApiLimiter({ max: 1 });
+    expect((await hit(a)).passed).toBe(true);
+    expect((await hit(b)).passed).toBe(true);
+    expect(a.store).not.toBe(b.store);
   });
 });

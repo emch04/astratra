@@ -3,6 +3,21 @@
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Chaque package Astratra est versionné indépendamment.
 
+## 2026-11-18 — `@astratra/security` 1.15.1 : le limiteur de requêtes sans dépendance
+
+### Changé
+- Le limiteur est écrit dans le paquet (`src/rateLimit.js`, `src/redisRateLimitStore.js`) : express-rate-limit et rate-limit-redis ne sont plus des dépendances. Mêmes options pour `createApiLimiter`, `createLoginLimiter` et `createAccountLimiter`, mêmes réponses (429, `RateLimit-*`, `Retry-After`), même interface de magasin (un magasin du projet, comme celui du serveur produit par Humalis, marche sans changement), même clé par adresse : une adresse IPv6 compte pour son bloc /56, identique à l'ancienne bibliothèque sur 500 adresses enregistrées. `validate` est accepté sans effet.
+- Nouveaux exports : `createRateLimit` (le limiteur lui-même, pour une route du projet), `createMemoryRateLimitStore`, `rateLimitKeyForIp`.
+- Magasin Redis : compteur et expiration en une seule opération (script Lua) ; clés hachées en SHA-256 (ni adresse ni e-mail en clair, longueur bornée) ; `sendCommand` ou `client` pour une connexion du projet ; tant que Redis ne répond pas, la limite se compte en mémoire de ce serveur au lieu d'échouer ou de laisser passer.
+
+### Corrigé
+- Avec `redisUrl` seul, les limiteurs de l'API, de la connexion et des comptes partageaient le préfixe `rl:` et la même clé (l'adresse) : les requêtes ordinaires remplissaient le compteur de la connexion (10 par défaut), et la personne ne pouvait plus se connecter. Chacun a maintenant son espace (`rl:api:`, `rl:login:`, `rl:account:`).
+- Un Redis figé (connexion ouverte, aucune réponse) suspendait chaque requête sans fin. Une commande sans réponse au-delà de `commandTimeoutMs` (1 s) compte comme une panne, et Redis n'est réessayé qu'après `retryAfterMs` (2 s). Trouvé par l'essai de coupure sur un vrai Redis (`docker pause`).
+
+### Essais
+- `__tests__/rateLimit.test.js` et `__tests__/rateLimiters.test.js` font tourner le vrai limiteur (plus de simulation) ; avec `@astratra/testkit/security` : différentiel des clés d'adresse, fuzz, ReDoS (il a trouvé une expression non ancrée dans la lecture des adresses, remplacée), temps linéaire, en-têtes d'adresse falsifiés, 50 requêtes simultanées (jamais plus que la limite, en mémoire comme sur Redis), Redis en panne ou figé. `__tests__/redis.integration.test.js` : compteurs partagés entre deux serveurs, clés hachées, et vraie coupure (`REDIS_TEST_CONTAINER`). `npm run verify:mutations` : 8 mutations du limiteur, toutes tuées.
+- `__tests__/esmExports.test.js` : chaque export est aussi un import nommé depuis un module ES. Une propriété écrite comme une expression dans l'objet exporté faisait disparaître les exports suivants pour les modules ES (vu en démarrant le serveur produit par Humalis), corrigé avant toute publication.
+
 ## 2026-11-18 — `@astratra/testkit` 2.0.0 (à publier) : les essais de sécurité
 
 ### Ajouté
