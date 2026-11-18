@@ -3,10 +3,21 @@
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Chaque package Astratra est versionné indépendamment.
 
+## 2026-11-18 — `@astratra/testkit` 2.0.0 (à publier) : les essais de sécurité
+
+### Ajouté
+- `@astratra/testkit/security`, une entrée sans aucune dépendance (Node seul), pour `node:test` comme pour Jest. Treize formes d'essais : fuzz à graine fixe (`fuzz`, générateurs `gen.*` avec réduction des contre-exemples), catalogue d'attaques partagé (`payloads.*`, jetons piégés `jwtAttacks` / `jwtClaimAttacks`), expressions qui s'emballent (`checkRegex` dans un fil arrêté net, `assertLinearTime`), bombes de ressources (`bombs.*`, `assertBounded`), différentiel contre la bibliothèque qu'on remplace (`assertSameBehavior`), vecteurs officiels (RFC 4226, 6238, 7515 ; lecteur des fichiers Wycheproof), essais métamorphiques, propriétés, temps constant (test t de Welch, méthode dudect), secrets dans les journaux (`captureOutput`, `assertNoSecrets`, sous leurs écritures base64, hexadécimale, coupée…), matrice d'autorisations (BOLA/IDOR), courses (`assertAtMost`), pannes provoquées (`assertFailsClosed`), mutations (`runMutations`) et chaîne d'approvisionnement (`checkLockfile`, `checkDependencyAllowlist`). Chaque échec donne sa graine : `SECURITY_TEST_SEED` le rejoue.
+- Dépôt : `npm run lint` vérifie aussi la chaîne d'approvisionnement (`scripts/verifier-dependances.js`) : chaque dépendance externe des paquets figure dans `allowed-dependencies.json` avec sa raison, le verrou ne tire que du registre npm en https avec une empreinte sha512, et aucun paquet nouveau ne lance de script à l'installation.
+
+### Cassé
+- `@babel/plugin-transform-modules-commonjs` devient une dépendance d'appairage facultative : seuls les projets qui utilisent le préréglage Jest de testkit l'installent (`npm install --save-dev @babel/plugin-transform-modules-commonjs`) ; sans lui, le préréglage le dit. Les autres n'installent plus les 22 paquets qu'il tirait.
+
 ## 2026-11-18 — analyse de sécurité : comparaison CSRF et dépendances
 
 ### Corrigé
-- `@astratra/security` 1.15.1 (à publier) : `createCsrfMiddleware` compare le jeton envoyé et celui du cookie en temps constant (`crypto.timingSafeEqual`) ; un en-tête absent, vide ou répété est refusé comme avant. Tests ajoutés (longueur différente, un caractère changé, en-tête répété, caractère non ASCII).
+- `@astratra/security` 1.15.1 (à publier) : `createAuthMiddleware` refuse un jeton émis dans le futur (`iat` plus loin que `clockTolerance`, une minute par défaut) et un `iat` qui n'est pas un nombre. Un serveur à l'horloge en avance produisait des jetons qui échappaient à « déconnecter partout », qui révoque ce qui a été émis avant la déconnexion. Trouvé par les jetons piégés de `@astratra/testkit/security` (`__tests__/securityKit.test.js` : chaque variante falsifiée d'un jeton refusée, lecteur de jetons passé au fuzz).
+- `create-astratra-app` 1.12.1 (à publier) demande `@astratra/security` ^1.15.1.
+- `@astratra/security` 1.15.1 : `createCsrfMiddleware` compare le jeton envoyé et celui du cookie en temps constant (`crypto.timingSafeEqual`) ; un en-tête absent, vide ou répété est refusé comme avant. Tests ajoutés (longueur différente, un caractère changé, en-tête répété, caractère non ASCII).
 
 ### Dépendances (dépôt)
 - Montées dans leurs plages : hono 4.13.19, `@hono/node-server` 2.1.9 (sous le SDK MCP), node-forge 1.4.3, undici 6.29.1, 7.30.2 et 8.12.4, vite 7.3.8, fast-uri 3.1.9, fast-xml-parser 5.12.1, ip-address 10.7.6, `@azure/identity` (msal-node 7.2.2), `@modelcontextprotocol/sdk` 1.32.2.

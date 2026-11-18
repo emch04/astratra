@@ -71,7 +71,7 @@ function packageJson(projectName, template, bricks = []) {
     '@astratra/ai': '^2.0.0',
     '@astratra/core': '^1.2.0',
     '@astratra/saas-kit': '^2.1.0',
-    '@astratra/security': '^1.15.0'
+    '@astratra/security': '^1.15.1'
   };
   // Scaffolded (api/stores/mongo.js, api/db/mongo.js) but not wired into
   // api/server.js by default — the project starts on the in-memory store.

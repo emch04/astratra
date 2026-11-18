@@ -184,7 +184,7 @@ est dans [CHANGELOG.md](CHANGELOG.md).
 | Paquet | Version | Rôle |
 |---|---|---|
 | [`@astratra/tooling`](packages/tooling/README.md) | 1.7.0 | Audit de l'espace de travail (secrets, routes, traductions), lanceur de tests, déploiement avec retour arrière, publication d'applications, évaluation d'IA |
-| [`@astratra/testkit`](packages/testkit/README.md) | 1.2.0 | Bases de test MongoDB ou PostgreSQL jetables, fausses données reproductibles par pays, garde contre les bases de production |
+| [`@astratra/testkit`](packages/testkit/README.md) | 2.0.0 | Essais de sécurité sans dépendance (fuzz, catalogue d'attaques, ReDoS, bombes de ressources, différentiel, vecteurs officiels, temps constant, secrets dans les journaux, matrice d'autorisations, courses, pannes, mutations, verrou npm), bases de test MongoDB ou PostgreSQL jetables, fausses données reproductibles par pays, garde contre les bases de production |
 
 L'exemple [`examples/dashboard-ui`](examples/dashboard-ui/README.md) montre
 `@astratra/saas-kit-ui` branché sur l'API `saas-kit`. Il n'est pas publié.

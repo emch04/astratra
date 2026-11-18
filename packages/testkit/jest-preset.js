@@ -12,9 +12,18 @@
  *
  * Usage, dans la configuration Jest du projet : `preset: '@astratra/testkit'`.
  */
+function commonjsPlugin() {
+  try {
+    return require.resolve('@babel/plugin-transform-modules-commonjs');
+  } catch {
+    // Depuis la 2.0.0, le module Babel n'est installé que par ceux qui utilisent ce préréglage.
+    throw new Error('The @astratra/testkit Jest preset needs @babel/plugin-transform-modules-commonjs: npm install --save-dev @babel/plugin-transform-modules-commonjs');
+  }
+}
+
 module.exports = {
   transform: {
-    '\\.[jt]sx?$': ['babel-jest', { plugins: [require.resolve('@babel/plugin-transform-modules-commonjs')] }]
+    '\\.[jt]sx?$': ['babel-jest', { plugins: [commonjsPlugin()] }]
   },
   transformIgnorePatterns: ['/node_modules/(?!@faker-js/faker/)']
 };

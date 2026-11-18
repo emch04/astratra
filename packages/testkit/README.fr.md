@@ -1,14 +1,16 @@
 # @astratra/testkit
 
-Trois outils pour des tests qui ne touchent jamais à la vraie base :
+Des essais de sécurité sans dépendance, et trois outils pour des tests qui ne
+touchent jamais à la vraie base :
 
-1. une **base jetable** (MongoDB ou Postgres dans un conteneur Docker) ;
-2. de **fausses données réalistes par pays**, reproductibles par graine ;
-3. un **garde-fou** qui refuse toute URI de base qui ressemble à de la production.
+1. des **essais de sécurité** (`@astratra/testkit/security`, ci-dessous) ;
+2. une **base jetable** (MongoDB ou Postgres dans un conteneur Docker) ;
+3. de **fausses données réalistes par pays**, reproductibles par graine ;
+4. un **garde-fou** qui refuse toute URI de base qui ressemble à de la production.
 
-À installer en `devDependency`. Dépendances : `@faker-js/faker` 10 (MIT, à
-l'exécution) et `@babel/plugin-transform-modules-commonjs` (MIT, pour le
-préréglage Jest ci-dessous) ; `@testcontainers/mongodb` et/ou
+À installer en `devDependency`. Dépendance : `@faker-js/faker` 10 (MIT, pour
+les fausses données). Facultatives : `@babel/plugin-transform-modules-commonjs`
+(MIT, seulement pour le préréglage Jest ci-dessous, depuis la 2.0.0) ; `@testcontainers/mongodb` et/ou
 `@testcontainers/postgresql` (MIT, optionnelles, à n'ajouter que pour le moteur
 utilisé — elles apportent `testcontainers`). Node ≥ 22.22 (exigence de
 testcontainers 12).
@@ -20,6 +22,10 @@ ont une faille d'exécution de code par `helpers.fake`). Node le charge sans
 réglage par `require()`, mais pas le chargeur de Jest en CommonJS. Le paquet
 fournit un préréglage qui fait convertir faker, et lui seul, par babel-jest :
 
+```sh
+npm install --save-dev @babel/plugin-transform-modules-commonjs
+```
+
 ```json
 { "jest": { "preset": "@astratra/testkit" } }
 ```
@@ -28,6 +34,101 @@ Si le projet a déjà son propre `transform`, reprends les deux réglages de
 `jest-preset.js` (le `transform` babel-jest et le `transformIgnorePatterns`).
 Autre voie, sans préréglage : Node ≥ 24.9 et
 `NODE_OPTIONS=--experimental-vm-modules jest`.
+
+## Essais de sécurité (`@astratra/testkit/security`)
+
+Treize formes d'essais de sécurité, **sans aucune dépendance** (Node seul),
+pour `node:test` comme pour Jest : chaque échec est une `AssertionError` qui
+dit quoi rejouer. L'entrée se charge seule, sans faker ni conteneurs.
+
+```js
+const { assertFuzz, gen, payloads, assertSafeRegex, assertConstantTime } = require('@astratra/testkit/security');
+```
+
+| Forme | Fonctions | Ce qu'elle attrape |
+|---|---|---|
+| Fuzz | `fuzz`, `assertFuzz`, `gen.*` | plantage, lenteur ou règle violée sur des milliers d'entrées hostiles |
+| Catalogue d'attaques | `payloads.*`, `jwtAttacks`, `jwtClaimAttacks`, `forgeJwt` | injections SQL et Mongo, XSS, chemins `../`, en-têtes, Unicode piégé, SSRF, IPv6 d'un même bloc, jetons « none », confusion d'algorithme… |
+| Expressions qui s'emballent | `checkRegex`, `assertSafeRegex`, `extractRegexLiterals`, `assertLinearTime` | ReDoS, temps quadratique ou exponentiel |
+| Bombes de ressources | `bombs.*`, `checkBounded`, `assertBounded` | gzip qui explose, JSON très profond, texte immense, mémoire ou durée hors limites |
+| Différentiel | `compareImplementations`, `assertSameBehavior` | une différence avec la bibliothèque qu'on remplace |
+| Vecteurs officiels | `runVectors`, `assertVectors`, `standardVectors`, `fromWycheproof` | écart à une norme (RFC 4226, 6238, 7515 ; fichiers Wycheproof) |
+| Métamorphique | `checkRelation`, `assertRelation`, `relations`, `transforms` | une relation cassée (même JSON reformaté, même adresse en majuscules ou décomposée) |
+| Propriétés | `checkProperty`, `assertProperty` | une règle fausse, réduite à son plus petit exemple |
+| Temps constant | `measureTiming`, `checkConstantTime`, `assertConstantTime` | une comparaison de secret dont la durée trahit le secret (test t de Welch, méthode dudect) |
+| Fuites dans les journaux | `captureOutput`, `findSecrets`, `assertNoSecrets` | un secret écrit dans un journal, même en base64, en hexadécimal ou coupé |
+| Matrice d'autorisations | `checkAuthorizationMatrix`, `assertAuthorizationMatrix`, `assertNoCrossAccountAccess` | une fiche lisible par un autre compte (BOLA/IDOR), une route d'administration ouverte |
+| Courses | `race`, `assertAtMost` | la dernière place vendue deux fois, un code servi deux fois |
+| Pannes provoquées | `faults.*`, `withFault`, `assertFailsClosed` | une protection qui s'ouvre quand Redis ou la base tombe |
+| Mutations | `runMutations`, `assertMutationsKilled` | un code que les essais ne protègent pas |
+| Chaîne d'approvisionnement | `checkLockfile`, `assertLockfile`, `checkDependencyAllowlist`, `assertDependencyAllowlist` | un paquet hors du registre, sans empreinte sha512, qui lance un script à l'installation ; une dépendance non décidée |
+
+### Rejouer un échec
+
+Tout ce qui est tiré au hasard part d'une graine (`seed`, 1 par défaut).
+Un échec donne la sienne : `SECURITY_TEST_SEED=<graine>` rejoue exactement les
+mêmes entrées.
+
+### Exemples
+
+```js
+const { test } = require('node:test');
+const security = require('@astratra/testkit/security');
+
+test('le lecteur de jetons ne plante jamais', async () => {
+  await security.assertFuzz(lireJeton, {
+    generator: security.gen.oneOf(security.gen.hostileString(), security.gen.mutated([jetonValide])),
+    runs: 2000,
+    // Un refus voulu porte un statut 4xx ou un code à soi ; une TypeError est un plantage.
+  });
+});
+
+test('aucun jeton piégé n’est accepté', () => {
+  for (const { name, token } of security.jwtAttacks(jetonValide, { publicKey })) {
+    assert.equal(verifier(token), null, name);
+  }
+});
+
+test('la comparaison du jeton CSRF ne trahit pas le jeton', () => {
+  const vrai = Buffer.from(jeton);
+  const fauxAuDebut = Buffer.from('X' + jeton.slice(1));
+  const fauxALaFin = Buffer.from(jeton.slice(0, -1) + 'X');
+  security.assertConstantTime((candidat) => comparer(candidat, vrai), { classes: [() => fauxAuDebut, () => fauxALaFin] });
+});
+
+test('un compte ne lit jamais la fiche d’un autre', async () => {
+  await security.assertAuthorizationMatrix({
+    actors: { anonyme: null, alice: sessionAlice, bob: sessionBob },
+    actions: ['lire', 'modifier', 'supprimer'],
+    resources: { noteAlice, noteBob },
+    expected: ({ actor, target }) => (actor !== 'anonyme' && target.proprietaire === actor ? 'allow' : 'deny'),
+    attempt: ({ context, action, target }) => appeler(context, action, target.id), // rend { status }
+  });
+});
+
+test('la dernière place ne part qu’une fois', async () => {
+  await security.assertAtMost(() => reserver(evenementUnePlace), { max: 1, concurrency: 50 });
+});
+
+test('la limite reste fermée quand Redis tombe', async () => {
+  await security.assertFailsClosed(clientRedis, 'eval', security.faults.rejecting(), () => appelerUneRoute());
+});
+```
+
+### Limites, dites franchement
+
+- Le **temps constant** est un indice statistique, pas une preuve : une mesure
+  sans fuite ne démontre rien. Les tampons sont recopiés avant chaque mesure
+  (une même adresse fausse le résultat par le seul effet du cache), et une fuite
+  doit se voir à chaque tentative (`attempts`, 3 par défaut).
+- Le **fuzz** est tiré au hasard, sans couverture du code (pas d'instrumentation
+  comme Jazzer.js) ; il complète les essais écrits, il ne les remplace pas.
+- `checkRegex` essaie des attaques devinées d'après l'expression, chacune dans
+  un fil arrêté net après le temps permis ; une expression qui passe n'est pas
+  prouvée sûre pour toutes les entrées. `assertLinearTime` mesure dans le
+  processus même : on part de petites tailles.
+- `fromWycheproof` lit les fichiers du projet Wycheproof (C2SP, licence
+  Apache-2.0), à télécharger depuis son dépôt ; ils ne sont pas recopiés ici.
 
 ## Base jetable
 

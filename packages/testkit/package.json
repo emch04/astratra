@@ -1,7 +1,7 @@
 {
   "name": "@astratra/testkit",
-  "version": "1.2.0",
-  "description": "Disposable test databases (MongoDB or Postgres in a container), reproducible per-country fake data, and a guard that refuses any production-looking database URI.",
+  "version": "2.0.0",
+  "description": "Security tests with no dependency (fuzzing, attack catalogue, ReDoS, resource bombs, differential, standard vectors, metamorphic and property tests, constant time, secrets in logs, authorization matrix, races, injected faults, mutations, lockfile checks), plus disposable test databases, per-country fake data and a production database guard.",
   "engines": {
     "node": ">=22.22"
   },
@@ -10,7 +10,9 @@
   "type": "commonjs",
   "files": [
     "src",
-    "jest-preset.js"
+    "jest-preset.js",
+    "security.js",
+    "security.d.ts"
   ],
   "scripts": {
     "test": "jest && node --test test/*.test.js"
@@ -24,6 +26,12 @@
   "keywords": [
     "astratra",
     "testing",
+    "security",
+    "fuzzing",
+    "redos",
+    "constant-time",
+    "authorization",
+    "mutation-testing",
     "testcontainers",
     "faker",
     "fixtures"
@@ -33,14 +41,17 @@
     "access": "public"
   },
   "dependencies": {
-    "@babel/plugin-transform-modules-commonjs": "^7.28.6",
     "@faker-js/faker": "^10.6.0"
   },
   "peerDependencies": {
+    "@babel/plugin-transform-modules-commonjs": ">=7.28.6",
     "@testcontainers/mongodb": ">=12.0.0",
     "@testcontainers/postgresql": ">=12.0.0"
   },
   "peerDependenciesMeta": {
+    "@babel/plugin-transform-modules-commonjs": {
+      "optional": true
+    },
     "@testcontainers/mongodb": {
       "optional": true
     },
@@ -49,6 +60,7 @@
     }
   },
   "devDependencies": {
+    "@babel/plugin-transform-modules-commonjs": "^7.28.6",
     "@testcontainers/mongodb": "^12.2.0",
     "@testcontainers/postgresql": "^12.2.0",
     "jest": "30.4.2"

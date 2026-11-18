@@ -12,7 +12,7 @@
   ],
   "scripts": {
     "test": "npm test --workspaces --if-present",
-    "lint": "eslint . && node scripts/verifier-noms.js",
+    "lint": "eslint . && node scripts/verifier-noms.js && node scripts/verifier-dependances.js",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "verify:packages": "node scripts/verify-package-installation.js"
   },

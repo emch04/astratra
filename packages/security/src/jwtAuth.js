@@ -64,12 +64,30 @@ const verificationOptionsFrom = (options = {}) => ({
   ...(options.maxAge ? { maxAge: options.maxAge } : {})
 });
 
+/* Un jeton émis « dans le futur » (iat après maintenant) échappait à « déconnecter partout », qui révoque ce qui a été
+   émis AVANT la déconnexion : un serveur à l'horloge en avance en produit, et jsonwebtoken ne le vérifie pas. Au-delà
+   de la tolérance d'horloge (clockTolerance, une minute par défaut), il est refusé ; un iat qui n'est pas un nombre
+   aussi (trouvé par les jetons piégés de @astratra/testkit/security). */
+const DEFAULT_FUTURE_IAT_TOLERANCE_SECONDS = 60;
+
+const assertIssuedAt = (decoded, verificationOptions) => {
+  if (!decoded || typeof decoded !== 'object' || decoded.iat === undefined) return decoded;
+  if (typeof decoded.iat !== 'number' || !Number.isFinite(decoded.iat)) {
+    throw Object.assign(new Error('jwt iat must be a number'), { name: 'JsonWebTokenError' });
+  }
+  const tolerance = verificationOptions.clockTolerance !== undefined ? verificationOptions.clockTolerance : DEFAULT_FUTURE_IAT_TOLERANCE_SECONDS;
+  if (decoded.iat > Math.floor(Date.now() / 1000) + tolerance) {
+    throw Object.assign(new Error('jwt issued in the future'), { name: 'JsonWebTokenError' });
+  }
+  return decoded;
+};
+
 const verifyWithRotation = (token, secret, legacySecret, verificationOptions) => {
   try {
-    return jwt.verify(token, secret, verificationOptions);
+    return assertIssuedAt(jwt.verify(token, secret, verificationOptions), verificationOptions);
   } catch (error) {
     if (legacySecret && error.name === 'JsonWebTokenError') {
-      return jwt.verify(token, legacySecret, verificationOptions);
+      return assertIssuedAt(jwt.verify(token, legacySecret, verificationOptions), verificationOptions);
     }
     throw error;
   }

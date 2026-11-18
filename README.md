@@ -178,7 +178,7 @@ package is in [CHANGELOG.md](CHANGELOG.md).
 | Package | Version | What it does |
 |---|---|---|
 | [`@astratra/tooling`](packages/tooling/README.md) | 1.7.0 | Workspace audit (secrets, routes, translations), test runner, deployment with rollback, app publishing, AI evaluation |
-| [`@astratra/testkit`](packages/testkit/README.md) | 1.2.0 | Disposable MongoDB or PostgreSQL test databases, reproducible per-country fake data, guard against production databases |
+| [`@astratra/testkit`](packages/testkit/README.md) | 2.0.0 | Security tests with no dependency (fuzzing, attack catalogue, ReDoS, resource bombs, differential, standard vectors, constant time, secrets in logs, authorization matrix, races, faults, mutations, lockfile), disposable MongoDB or PostgreSQL test databases, reproducible per-country fake data, guard against production databases |
 
 The example [`examples/dashboard-ui`](examples/dashboard-ui/README.md) shows
 `@astratra/saas-kit-ui` against the `saas-kit` API. It is not published.
