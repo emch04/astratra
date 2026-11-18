@@ -3,6 +3,18 @@
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Chaque package Astratra est versionné indépendamment.
 
+## 2026-11-18 — les jetons JWT sans jsonwebtoken
+
+### Changé
+- `@astratra/security` 1.15.1 (à publier) : `signJwt`, `verifyJwt` et `decodeJwt` (src/jwt.js, node:crypto seul) remplacent jsonwebtoken dans `createAuthMiddleware` et dans la vérification des jetons d'identité Google et Apple. Même forme de jeton, mêmes options, mêmes erreurs (`JsonWebTokenError`, `TokenExpiredError`, `NotBeforeError`) : comparé à jsonwebtoken 9.0.3 sur des vecteurs enregistrés avant son retrait (`__tests__/fixtures/jwt-reference.json`) — 120 signatures (HMAC et RSA identiques à l'octet, ECDSA et PSS vérifiés dans les deux sens), 5 refus de signature mot pour mot, 936 vérifications aux mêmes verdicts. HS, RS, PS et ES en 256, 384 et 512.
+- Plus strict : `algorithms` obligatoire, pas de « none » ; une clé ne sert qu'à sa famille (jamais une clé publique comme secret HMAC, courbe EC de l'algorithme, RSA d'au moins 2 048 bits) ; base64url exact (une signature écrite autrement mais décodée aux mêmes octets est refusée : pas de jeton malléable) ; en-tête `crit` refusé ; charge objet ; 16 Kio au plus ; une entrée abîmée donne toujours une `JsonWebTokenError` (jsonwebtoken laissait passer une SyntaxError ou une TypeError sur 23 des jetons enregistrés).
+- `@astratra/saas-kit` 2.1.1 (à publier) : le jeton d'accès est signé par `signJwt` de `@astratra/security` (^1.15.1) ; jsonwebtoken n'est plus une dépendance.
+- La lecture des durées (« 15m », « 2 days ») reprend celle du module ms, mais sans son expression régulière, qui s'emballait sur une longue suite de chiffres (trouvé par `assertSafeRegex`).
+
+### Essais
+- `__tests__/jwt.test.js` (18) : les vecteurs enregistrés, RFC 7515 A.1, signer puis vérifier pour les dix algorithmes (propriété), jetons piégés de `@astratra/testkit/security` sur quatre familles, confusion d'algorithme, revendications fausses signées avec la vraie clé, clés d'une autre famille ou trop courtes, fuzz (3 000 entrées), métamorphique (un bit changé, clés réordonnées), temps constant de la signature HMAC, expressions régulières. `npm run verify:mutations` : 13 mutations du module, toutes tuées (trois survivaient d'abord : écriture base64url non canonique, en-tête crit et charge non objet n'étaient essayés qu'avec de fausses signatures).
+- Les essais de security, saas-kit et core fabriquent leurs jetons avec ce module (core vérifie l'assertion Google avec node:crypto).
+
 ## 2026-11-18 — le jeton Google sans google-auth-library ; imports nommés en module ES réparés dans huit paquets
 
 ### Ajouté

@@ -2,6 +2,7 @@ module.exports = {
   ...require('./codes'),
   ...require('./cors'),
   ...require('./encryption'),
+  ...require('./jwt'),
   ...require('./jwtAuth'),
   ...require('./passwordHashing'),
   ...require('./mongoSanitize'),

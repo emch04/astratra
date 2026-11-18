@@ -37,7 +37,6 @@
   },
   "devDependencies": {
     "@astratra/testkit": "^2.0.0",
-    "jsonwebtoken": "^9.0.2",
     "jest": "30.4.2"
   }
 }

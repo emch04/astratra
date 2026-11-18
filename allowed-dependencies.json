@@ -24,7 +24,6 @@
     "express": "credentials, saas-kit, wallet ; appairage d'agent et core",
     "express-validator": "core, credentials, saas-kit — à remplacer par un module à nous",
     "ignore": "repomap : règles .gitignore",
-    "jsonwebtoken": "security, saas-kit : jetons — à remplacer par un module à nous",
     "mongodb": "conscience (appairage)",
     "mongoose": "store-mongo (appairage)",
     "pdfkit": "pdf (appairage)",

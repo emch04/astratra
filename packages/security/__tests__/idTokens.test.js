@@ -1,5 +1,7 @@
 const crypto = require('crypto');
-const jwt = require('jsonwebtoken');
+// Les jetons des essais viennent du module du paquet (jsonwebtoken retiré ; même forme de jeton, voir jwt.test.js).
+const { signJwt, verifyJwt, decodeJwt } = require('../src');
+const jwt = { sign: signJwt, verify: verifyJwt, decode: decodeJwt };
 const {
   createIdTokenVerifier,
   createGoogleIdTokenVerifier,

@@ -1,7 +1,9 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const { PassThrough, Readable, Writable } = require('node:stream');
-const jwt = require('jsonwebtoken');
+// Les jetons des essais passent par le module de @astratra/security (jsonwebtoken retiré).
+const { signJwt, verifyJwt, decodeJwt } = require('@astratra/security');
+const jwt = { sign: signJwt, verify: (token, key, options = {}) => verifyJwt(token, key, { algorithms: ['HS256'], ...options }), decode: decodeJwt };
 const {
   createSaasApp,
   createMemorySettingsStore,

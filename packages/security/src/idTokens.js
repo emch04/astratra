@@ -1,7 +1,7 @@
 /**
  * Vérifier un jeton d'identité OpenID Connect (Google, Apple, tout fournisseur
  * qui publie ses clés en JWKS) sans dépendance JOSE : Node transforme chaque
- * JWK en KeyObject, jsonwebtoken vérifie la signature, l'émetteur, l'audience
+ * JWK en KeyObject, verifyJwt (./jwt) vérifie la signature, l'émetteur, l'audience
  * et l'expiration.
  *
  * Ce que le module garantit, chaque point testé :
@@ -28,7 +28,7 @@
  * contient jamais le jeton.
  */
 const crypto = require('crypto');
-const jwt = require('jsonwebtoken');
+const { decodeJwt, verifyJwt } = require('./jwt');
 
 const DEFAULT_CACHE_MS = 60 * 60 * 1000;
 const DEFAULT_MIN_REFRESH_MS = 60 * 1000;
@@ -145,7 +145,7 @@ function createIdTokenVerifier(options = {}) {
     if (typeof idToken !== 'string' || !idToken || idToken.length > MAX_TOKEN_LENGTH) {
       throw new IdTokenError('malformed');
     }
-    const decoded = jwt.decode(idToken, { complete: true });
+    const decoded = decodeJwt(idToken, { complete: true });
     const header = decoded && decoded.header;
     if (!header || header.alg !== 'RS256' || typeof header.kid !== 'string' || !header.kid) {
       throw new IdTokenError('malformed');
@@ -155,7 +155,8 @@ function createIdTokenVerifier(options = {}) {
 
     let claims;
     try {
-      claims = jwt.verify(idToken, key, {
+      claims = verifyJwt(idToken, key, {
+        maxTokenLength: MAX_TOKEN_LENGTH,
         algorithms: ['RS256'],
         issuer: issuers,
         audience: audienceList,

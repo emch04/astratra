@@ -1,6 +1,5 @@
 const crypto = require('node:crypto');
 const { URLSearchParams } = require('node:url');
-const jwt = require('jsonwebtoken');
 const { assertNoSecrets, captureOutput, assertFuzz, gen, payloads, race, assertSameBehavior } = require('@astratra/testkit/security');
 const { createGoogleServiceAccountAuth, signServiceAccountAssertion, readGoogleServiceAccount, isGoogleTokenUri, GoogleAuthError } = require('../src');
 
@@ -27,13 +26,16 @@ function fakeGoogle({ token = () => json(200, { access_token: ACCESS_TOKEN, expi
 }
 
 describe('jeton de compte de service Google', () => {
-  test('l’assertion est un JWT RS256 aux revendications exactes, vérifié par une autre implémentation (jsonwebtoken)', async () => {
+  test('l’assertion est un JWT RS256 aux revendications exactes, vérifié indépendamment (node:crypto)', async () => {
     const google = fakeGoogle();
     const auth = createGoogleServiceAccountAuth({ credentials: ACCOUNT, scopes: [SCOPE, 'https://www.googleapis.com/auth/cloud-platform'], fetch: google.fetch, now: () => 1_700_000_000_000 });
     expect(await auth.getAccessToken()).toBe(ACCESS_TOKEN);
     const form = new URLSearchParams(google.calls[0].init.body);
     expect(form.get('grant_type')).toBe('urn:ietf:params:oauth:grant-type:jwt-bearer');
-    const claims = jwt.verify(form.get('assertion'), rsaPublic.export({ type: 'spki', format: 'pem' }), { algorithms: ['RS256'], clockTimestamp: 1_700_000_000 });
+    const [head, body, signature] = form.get('assertion').split('.');
+    expect(JSON.parse(Buffer.from(head, 'base64url'))).toEqual({ alg: 'RS256', typ: 'JWT' });
+    expect(crypto.verify('RSA-SHA256', Buffer.from(`${head}.${body}`), rsaPublic, Buffer.from(signature, 'base64url'))).toBe(true);
+    const claims = JSON.parse(Buffer.from(body, 'base64url'));
     expect(claims).toEqual({ iss: ACCOUNT.client_email, scope: `${SCOPE} https://www.googleapis.com/auth/cloud-platform`, aud: 'https://oauth2.googleapis.com/token', iat: 1_700_000_000, exp: 1_700_003_600 });
     expect(google.calls[0].init.headers['content-type']).toBe('application/x-www-form-urlencoded');
     expect(auth.clientEmail).toBe(ACCOUNT.client_email);

@@ -161,7 +161,7 @@ package is in [CHANGELOG.md](CHANGELOG.md).
 
 | Package | Version | What it does |
 |---|---|---|
-| [`@astratra/saas-kit`](packages/saas-kit/README.md) | 2.1.0 | Backend starter: `createSaasApp()` assembles users, authentication, settings, notifications and dashboard routes |
+| [`@astratra/saas-kit`](packages/saas-kit/README.md) | 2.1.1 | Backend starter: `createSaasApp()` assembles users, authentication, settings, notifications and dashboard routes |
 | [`@astratra/store-mongo`](packages/store-mongo/README.md) | 1.2.0 | MongoDB (Mongoose) persistence adapters for the SaaS stores |
 | [`@astratra/store-postgres`](packages/store-postgres/README.md) | 1.2.0 | PostgreSQL (`pg`) persistence adapters for the SaaS stores |
 | [`@astratra/saas-kit-ui`](packages/saas-kit-ui/README.md) | 1.5.0 | React dashboard for `@astratra/saas-kit`, 👍/👎 feedback bar |

@@ -167,7 +167,7 @@ est dans [CHANGELOG.md](CHANGELOG.md).
 
 | Paquet | Version | Rôle |
 |---|---|---|
-| [`@astratra/saas-kit`](packages/saas-kit/README.md) | 2.1.0 | Démarrage côté serveur : `createSaasApp()` assemble utilisateurs, authentification, réglages, notifications et tableau de bord |
+| [`@astratra/saas-kit`](packages/saas-kit/README.md) | 2.1.1 | Démarrage côté serveur : `createSaasApp()` assemble utilisateurs, authentification, réglages, notifications et tableau de bord |
 | [`@astratra/store-mongo`](packages/store-mongo/README.md) | 1.2.0 | Adaptateurs de persistance MongoDB (Mongoose) pour les magasins du SaaS |
 | [`@astratra/store-postgres`](packages/store-postgres/README.md) | 1.2.0 | Adaptateurs de persistance PostgreSQL (`pg`) pour les magasins du SaaS |
 | [`@astratra/saas-kit-ui`](packages/saas-kit-ui/README.md) | 1.5.0 | Tableau de bord React pour `@astratra/saas-kit`, barre de retours 👍/👎 |

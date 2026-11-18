@@ -13,7 +13,7 @@
   ],
   "scripts": {
     "test": "jest",
-    "verify:mutations": "node scripts/verify-rate-limit-mutations.cjs"
+    "verify:mutations": "node scripts/verify-rate-limit-mutations.cjs && node scripts/verify-jwt-mutations.cjs"
   },
   "jest": {
     "testMatch": [
@@ -31,8 +31,7 @@
   },
   "dependencies": {
     "@astratra/core": "^1.0.0",
-    "@simplewebauthn/server": "^13.1.2",
-    "jsonwebtoken": "^9.0.2"
+    "@simplewebauthn/server": "^13.1.2"
   },
   "peerDependencies": {
     "redis": ">=4"

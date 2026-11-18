@@ -1,5 +1,7 @@
 const crypto = require('node:crypto');
-const jwt = require('jsonwebtoken');
+// Les jetons des essais viennent du module du paquet (jsonwebtoken retiré ; même forme de jeton, voir jwt.test.js).
+const { signJwt, verifyJwt, decodeJwt } = require('../src');
+const jwt = { sign: signJwt, verify: verifyJwt, decode: decodeJwt };
 const { jwtAttacks, jwtClaimAttacks, forgeJwt, assertFuzz, gen, payloads, assertConstantTime } = require('@astratra/testkit/security');
 const { createAuthMiddleware, createCsrfMiddleware } = require('../src');
 

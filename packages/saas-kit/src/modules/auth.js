@@ -1,6 +1,6 @@
 const express = require('express');
 const crypto = require('crypto');
-const jwt = require('jsonwebtoken');
+const { signJwt } = require('@astratra/security');
 const { body } = require('express-validator');
 const { apiResponse, AppError, asyncHandler, validateMiddleware } = require('@astratra/core');
 const { clearSessionCookie, createWebauthnService, setSessionCookie } = require('@astratra/security');
@@ -59,7 +59,7 @@ function createAuthRoutes(options) {
    * One place that mints an access token, because two would drift: the refresh
    * route must produce a token indistinguishable from the login one.
    */
-  const signAccessToken = (publicUser, claims = {}) => jwt.sign(
+  const signAccessToken = (publicUser, claims = {}) => signJwt(
     { ...publicUser, jti: crypto.randomUUID(), ...claims },
     jwtSecret,
     {

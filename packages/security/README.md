@@ -206,7 +206,32 @@ app.delete('/api/projects/:id', authorizeRoles('owner', 'admin'), handler);
 ```
 
 Par défaut, le middleware limite la vérification à `HS256`. Si ton application
-utilise un autre algorithme, configure explicitement `algorithms`.
+utilise un autre algorithme, configure explicitement `algorithms`. Un jeton émis
+plus d'une minute dans le futur (`clockTolerance` pour un autre écart) est refusé :
+sinon il échapperait à « déconnecter partout ».
+
+### Les jetons eux-mêmes, sans dépendance
+
+Depuis la 1.15.1, les jetons sont signés et vérifiés par le paquet (`signJwt`,
+`verifyJwt`, `decodeJwt`), sans jsonwebtoken : même forme de jeton, mêmes options,
+mêmes erreurs (`JsonWebTokenError`, `TokenExpiredError`, `NotBeforeError`),
+comparés à jsonwebtoken 9 sur 120 signatures et 936 vérifications enregistrées.
+HS256/384/512, RS256/384/512, PS256/384/512, ES256/384/512.
+
+```js
+const { signJwt, verifyJwt } = require('@astratra/security');
+
+const token = signJwt({ id: user.id, role: user.role }, process.env.JWT_SECRET, { expiresIn: '15m', issuer: 'mon-app' });
+const claims = verifyJwt(token, process.env.JWT_SECRET, { algorithms: ['HS256'], issuer: 'mon-app' });
+```
+
+Plus strict que jsonwebtoken, sans regret : `algorithms` est obligatoire et « none »
+n'existe pas ; une clé ne sert qu'à sa famille (une clé publique n'est jamais un
+secret HMAC, une clé EC doit être de la courbe de l'algorithme, une clé RSA d'au
+moins 2 048 bits) ; chaque morceau doit être du base64url exact ; un en-tête `crit`
+est refusé ; la charge doit être un objet ; un jeton de plus de 16 Kio est refusé ;
+une entrée abîmée donne toujours une `JsonWebTokenError` (jsonwebtoken laissait
+parfois passer une SyntaxError ou une TypeError).
 
 **Session par cookie sans `cookieParserMiddleware()` monté en amont** :
 `createAuthMiddleware` a besoin de `req.cookies` pour lire un cookie de

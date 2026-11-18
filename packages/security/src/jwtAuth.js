@@ -1,4 +1,4 @@
-const jwt = require('jsonwebtoken');
+const { verifyJwt } = require('./jwt');
 const { DEFAULT_SESSION_COOKIE_NAME } = require('./cookies');
 
 const DEFAULT_UNAUTHORIZED = {
@@ -84,10 +84,10 @@ const assertIssuedAt = (decoded, verificationOptions) => {
 
 const verifyWithRotation = (token, secret, legacySecret, verificationOptions) => {
   try {
-    return assertIssuedAt(jwt.verify(token, secret, verificationOptions), verificationOptions);
+    return assertIssuedAt(verifyJwt(token, secret, verificationOptions), verificationOptions);
   } catch (error) {
     if (legacySecret && error.name === 'JsonWebTokenError') {
-      return assertIssuedAt(jwt.verify(token, legacySecret, verificationOptions), verificationOptions);
+      return assertIssuedAt(verifyJwt(token, legacySecret, verificationOptions), verificationOptions);
     }
     throw error;
   }

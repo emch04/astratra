@@ -1043,3 +1043,43 @@ export function canonicalDeviceRequest(parts: { method: string; path: string; ti
 /** Raw 65-byte point (base64), SPKI DER (base64) or PEM, P-256 only; returns the SPKI PEM. */
 export function importDevicePublicKey(value: string): string;
 export const DEVICE_SIGNATURE_HEADERS: { device: string; time: string; nonce: string; signature: string; key: string };
+
+/** Les jetons JWT (JWS compact), sans jsonwebtoken. */
+export type JwtAlgorithm = 'HS256' | 'HS384' | 'HS512' | 'RS256' | 'RS384' | 'RS512' | 'PS256' | 'PS384' | 'PS512' | 'ES256' | 'ES384' | 'ES512';
+export type JwtKey = string | Buffer | import('node:crypto').KeyObject;
+export interface SignJwtOptions {
+  algorithm?: JwtAlgorithm;
+  /** Secondes, ou durée « 15m », « 2 days » (sans unité : millisecondes). */
+  expiresIn?: number | string;
+  notBefore?: number | string;
+  audience?: string | string[];
+  issuer?: string;
+  subject?: string;
+  jwtid?: string;
+  keyid?: string;
+  header?: Record<string, unknown>;
+  noTimestamp?: boolean;
+}
+export interface VerifyJwtOptions {
+  /** Obligatoire : les algorithmes acceptés. */
+  algorithms: JwtAlgorithm[];
+  issuer?: string | string[];
+  audience?: string | RegExp | Array<string | RegExp>;
+  subject?: string;
+  jwtid?: string;
+  clockTolerance?: number;
+  clockTimestamp?: number;
+  maxAge?: number | string;
+  /** 16 Kio par défaut. */
+  maxTokenLength?: number;
+  ignoreExpiration?: boolean;
+  ignoreNotBefore?: boolean;
+  complete?: boolean;
+}
+export function signJwt(payload: Record<string, unknown>, key: JwtKey, options?: SignJwtOptions): string;
+export function verifyJwt<T = Record<string, unknown>>(token: string, key: JwtKey, options: VerifyJwtOptions): T;
+export function decodeJwt(token: string, options?: { complete?: boolean }): unknown;
+export class JsonWebTokenError extends Error {}
+export class TokenExpiredError extends JsonWebTokenError { expiredAt: Date }
+export class NotBeforeError extends JsonWebTokenError { date: Date }
+export const JWT_ALGORITHMS: JwtAlgorithm[];
