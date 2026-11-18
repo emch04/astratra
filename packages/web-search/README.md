@@ -155,8 +155,8 @@ toolDefinitions('gemini');      // [{ functionDeclarations: [...] }], schema cle
 - **`runAgentLoop` of `@astratra/ai`**: `registryTools(ws, { roles })` registers
   `type: 'read'`, `risk: 'LOW'`, `external: true` (the query leaves the
   application: the masker applies to it).
-- **MCP**: `createMcpServer(ws)` from `@astratra/web-search/mcp` (needs
-  `@modelcontextprotocol/sdk`) serves the same two tools, marked read-only. A
+- **MCP**: `createMcpServer(ws)` from `@astratra/web-search/mcp` (protocol from
+  `@astratra/mcp`, no dependency) serves the same two tools, marked read-only. A
   ready-made stdio server reads its engines from the environment:
 
 ```bash

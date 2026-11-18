@@ -35,11 +35,7 @@ function resultValue(result, max) {
   try { return JSON.parse(texte); } catch { return texte; }
 }
 
-async function chargerSdk() {
-  const { Client } = require('@modelcontextprotocol/sdk/client/index.js');
-  const { StreamableHTTPClientTransport } = require('@modelcontextprotocol/sdk/client/streamableHttp.js');
-  return { Client, StreamableHTTPClientTransport };
-}
+const { createMcpClient, createStreamableHttpClientTransport } = require('@astratra/mcp');
 
 /**
  * Se connecte à un serveur MCP et rend ses outils au format des outils natifs.
@@ -60,21 +56,13 @@ async function chargerSdk() {
 async function connectMcpServer(options = {}) {
   const { url, headers = {}, prefix = '', allow = null, kinds = {}, timeoutMs = DEFAULT_TIMEOUT_MS, resultMax = DEFAULT_RESULT_MAX } = options;
   if (!options.transport && !url) throw new Error('connectMcpServer: url is required');
-  const { Client, StreamableHTTPClientTransport } = await chargerSdk();
-  const transport = options.transport || new StreamableHTTPClientTransport(new URL(url), {
-    requestInit: { headers },
-    ...(options.fetch ? { fetch: options.fetch } : {})
-  });
-  const client = new Client(options.client || { name: 'astratra-ai', version: '1.0.0' });
+  // Le client de @astratra/mcp : https:// seulement (http:// vers la machine), aucune redirection suivie, réponses
+  // plafonnées. Un transport du SDK officiel peut aussi être donné dans options.transport.
+  const transport = options.transport || createStreamableHttpClientTransport(url, { headers, ...(options.fetch ? { fetch: options.fetch } : {}) });
+  const client = createMcpClient(options.client || { name: 'astratra-ai', version: '1.0.0' }, { timeoutMs });
   await client.connect(transport);
 
-  const decrits = [];
-  let curseur;
-  do {
-    const page = await client.listTools(curseur ? { cursor: curseur } : {});
-    decrits.push(...(page.tools || []));
-    curseur = page.nextCursor;
-  } while (curseur);
+  const decrits = await client.listAllTools();
 
   const permis = allow ? new Set(allow) : null;
   const tools = decrits
@@ -94,8 +82,8 @@ async function connectMcpServer(options = {}) {
         mcp: { name: t.name },
         summary: () => ({}),
         async run(args, ctx = {}) {
-          const result = await client.callTool({ name: t.name, arguments: args || {} }, undefined, {
-            timeout: timeoutMs,
+          const result = await client.callTool({ name: t.name, arguments: args || {} }, {
+            timeoutMs,
             ...(ctx.signal ? { signal: ctx.signal } : {})
           });
           const data = resultValue(result, resultMax);
@@ -106,7 +94,7 @@ async function connectMcpServer(options = {}) {
     })
     .filter(Boolean);
 
-  const instructions = typeof client.getInstructions === 'function' ? (client.getInstructions() || null) : null;
+  const instructions = client.getInstructions() || null;
   return {
     tools,
     instructions,

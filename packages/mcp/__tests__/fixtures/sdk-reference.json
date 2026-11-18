@@ -1,0 +1,1838 @@
+{
+ "source": "@modelcontextprotocol/sdk 1.32.2",
+ "server": {
+  "initialize, dernière version": {
+   "messages": [
+    {
+     "jsonrpc": "2.0",
+     "id": 1,
+     "method": "initialize",
+     "params": {
+      "protocolVersion": "2025-11-25",
+      "capabilities": {},
+      "clientInfo": {
+       "name": "enregistreur",
+       "version": "1"
+      }
+     }
+    }
+   ],
+   "replies": [
+    [
+     {
+      "result": {
+       "protocolVersion": "2025-11-25",
+       "capabilities": {
+        "tools": {
+         "listChanged": true
+        }
+       },
+       "serverInfo": {
+        "name": "essai",
+        "version": "1.0.0"
+       },
+       "instructions": "Instructions du serveur."
+      },
+      "jsonrpc": "2.0",
+      "id": 1
+     }
+    ]
+   ]
+  },
+  "initialize, 2025-06-18": {
+   "messages": [
+    {
+     "jsonrpc": "2.0",
+     "id": 1,
+     "method": "initialize",
+     "params": {
+      "protocolVersion": "2025-06-18",
+      "capabilities": {},
+      "clientInfo": {
+       "name": "enregistreur",
+       "version": "1"
+      }
+     }
+    }
+   ],
+   "replies": [
+    [
+     {
+      "result": {
+       "protocolVersion": "2025-06-18",
+       "capabilities": {
+        "tools": {
+         "listChanged": true
+        }
+       },
+       "serverInfo": {
+        "name": "essai",
+        "version": "1.0.0"
+       },
+       "instructions": "Instructions du serveur."
+      },
+      "jsonrpc": "2.0",
+      "id": 1
+     }
+    ]
+   ]
+  },
+  "initialize, 2024-11-05": {
+   "messages": [
+    {
+     "jsonrpc": "2.0",
+     "id": 1,
+     "method": "initialize",
+     "params": {
+      "protocolVersion": "2024-11-05",
+      "capabilities": {},
+      "clientInfo": {
+       "name": "enregistreur",
+       "version": "1"
+      }
+     }
+    }
+   ],
+   "replies": [
+    [
+     {
+      "result": {
+       "protocolVersion": "2024-11-05",
+       "capabilities": {
+        "tools": {
+         "listChanged": true
+        }
+       },
+       "serverInfo": {
+        "name": "essai",
+        "version": "1.0.0"
+       },
+       "instructions": "Instructions du serveur."
+      },
+      "jsonrpc": "2.0",
+      "id": 1
+     }
+    ]
+   ]
+  },
+  "initialize, version inconnue": {
+   "messages": [
+    {
+     "jsonrpc": "2.0",
+     "id": 1,
+     "method": "initialize",
+     "params": {
+      "protocolVersion": "2099-01-01",
+      "capabilities": {},
+      "clientInfo": {
+       "name": "enregistreur",
+       "version": "1"
+      }
+     }
+    }
+   ],
+   "replies": [
+    [
+     {
+      "result": {
+       "protocolVersion": "2025-11-25",
+       "capabilities": {
+        "tools": {
+         "listChanged": true
+        }
+       },
+       "serverInfo": {
+        "name": "essai",
+        "version": "1.0.0"
+       },
+       "instructions": "Instructions du serveur."
+      },
+      "jsonrpc": "2.0",
+      "id": 1
+     }
+    ]
+   ]
+  },
+  "initialize sans version": {
+   "messages": [
+    {
+     "jsonrpc": "2.0",
+     "id": 1,
+     "method": "initialize",
+     "params": {
+      "capabilities": {},
+      "clientInfo": {
+       "name": "x",
+       "version": "1"
+      }
+     }
+    }
+   ],
+   "replies": [
+    [
+     {
+      "jsonrpc": "2.0",
+      "id": 1,
+      "error": {
+       "code": -32603,
+       "message": "[\n  {\n    \"expected\": \"string\",\n    \"code\": \"invalid_type\",\n    \"path\": [\n      \"params\",\n      \"protocolVersion\"\n    ],\n    \"message\": \"Invalid input: expected string, received undefined\"\n  }\n]"
+      }
+     }
+    ]
+   ]
+  },
+  "initialize sans paramètres": {
+   "messages": [
+    {
+     "jsonrpc": "2.0",
+     "id": 1,
+     "method": "initialize"
+    }
+   ],
+   "replies": [
+    [
+     {
+      "jsonrpc": "2.0",
+      "id": 1,
+      "error": {
+       "code": -32603,
+       "message": "[\n  {\n    \"expected\": \"object\",\n    \"code\": \"invalid_type\",\n    \"path\": [\n      \"params\"\n    ],\n    \"message\": \"Invalid input: expected object, received undefined\"\n  }\n]"
+      }
+     }
+    ]
+   ]
+  },
+  "ping": {
+   "messages": [
+    {
+     "jsonrpc": "2.0",
+     "id": 1,
+     "method": "initialize",
+     "params": {
+      "protocolVersion": "2025-11-25",
+      "capabilities": {},
+      "clientInfo": {
+       "name": "enregistreur",
+       "version": "1"
+      }
+     }
+    },
+    {
+     "jsonrpc": "2.0",
+     "method": "notifications/initialized"
+    },
+    {
+     "jsonrpc": "2.0",
+     "id": 2,
+     "method": "ping"
+    }
+   ],
+   "replies": [
+    [
+     {
+      "result": {
+       "protocolVersion": "2025-11-25",
+       "capabilities": {
+        "tools": {
+         "listChanged": true
+        }
+       },
+       "serverInfo": {
+        "name": "essai",
+        "version": "1.0.0"
+       },
+       "instructions": "Instructions du serveur."
+      },
+      "jsonrpc": "2.0",
+      "id": 1
+     }
+    ],
+    [],
+    [
+     {
+      "result": {},
+      "jsonrpc": "2.0",
+      "id": 2
+     }
+    ]
+   ]
+  },
+  "ping avec paramètres": {
+   "messages": [
+    {
+     "jsonrpc": "2.0",
+     "id": 1,
+     "method": "initialize",
+     "params": {
+      "protocolVersion": "2025-11-25",
+      "capabilities": {},
+      "clientInfo": {
+       "name": "enregistreur",
+       "version": "1"
+      }
+     }
+    },
+    {
+     "jsonrpc": "2.0",
+     "method": "notifications/initialized"
+    },
+    {
+     "jsonrpc": "2.0",
+     "id": "deux",
+     "method": "ping",
+     "params": {}
+    }
+   ],
+   "replies": [
+    [
+     {
+      "result": {
+       "protocolVersion": "2025-11-25",
+       "capabilities": {
+        "tools": {
+         "listChanged": true
+        }
+       },
+       "serverInfo": {
+        "name": "essai",
+        "version": "1.0.0"
+       },
+       "instructions": "Instructions du serveur."
+      },
+      "jsonrpc": "2.0",
+      "id": 1
+     }
+    ],
+    [],
+    [
+     {
+      "result": {},
+      "jsonrpc": "2.0",
+      "id": "deux"
+     }
+    ]
+   ]
+  },
+  "tools/list": {
+   "messages": [
+    {
+     "jsonrpc": "2.0",
+     "id": 1,
+     "method": "initialize",
+     "params": {
+      "protocolVersion": "2025-11-25",
+      "capabilities": {},
+      "clientInfo": {
+       "name": "enregistreur",
+       "version": "1"
+      }
+     }
+    },
+    {
+     "jsonrpc": "2.0",
+     "method": "notifications/initialized"
+    },
+    {
+     "jsonrpc": "2.0",
+     "id": 3,
+     "method": "tools/list"
+    }
+   ],
+   "replies": [
+    [
+     {
+      "result": {
+       "protocolVersion": "2025-11-25",
+       "capabilities": {
+        "tools": {
+         "listChanged": true
+        }
+       },
+       "serverInfo": {
+        "name": "essai",
+        "version": "1.0.0"
+       },
+       "instructions": "Instructions du serveur."
+      },
+      "jsonrpc": "2.0",
+      "id": 1
+     }
+    ],
+    [],
+    [
+     {
+      "result": {
+       "tools": [
+        {
+         "name": "addition",
+         "description": "Additionne deux nombres",
+         "inputSchema": {
+          "type": "object",
+          "properties": {
+           "a": {
+            "type": "number"
+           },
+           "b": {
+            "type": "number"
+           }
+          },
+          "required": [
+           "a",
+           "b"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+         },
+         "execution": {
+          "taskSupport": "forbidden"
+         }
+        },
+        {
+         "name": "echo",
+         "description": "Rend le texte",
+         "inputSchema": {
+          "type": "object",
+          "properties": {
+           "texte": {
+            "type": "string"
+           }
+          },
+          "required": [
+           "texte"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+         },
+         "execution": {
+          "taskSupport": "forbidden"
+         }
+        },
+        {
+         "name": "panne",
+         "description": "Lève une erreur",
+         "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {}
+         },
+         "execution": {
+          "taskSupport": "forbidden"
+         }
+        },
+        {
+         "name": "refus",
+         "description": "Rend une erreur d’outil",
+         "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {}
+         },
+         "execution": {
+          "taskSupport": "forbidden"
+         }
+        }
+       ]
+      },
+      "jsonrpc": "2.0",
+      "id": 3
+     }
+    ]
+   ]
+  },
+  "tools/list curseur inconnu": {
+   "messages": [
+    {
+     "jsonrpc": "2.0",
+     "id": 1,
+     "method": "initialize",
+     "params": {
+      "protocolVersion": "2025-11-25",
+      "capabilities": {},
+      "clientInfo": {
+       "name": "enregistreur",
+       "version": "1"
+      }
+     }
+    },
+    {
+     "jsonrpc": "2.0",
+     "method": "notifications/initialized"
+    },
+    {
+     "jsonrpc": "2.0",
+     "id": 3,
+     "method": "tools/list",
+     "params": {
+      "cursor": "zzz"
+     }
+    }
+   ],
+   "replies": [
+    [
+     {
+      "result": {
+       "protocolVersion": "2025-11-25",
+       "capabilities": {
+        "tools": {
+         "listChanged": true
+        }
+       },
+       "serverInfo": {
+        "name": "essai",
+        "version": "1.0.0"
+       },
+       "instructions": "Instructions du serveur."
+      },
+      "jsonrpc": "2.0",
+      "id": 1
+     }
+    ],
+    [],
+    [
+     {
+      "result": {
+       "tools": [
+        {
+         "name": "addition",
+         "description": "Additionne deux nombres",
+         "inputSchema": {
+          "type": "object",
+          "properties": {
+           "a": {
+            "type": "number"
+           },
+           "b": {
+            "type": "number"
+           }
+          },
+          "required": [
+           "a",
+           "b"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+         },
+         "execution": {
+          "taskSupport": "forbidden"
+         }
+        },
+        {
+         "name": "echo",
+         "description": "Rend le texte",
+         "inputSchema": {
+          "type": "object",
+          "properties": {
+           "texte": {
+            "type": "string"
+           }
+          },
+          "required": [
+           "texte"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+         },
+         "execution": {
+          "taskSupport": "forbidden"
+         }
+        },
+        {
+         "name": "panne",
+         "description": "Lève une erreur",
+         "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {}
+         },
+         "execution": {
+          "taskSupport": "forbidden"
+         }
+        },
+        {
+         "name": "refus",
+         "description": "Rend une erreur d’outil",
+         "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {}
+         },
+         "execution": {
+          "taskSupport": "forbidden"
+         }
+        }
+       ]
+      },
+      "jsonrpc": "2.0",
+      "id": 3
+     }
+    ]
+   ]
+  },
+  "tools/call addition": {
+   "messages": [
+    {
+     "jsonrpc": "2.0",
+     "id": 1,
+     "method": "initialize",
+     "params": {
+      "protocolVersion": "2025-11-25",
+      "capabilities": {},
+      "clientInfo": {
+       "name": "enregistreur",
+       "version": "1"
+      }
+     }
+    },
+    {
+     "jsonrpc": "2.0",
+     "method": "notifications/initialized"
+    },
+    {
+     "jsonrpc": "2.0",
+     "id": 4,
+     "method": "tools/call",
+     "params": {
+      "name": "addition",
+      "arguments": {
+       "a": 2,
+       "b": 3
+      }
+     }
+    }
+   ],
+   "replies": [
+    [
+     {
+      "result": {
+       "protocolVersion": "2025-11-25",
+       "capabilities": {
+        "tools": {
+         "listChanged": true
+        }
+       },
+       "serverInfo": {
+        "name": "essai",
+        "version": "1.0.0"
+       },
+       "instructions": "Instructions du serveur."
+      },
+      "jsonrpc": "2.0",
+      "id": 1
+     }
+    ],
+    [],
+    [
+     {
+      "result": {
+       "content": [
+        {
+         "type": "text",
+         "text": "5"
+        }
+       ]
+      },
+      "jsonrpc": "2.0",
+      "id": 4
+     }
+    ]
+   ]
+  },
+  "tools/call argument manquant": {
+   "messages": [
+    {
+     "jsonrpc": "2.0",
+     "id": 1,
+     "method": "initialize",
+     "params": {
+      "protocolVersion": "2025-11-25",
+      "capabilities": {},
+      "clientInfo": {
+       "name": "enregistreur",
+       "version": "1"
+      }
+     }
+    },
+    {
+     "jsonrpc": "2.0",
+     "method": "notifications/initialized"
+    },
+    {
+     "jsonrpc": "2.0",
+     "id": 4,
+     "method": "tools/call",
+     "params": {
+      "name": "addition",
+      "arguments": {
+       "a": 2
+      }
+     }
+    }
+   ],
+   "replies": [
+    [
+     {
+      "result": {
+       "protocolVersion": "2025-11-25",
+       "capabilities": {
+        "tools": {
+         "listChanged": true
+        }
+       },
+       "serverInfo": {
+        "name": "essai",
+        "version": "1.0.0"
+       },
+       "instructions": "Instructions du serveur."
+      },
+      "jsonrpc": "2.0",
+      "id": 1
+     }
+    ],
+    [],
+    [
+     {
+      "result": {
+       "content": [
+        {
+         "type": "text",
+         "text": "MCP error -32602: Input validation error: Invalid arguments for tool addition: Required at b"
+        }
+       ],
+       "isError": true
+      },
+      "jsonrpc": "2.0",
+      "id": 4
+     }
+    ]
+   ]
+  },
+  "tools/call mauvais type": {
+   "messages": [
+    {
+     "jsonrpc": "2.0",
+     "id": 1,
+     "method": "initialize",
+     "params": {
+      "protocolVersion": "2025-11-25",
+      "capabilities": {},
+      "clientInfo": {
+       "name": "enregistreur",
+       "version": "1"
+      }
+     }
+    },
+    {
+     "jsonrpc": "2.0",
+     "method": "notifications/initialized"
+    },
+    {
+     "jsonrpc": "2.0",
+     "id": 4,
+     "method": "tools/call",
+     "params": {
+      "name": "addition",
+      "arguments": {
+       "a": "deux",
+       "b": 3
+      }
+     }
+    }
+   ],
+   "replies": [
+    [
+     {
+      "result": {
+       "protocolVersion": "2025-11-25",
+       "capabilities": {
+        "tools": {
+         "listChanged": true
+        }
+       },
+       "serverInfo": {
+        "name": "essai",
+        "version": "1.0.0"
+       },
+       "instructions": "Instructions du serveur."
+      },
+      "jsonrpc": "2.0",
+      "id": 1
+     }
+    ],
+    [],
+    [
+     {
+      "result": {
+       "content": [
+        {
+         "type": "text",
+         "text": "MCP error -32602: Input validation error: Invalid arguments for tool addition: Expected number, received string at a"
+        }
+       ],
+       "isError": true
+      },
+      "jsonrpc": "2.0",
+      "id": 4
+     }
+    ]
+   ]
+  },
+  "tools/call sans arguments": {
+   "messages": [
+    {
+     "jsonrpc": "2.0",
+     "id": 1,
+     "method": "initialize",
+     "params": {
+      "protocolVersion": "2025-11-25",
+      "capabilities": {},
+      "clientInfo": {
+       "name": "enregistreur",
+       "version": "1"
+      }
+     }
+    },
+    {
+     "jsonrpc": "2.0",
+     "method": "notifications/initialized"
+    },
+    {
+     "jsonrpc": "2.0",
+     "id": 4,
+     "method": "tools/call",
+     "params": {
+      "name": "addition"
+     }
+    }
+   ],
+   "replies": [
+    [
+     {
+      "result": {
+       "protocolVersion": "2025-11-25",
+       "capabilities": {
+        "tools": {
+         "listChanged": true
+        }
+       },
+       "serverInfo": {
+        "name": "essai",
+        "version": "1.0.0"
+       },
+       "instructions": "Instructions du serveur."
+      },
+      "jsonrpc": "2.0",
+      "id": 1
+     }
+    ],
+    [],
+    [
+     {
+      "result": {
+       "content": [
+        {
+         "type": "text",
+         "text": "MCP error -32602: Input validation error: Invalid arguments for tool addition: Required at a\nRequired at b"
+        }
+       ],
+       "isError": true
+      },
+      "jsonrpc": "2.0",
+      "id": 4
+     }
+    ]
+   ]
+  },
+  "tools/call argument en trop": {
+   "messages": [
+    {
+     "jsonrpc": "2.0",
+     "id": 1,
+     "method": "initialize",
+     "params": {
+      "protocolVersion": "2025-11-25",
+      "capabilities": {},
+      "clientInfo": {
+       "name": "enregistreur",
+       "version": "1"
+      }
+     }
+    },
+    {
+     "jsonrpc": "2.0",
+     "method": "notifications/initialized"
+    },
+    {
+     "jsonrpc": "2.0",
+     "id": 4,
+     "method": "tools/call",
+     "params": {
+      "name": "echo",
+      "arguments": {
+       "texte": "a",
+       "autre": 1
+      }
+     }
+    }
+   ],
+   "replies": [
+    [
+     {
+      "result": {
+       "protocolVersion": "2025-11-25",
+       "capabilities": {
+        "tools": {
+         "listChanged": true
+        }
+       },
+       "serverInfo": {
+        "name": "essai",
+        "version": "1.0.0"
+       },
+       "instructions": "Instructions du serveur."
+      },
+      "jsonrpc": "2.0",
+      "id": 1
+     }
+    ],
+    [],
+    [
+     {
+      "result": {
+       "content": [
+        {
+         "type": "text",
+         "text": "a"
+        }
+       ]
+      },
+      "jsonrpc": "2.0",
+      "id": 4
+     }
+    ]
+   ]
+  },
+  "tools/call outil inconnu": {
+   "messages": [
+    {
+     "jsonrpc": "2.0",
+     "id": 1,
+     "method": "initialize",
+     "params": {
+      "protocolVersion": "2025-11-25",
+      "capabilities": {},
+      "clientInfo": {
+       "name": "enregistreur",
+       "version": "1"
+      }
+     }
+    },
+    {
+     "jsonrpc": "2.0",
+     "method": "notifications/initialized"
+    },
+    {
+     "jsonrpc": "2.0",
+     "id": 4,
+     "method": "tools/call",
+     "params": {
+      "name": "inconnu",
+      "arguments": {}
+     }
+    }
+   ],
+   "replies": [
+    [
+     {
+      "result": {
+       "protocolVersion": "2025-11-25",
+       "capabilities": {
+        "tools": {
+         "listChanged": true
+        }
+       },
+       "serverInfo": {
+        "name": "essai",
+        "version": "1.0.0"
+       },
+       "instructions": "Instructions du serveur."
+      },
+      "jsonrpc": "2.0",
+      "id": 1
+     }
+    ],
+    [],
+    [
+     {
+      "result": {
+       "content": [
+        {
+         "type": "text",
+         "text": "MCP error -32602: Tool inconnu not found"
+        }
+       ],
+       "isError": true
+      },
+      "jsonrpc": "2.0",
+      "id": 4
+     }
+    ]
+   ]
+  },
+  "tools/call sans nom": {
+   "messages": [
+    {
+     "jsonrpc": "2.0",
+     "id": 1,
+     "method": "initialize",
+     "params": {
+      "protocolVersion": "2025-11-25",
+      "capabilities": {},
+      "clientInfo": {
+       "name": "enregistreur",
+       "version": "1"
+      }
+     }
+    },
+    {
+     "jsonrpc": "2.0",
+     "method": "notifications/initialized"
+    },
+    {
+     "jsonrpc": "2.0",
+     "id": 4,
+     "method": "tools/call",
+     "params": {
+      "arguments": {}
+     }
+    }
+   ],
+   "replies": [
+    [
+     {
+      "result": {
+       "protocolVersion": "2025-11-25",
+       "capabilities": {
+        "tools": {
+         "listChanged": true
+        }
+       },
+       "serverInfo": {
+        "name": "essai",
+        "version": "1.0.0"
+       },
+       "instructions": "Instructions du serveur."
+      },
+      "jsonrpc": "2.0",
+      "id": 1
+     }
+    ],
+    [],
+    [
+     {
+      "jsonrpc": "2.0",
+      "id": 4,
+      "error": {
+       "code": -32603,
+       "message": "[\n  {\n    \"expected\": \"string\",\n    \"code\": \"invalid_type\",\n    \"path\": [\n      \"params\",\n      \"name\"\n    ],\n    \"message\": \"Invalid input: expected string, received undefined\"\n  }\n]"
+      }
+     }
+    ]
+   ]
+  },
+  "tools/call outil qui lève": {
+   "messages": [
+    {
+     "jsonrpc": "2.0",
+     "id": 1,
+     "method": "initialize",
+     "params": {
+      "protocolVersion": "2025-11-25",
+      "capabilities": {},
+      "clientInfo": {
+       "name": "enregistreur",
+       "version": "1"
+      }
+     }
+    },
+    {
+     "jsonrpc": "2.0",
+     "method": "notifications/initialized"
+    },
+    {
+     "jsonrpc": "2.0",
+     "id": 4,
+     "method": "tools/call",
+     "params": {
+      "name": "panne",
+      "arguments": {}
+     }
+    }
+   ],
+   "replies": [
+    [
+     {
+      "result": {
+       "protocolVersion": "2025-11-25",
+       "capabilities": {
+        "tools": {
+         "listChanged": true
+        }
+       },
+       "serverInfo": {
+        "name": "essai",
+        "version": "1.0.0"
+       },
+       "instructions": "Instructions du serveur."
+      },
+      "jsonrpc": "2.0",
+      "id": 1
+     }
+    ],
+    [],
+    [
+     {
+      "result": {
+       "content": [
+        {
+         "type": "text",
+         "text": "secret interne : /etc/chemin et clé"
+        }
+       ],
+       "isError": true
+      },
+      "jsonrpc": "2.0",
+      "id": 4
+     }
+    ]
+   ]
+  },
+  "tools/call erreur d’outil": {
+   "messages": [
+    {
+     "jsonrpc": "2.0",
+     "id": 1,
+     "method": "initialize",
+     "params": {
+      "protocolVersion": "2025-11-25",
+      "capabilities": {},
+      "clientInfo": {
+       "name": "enregistreur",
+       "version": "1"
+      }
+     }
+    },
+    {
+     "jsonrpc": "2.0",
+     "method": "notifications/initialized"
+    },
+    {
+     "jsonrpc": "2.0",
+     "id": 4,
+     "method": "tools/call",
+     "params": {
+      "name": "refus",
+      "arguments": {}
+     }
+    }
+   ],
+   "replies": [
+    [
+     {
+      "result": {
+       "protocolVersion": "2025-11-25",
+       "capabilities": {
+        "tools": {
+         "listChanged": true
+        }
+       },
+       "serverInfo": {
+        "name": "essai",
+        "version": "1.0.0"
+       },
+       "instructions": "Instructions du serveur."
+      },
+      "jsonrpc": "2.0",
+      "id": 1
+     }
+    ],
+    [],
+    [
+     {
+      "result": {
+       "content": [
+        {
+         "type": "text",
+         "text": "refusé"
+        }
+       ],
+       "isError": true
+      },
+      "jsonrpc": "2.0",
+      "id": 4
+     }
+    ]
+   ]
+  },
+  "méthode inconnue": {
+   "messages": [
+    {
+     "jsonrpc": "2.0",
+     "id": 1,
+     "method": "initialize",
+     "params": {
+      "protocolVersion": "2025-11-25",
+      "capabilities": {},
+      "clientInfo": {
+       "name": "enregistreur",
+       "version": "1"
+      }
+     }
+    },
+    {
+     "jsonrpc": "2.0",
+     "method": "notifications/initialized"
+    },
+    {
+     "jsonrpc": "2.0",
+     "id": 5,
+     "method": "inconnue/methode"
+    }
+   ],
+   "replies": [
+    [
+     {
+      "result": {
+       "protocolVersion": "2025-11-25",
+       "capabilities": {
+        "tools": {
+         "listChanged": true
+        }
+       },
+       "serverInfo": {
+        "name": "essai",
+        "version": "1.0.0"
+       },
+       "instructions": "Instructions du serveur."
+      },
+      "jsonrpc": "2.0",
+      "id": 1
+     }
+    ],
+    [],
+    [
+     {
+      "jsonrpc": "2.0",
+      "id": 5,
+      "error": {
+       "code": -32601,
+       "message": "Method not found"
+      }
+     }
+    ]
+   ]
+  },
+  "resources/list non servi": {
+   "messages": [
+    {
+     "jsonrpc": "2.0",
+     "id": 1,
+     "method": "initialize",
+     "params": {
+      "protocolVersion": "2025-11-25",
+      "capabilities": {},
+      "clientInfo": {
+       "name": "enregistreur",
+       "version": "1"
+      }
+     }
+    },
+    {
+     "jsonrpc": "2.0",
+     "method": "notifications/initialized"
+    },
+    {
+     "jsonrpc": "2.0",
+     "id": 5,
+     "method": "resources/list"
+    }
+   ],
+   "replies": [
+    [
+     {
+      "result": {
+       "protocolVersion": "2025-11-25",
+       "capabilities": {
+        "tools": {
+         "listChanged": true
+        }
+       },
+       "serverInfo": {
+        "name": "essai",
+        "version": "1.0.0"
+       },
+       "instructions": "Instructions du serveur."
+      },
+      "jsonrpc": "2.0",
+      "id": 1
+     }
+    ],
+    [],
+    [
+     {
+      "jsonrpc": "2.0",
+      "id": 5,
+      "error": {
+       "code": -32601,
+       "message": "Method not found"
+      }
+     }
+    ]
+   ]
+  },
+  "notification inconnue": {
+   "messages": [
+    {
+     "jsonrpc": "2.0",
+     "id": 1,
+     "method": "initialize",
+     "params": {
+      "protocolVersion": "2025-11-25",
+      "capabilities": {},
+      "clientInfo": {
+       "name": "enregistreur",
+       "version": "1"
+      }
+     }
+    },
+    {
+     "jsonrpc": "2.0",
+     "method": "notifications/initialized"
+    },
+    {
+     "jsonrpc": "2.0",
+     "method": "notifications/inconnue"
+    }
+   ],
+   "replies": [
+    [
+     {
+      "result": {
+       "protocolVersion": "2025-11-25",
+       "capabilities": {
+        "tools": {
+         "listChanged": true
+        }
+       },
+       "serverInfo": {
+        "name": "essai",
+        "version": "1.0.0"
+       },
+       "instructions": "Instructions du serveur."
+      },
+      "jsonrpc": "2.0",
+      "id": 1
+     }
+    ],
+    [],
+    []
+   ]
+  },
+  "réponse sans requête": {
+   "messages": [
+    {
+     "jsonrpc": "2.0",
+     "id": 1,
+     "method": "initialize",
+     "params": {
+      "protocolVersion": "2025-11-25",
+      "capabilities": {},
+      "clientInfo": {
+       "name": "enregistreur",
+       "version": "1"
+      }
+     }
+    },
+    {
+     "jsonrpc": "2.0",
+     "method": "notifications/initialized"
+    },
+    {
+     "jsonrpc": "2.0",
+     "id": 99,
+     "result": {}
+    }
+   ],
+   "replies": [
+    [
+     {
+      "result": {
+       "protocolVersion": "2025-11-25",
+       "capabilities": {
+        "tools": {
+         "listChanged": true
+        }
+       },
+       "serverInfo": {
+        "name": "essai",
+        "version": "1.0.0"
+       },
+       "instructions": "Instructions du serveur."
+      },
+      "jsonrpc": "2.0",
+      "id": 1
+     }
+    ],
+    [],
+    []
+   ]
+  },
+  "tools/call avant initialize": {
+   "messages": [
+    {
+     "jsonrpc": "2.0",
+     "id": 4,
+     "method": "tools/call",
+     "params": {
+      "name": "addition",
+      "arguments": {
+       "a": 2,
+       "b": 3
+      }
+     }
+    }
+   ],
+   "replies": [
+    [
+     {
+      "result": {
+       "content": [
+        {
+         "type": "text",
+         "text": "5"
+        }
+       ]
+      },
+      "jsonrpc": "2.0",
+      "id": 4
+     }
+    ]
+   ]
+  },
+  "ping avant initialize": {
+   "messages": [
+    {
+     "jsonrpc": "2.0",
+     "id": 2,
+     "method": "ping"
+    }
+   ],
+   "replies": [
+    [
+     {
+      "result": {},
+      "jsonrpc": "2.0",
+      "id": 2
+     }
+    ]
+   ]
+  }
+ },
+ "http": {
+  "sans Accept": {
+   "status": 406,
+   "type": "application/json",
+   "session": null,
+   "body": {
+    "jsonrpc": "2.0",
+    "error": {
+     "code": -32000,
+     "message": "Not Acceptable: Client must accept both application/json and text/event-stream"
+    },
+    "id": null
+   }
+  },
+  "Accept JSON seulement": {
+   "status": 406,
+   "type": "application/json",
+   "session": null,
+   "body": {
+    "jsonrpc": "2.0",
+    "error": {
+     "code": -32000,
+     "message": "Not Acceptable: Client must accept both application/json and text/event-stream"
+    },
+    "id": null
+   }
+  },
+  "mauvais Content-Type": {
+   "status": 415,
+   "type": "application/json",
+   "session": null,
+   "body": {
+    "jsonrpc": "2.0",
+    "error": {
+     "code": -32000,
+     "message": "Unsupported Media Type: Content-Type must be application/json"
+    },
+    "id": null
+   }
+  },
+  "JSON invalide": {
+   "status": 400,
+   "type": "application/json",
+   "session": null,
+   "body": {
+    "jsonrpc": "2.0",
+    "error": {
+     "code": -32700,
+     "message": "Parse error: Invalid JSON-RPC message"
+    },
+    "id": null
+   }
+  },
+  "pas du JSON-RPC": {
+   "status": 400,
+   "type": "application/json",
+   "session": null,
+   "body": {
+    "jsonrpc": "2.0",
+    "error": {
+     "code": -32700,
+     "message": "Parse error: Invalid JSON-RPC message"
+    },
+    "id": null
+   }
+  },
+  "initialize deux fois dans la session": {
+   "status": 400,
+   "type": "application/json",
+   "session": null,
+   "body": {
+    "jsonrpc": "2.0",
+    "error": {
+     "code": -32600,
+     "message": "Invalid Request: Server already initialized"
+    },
+    "id": null
+   }
+  },
+  "requête sans session": {
+   "status": 400,
+   "type": "application/json",
+   "session": null,
+   "body": {
+    "jsonrpc": "2.0",
+    "error": {
+     "code": -32000,
+     "message": "Bad Request: Mcp-Session-Id header is required"
+    },
+    "id": null
+   }
+  },
+  "session inconnue": {
+   "status": 404,
+   "type": "application/json",
+   "session": null,
+   "body": {
+    "jsonrpc": "2.0",
+    "error": {
+     "code": -32001,
+     "message": "Session not found"
+    },
+    "id": null
+   }
+  },
+  "version de protocole inconnue": {
+   "status": 400,
+   "type": "application/json",
+   "session": null,
+   "body": {
+    "jsonrpc": "2.0",
+    "error": {
+     "code": -32000,
+     "message": "Bad Request: Unsupported protocol version: 1999-01-01 (supported versions: 2025-11-25, 2025-06-18, 2025-03-26, 2024-11-05, 2024-10-07)"
+    },
+    "id": null
+   }
+  },
+  "ping": {
+   "status": 200,
+   "type": "application/json",
+   "session": "présente",
+   "body": {
+    "result": {},
+    "jsonrpc": "2.0",
+    "id": 2
+   }
+  },
+  "tools/call": {
+   "status": 200,
+   "type": "application/json",
+   "session": "présente",
+   "body": {
+    "result": {
+     "content": [
+      {
+       "type": "text",
+       "text": "5"
+      }
+     ]
+    },
+    "jsonrpc": "2.0",
+    "id": 4
+   }
+  },
+  "notification seule": {
+   "status": 202,
+   "type": "",
+   "session": null,
+   "body": null
+  },
+  "lot avec initialize": {
+   "status": 400,
+   "type": "application/json",
+   "session": null,
+   "body": {
+    "jsonrpc": "2.0",
+    "error": {
+     "code": -32600,
+     "message": "Invalid Request: Only one initialization request is allowed"
+    },
+    "id": null
+   }
+  },
+  "lot de deux requêtes": {
+   "status": 200,
+   "type": "application/json",
+   "session": "présente",
+   "body": [
+    {
+     "result": {},
+     "jsonrpc": "2.0",
+     "id": 2
+    },
+    {
+     "result": {
+      "tools": [
+       {
+        "name": "addition",
+        "description": "Additionne deux nombres",
+        "inputSchema": {
+         "type": "object",
+         "properties": {
+          "a": {
+           "type": "number"
+          },
+          "b": {
+           "type": "number"
+          }
+         },
+         "required": [
+          "a",
+          "b"
+         ],
+         "additionalProperties": false,
+         "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "execution": {
+         "taskSupport": "forbidden"
+        }
+       },
+       {
+        "name": "echo",
+        "description": "Rend le texte",
+        "inputSchema": {
+         "type": "object",
+         "properties": {
+          "texte": {
+           "type": "string"
+          }
+         },
+         "required": [
+          "texte"
+         ],
+         "additionalProperties": false,
+         "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "execution": {
+         "taskSupport": "forbidden"
+        }
+       },
+       {
+        "name": "panne",
+        "description": "Lève une erreur",
+        "inputSchema": {
+         "$schema": "http://json-schema.org/draft-07/schema#",
+         "type": "object",
+         "properties": {}
+        },
+        "execution": {
+         "taskSupport": "forbidden"
+        }
+       },
+       {
+        "name": "refus",
+        "description": "Rend une erreur d’outil",
+        "inputSchema": {
+         "$schema": "http://json-schema.org/draft-07/schema#",
+         "type": "object",
+         "properties": {}
+        },
+        "execution": {
+         "taskSupport": "forbidden"
+        }
+       }
+      ]
+     },
+     "jsonrpc": "2.0",
+     "id": 7
+    }
+   ]
+  },
+  "PUT": {
+   "status": 405,
+   "type": "application/json",
+   "session": null,
+   "body": {
+    "jsonrpc": "2.0",
+    "error": {
+     "code": -32000,
+     "message": "Method not allowed."
+    },
+    "id": null
+   }
+  },
+  "GET sans session": {
+   "status": 400,
+   "type": "application/json",
+   "session": null,
+   "body": {
+    "jsonrpc": "2.0",
+    "error": {
+     "code": -32000,
+     "message": "Bad Request: Mcp-Session-Id header is required"
+    },
+    "id": null
+   }
+  },
+  "Origin d’une autre page": {
+   "status": 200,
+   "type": "application/json",
+   "session": "présente",
+   "body": {
+    "result": {
+     "protocolVersion": "2025-11-25",
+     "capabilities": {
+      "tools": {
+       "listChanged": true
+      }
+     },
+     "serverInfo": {
+      "name": "essai",
+      "version": "1.0.0"
+     },
+     "instructions": "Instructions du serveur."
+    },
+    "jsonrpc": "2.0",
+    "id": 1
+   }
+  },
+  "DELETE session inconnue": {
+   "status": 404,
+   "type": "application/json",
+   "session": null,
+   "body": {
+    "jsonrpc": "2.0",
+    "error": {
+     "code": -32001,
+     "message": "Session not found"
+    },
+    "id": null
+   }
+  },
+  "DELETE": {
+   "status": 200,
+   "type": "",
+   "session": null,
+   "body": null
+  },
+  "après DELETE": {
+   "status": 404,
+   "type": "application/json",
+   "session": null,
+   "body": {
+    "jsonrpc": "2.0",
+    "error": {
+     "code": -32001,
+     "message": "Session not found"
+    },
+    "id": null
+   }
+  }
+ },
+ "client": [
+  {
+   "method": "initialize",
+   "params": {
+    "protocolVersion": "2025-11-25",
+    "capabilities": {},
+    "clientInfo": {
+     "name": "enregistreur",
+     "version": "1"
+    }
+   },
+   "jsonrpc": "2.0",
+   "id": 0
+  },
+  {
+   "method": "notifications/initialized",
+   "jsonrpc": "2.0"
+  },
+  {
+   "method": "tools/list",
+   "jsonrpc": "2.0",
+   "id": 1
+  },
+  {
+   "method": "tools/list",
+   "params": {
+    "cursor": "page2"
+   },
+   "jsonrpc": "2.0",
+   "id": 2
+  },
+  {
+   "method": "tools/call",
+   "params": {
+    "name": "rapide",
+    "arguments": {
+     "x": 1
+    }
+   },
+   "jsonrpc": "2.0",
+   "id": 3
+  },
+  {
+   "method": "tools/call",
+   "params": {
+    "name": "lent",
+    "arguments": {}
+   },
+   "jsonrpc": "2.0",
+   "id": 4
+  },
+  {
+   "jsonrpc": "2.0",
+   "method": "notifications/cancelled",
+   "params": {
+    "requestId": 4,
+    "reason": "McpError: MCP error -32001: Request timed out"
+   }
+  },
+  {
+   "method": "ping",
+   "jsonrpc": "2.0",
+   "id": 5
+  }
+ ]
+}

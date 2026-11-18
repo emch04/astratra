@@ -128,7 +128,7 @@ package is in [CHANGELOG.md](CHANGELOG.md).
 
 | Package | Version | What it does |
 |---|---|---|
-| [`@astratra/ai`](packages/ai/README.md) | 2.0.0 | Multi-provider AI routing with quotas and fallback, tool registry, agent loop, risk levels with confirmation, local llama.cpp provider |
+| [`@astratra/ai`](packages/ai/README.md) | 2.0.1 | Multi-provider AI routing with quotas and fallback, tool registry, agent loop, risk levels with confirmation, local llama.cpp provider |
 | [`@astratra/agent`](packages/agent/README.md) | 1.4.2 | Durable tasks, budgets, plans, completion checks, context summaries, consumption tracking, user feedback (👍/👎), a timed task scheduler and an approval queue for proposed actions |
 | [`@astratra/models`](packages/models/README.md) | 1.3.1 | Local CPU model service (embeddings, reranking, NLI, entities, speech-to-text) and its Node client; price catalogue and cost calculation |
 | [`@astratra/conscience`](packages/conscience/README.md) | 1.5.2 | Documented memory of an agent's decisions (outcomes, corrections, lessons with evidence, self-model, lineage, erasure) under a deterministic governor without any language model |
@@ -154,6 +154,7 @@ package is in [CHANGELOG.md](CHANGELOG.md).
 | [`@astratra/loyalty`](packages/loyalty/README.md) | 1.1.0 | Stamp cards and monthly-quota passes, computed without a database |
 | [`@astratra/wallet`](packages/wallet/README.md) | 1.2.1 | Apple Wallet and Google Wallet passes kept up to date (loyalty cards, event tickets, boarding passes): signing, web service, add-to-wallet links, removal |
 | [`@astratra/pdf`](packages/pdf/README.md) | 1.1.0 | PDFKit layout primitives: text that fits its box, paginated tables, card sheets with vector QR codes |
+| [`@astratra/mcp`](packages/mcp/README.md) | 1.0.0 | Model Context Protocol with no dependency: client, server, stdio and Streamable HTTP; Origin check, size and time limits; speaks with the official SDK |
 | [`@astratra/qr`](packages/qr/README.md) | 1.0.0 | QR codes with no dependency, Node and browser: all modes, L/M/Q/H, versions 1 to 40, best mask; SVG, PNG, data URL |
 | [`@astratra/s3`](packages/s3/README.md) | 1.0.0 | S3 client with no dependency (AWS S3, R2, MinIO, SeaweedFS): objects, ranges, streams, lists, batch delete, presigned GET and PUT; SigV4 with node:crypto |
 | [`@astratra/closure`](packages/closure/README.md) | 1.1.0 | Period closing checklist with blocking and acknowledged items, and an archive free of credentials |

@@ -7,7 +7,6 @@
     "@hocuspocus/provider": "collab : synchronisation en direct",
     "@hocuspocus/server": "collab : serveur de synchronisation",
     "@medplum/fhirtypes": "fhir : types FHIR",
-    "@modelcontextprotocol/sdk": "ai, web-search : MCP — à remplacer par un module à nous",
     "@simplewebauthn/server": "security : clés d'accès WebAuthn",
     "@testcontainers/mongodb": "testkit : base jetable (facultatif)",
     "@testcontainers/postgresql": "testkit : base jetable (facultatif)",

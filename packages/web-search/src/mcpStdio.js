@@ -43,8 +43,8 @@ async function main() {
   }
   const browser = browserFromEnv(process.env);
   const ws = createWebSearch({ providers, mode: process.env.WEB_SEARCH_MODE === 'fallback' ? 'fallback' : 'fuse', ...(browser ? { browser } : {}) });
-  const { StdioServerTransport } = require('@modelcontextprotocol/sdk/server/stdio.js');
-  await createMcpServer(ws, { screenshots: process.env.WEB_BROWSER_SCREENSHOTS === '1' }).connect(new StdioServerTransport());
+  const { createStdioServerTransport } = require('@astratra/mcp');
+  await createMcpServer(ws, { screenshots: process.env.WEB_BROWSER_SCREENSHOTS === '1' }).connect(createStdioServerTransport());
   process.stderr.write(`web-search: MCP server ready (${ws.providerIds.join(', ')}${browser ? ', browser' : ''}).\n`);
 }
 

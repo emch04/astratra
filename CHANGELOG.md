@@ -3,6 +3,20 @@
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Chaque package Astratra est versionné indépendamment.
 
+## 2026-11-18 — `@astratra/mcp` 1.0.0 (à publier) : MCP sans le SDK officiel
+
+### Ajouté
+- Nouveau paquet `@astratra/mcp` : `createMcpClient`, `createMcpServer` (`tool()` et `setRequestHandler`), `createStdioServerTransport`, `createStreamableHttpClientTransport`, `createStreamableHttpHandler`, `createInMemoryTransportPair`, `McpError`, `ErrorCode` ; JSON-RPC 2.0, poignée de main et négociation de version (2024-10-07 à 2025-11-25), pages d'outils, délai et annulation (`notifications/cancelled`), réponses JSON ou flux SSE. Pour les projets qui utilisaient `@modelcontextprotocol/sdk` ; les transports ont la forme de ceux du SDK, qui se branchent tels quels, et le SDK parle à ces serveurs dans les deux sens (HTTP, stdio, mémoire).
+- Plus sûr que le SDK : l'en-tête Origin est vérifié par le serveur HTTP (aucune page permise par défaut) ; une exception d'un traitement ou d'un outil ne renvoie jamais son message ; initialize ou tools/call sans paramètres requis répond -32602 au lieu de -32603 avec le vidage d'un schéma ; un curseur inconnu est refusé ; le client n'accepte que https:// (http:// vers la machine), sans redirection, avec des réponses et des flux plafonnés ; un flux qui casse fait échouer sa requête tout de suite ; un curseur répété arrête la liste ; corps, lots, nombre et inactivité des sessions bornés côté serveur.
+
+### Changé
+- `@astratra/ai` 2.0.1 (à publier) : `connectMcpServer` utilise `@astratra/mcp` ; `@modelcontextprotocol/sdk` n'est plus une dépendance.
+- `create-astratra-app` 1.12.1 (à publier) : le projet généré demande `@astratra/ai` ^2.0.1.
+- `@astratra/web-search` 1.2.1 (à publier) : le serveur MCP (`@astratra/web-search/mcp`, `astratra-web-search-mcp`) utilise `@astratra/mcp` ; le SDK n'est plus une dépendance facultative. Le SDK ne reste installé dans le dépôt que par promptfoo, outil d'évaluation de développement (42 dépendances décidées).
+
+### Essais
+- `packages/mcp/__tests__/mcp.test.js` (15, dont 2 avec le SDK), avec `@astratra/testkit/security` : comparé au SDK 1.32.2 sur des réponses enregistrées (`scripts/record-sdk-reference.cjs`) — 25 scénarios de serveur (versions, ping, pages, appels, validation, outil inconnu, exceptions, méthodes inconnues), 20 requêtes HTTP (Accept, Content-Type, JSON cassé, sessions, version, lots, DELETE) et les 8 messages du client (poignée de main, pages, appel, délai avec annulation, ping), mêmes réponses hors 6 écarts voulus et nommés ; le SDK lui-même contre ces serveurs et ce client, en HTTP (JSON et SSE), stdio et mémoire (`MCP_SDK_PROJECT`) ; serveur distant hostile (redirection, réponse et flux immenses, session invalide, JSON cassé) ; serveur HTTP (Origin, corps, lot, sessions, délai) ; messages d'exception cachés ; annulation ; fuzz de messages bruts (une réponse bien formée ou rien) ; stdio ; expressions régulières. Deux défauts trouvés et corrigés avant la validation : une session expirait pendant une requête longue, et un flux SSE cassé laissait sa requête attendre son délai. `npm run verify:mutations` dans mcp : 22 mutations, toutes tuées.
+
 ## 2026-11-18 — la validation des requêtes sans express-validator
 
 ### Ajouté

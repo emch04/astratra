@@ -288,13 +288,13 @@ describe('gardes de @astratra/ai sur une page piégée', () => {
 
 describe('serveur MCP avec le navigateur', () => {
   test('quatre outils ; la capture revient en image avec screenshots: true', async () => {
-    const { Client } = require('@modelcontextprotocol/sdk/client/index.js');
-    const { InMemoryTransport } = require('@modelcontextprotocol/sdk/inMemory.js');
+    const { createMcpClient, createInMemoryTransportPair } = require('@astratra/mcp');
     const browser = fakeBrowser({ 'https://spa.example/': { text: 'Texte rendu' } });
     const server = createMcpServer(make(browser), { screenshots: true });
-    const [clientSide, serverSide] = InMemoryTransport.createLinkedPair();
-    const client = new Client({ name: 'test', version: '1.0.0' });
-    await Promise.all([server.connect(serverSide), client.connect(clientSide)]);
+    const [clientSide, serverSide] = createInMemoryTransportPair();
+    const client = createMcpClient({ name: 'test', version: '1.0.0' });
+    await server.connect(serverSide);
+    await client.connect(clientSide);
     const { tools } = await client.listTools();
     expect(tools.map((tool) => [tool.name, tool.annotations.readOnlyHint])).toEqual([['web_search', true], ['read_page', true], ['browse_page', true], ['search_site', true]]);
     const page = await client.callTool({ name: 'browse_page', arguments: { url: 'https://spa.example/', screenshot: true } });
@@ -307,12 +307,12 @@ describe('serveur MCP avec le navigateur', () => {
   });
 
   test('sans screenshots : la capture est refusée', async () => {
-    const { Client } = require('@modelcontextprotocol/sdk/client/index.js');
-    const { InMemoryTransport } = require('@modelcontextprotocol/sdk/inMemory.js');
+    const { createMcpClient, createInMemoryTransportPair } = require('@astratra/mcp');
     const server = createMcpServer(make(fakeBrowser({ 'https://spa.example/': { text: 'x' } })));
-    const [clientSide, serverSide] = InMemoryTransport.createLinkedPair();
-    const client = new Client({ name: 'test', version: '1.0.0' });
-    await Promise.all([server.connect(serverSide), client.connect(clientSide)]);
+    const [clientSide, serverSide] = createInMemoryTransportPair();
+    const client = createMcpClient({ name: 'test', version: '1.0.0' });
+    await server.connect(serverSide);
+    await client.connect(clientSide);
     const page = await client.callTool({ name: 'browse_page', arguments: { url: 'https://spa.example/', screenshot: true } });
     expect(page.isError).toBe(true);
     await client.close();

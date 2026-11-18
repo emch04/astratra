@@ -1,0 +1,39 @@
+{
+  "name": "@astratra/mcp",
+  "version": "1.0.0",
+  "description": "The Model Context Protocol with no dependency: client and server (initialize, tools/list, tools/call, ping, cancellation), stdio and Streamable HTTP transports, Origin check, size and time limits. Works with transports from the official SDK too.",
+  "engines": {
+    "node": ">=22"
+  },
+  "main": "src/index.js",
+  "types": "src/index.d.ts",
+  "type": "commonjs",
+  "files": [
+    "src"
+  ],
+  "scripts": {
+    "test": "jest",
+    "verify:mutations": "node scripts/verify-mcp-mutations.cjs"
+  },
+  "jest": {
+    "testMatch": [
+      "**/__tests__/**/*.test.js"
+    ]
+  },
+  "keywords": [
+    "astratra",
+    "mcp",
+    "model-context-protocol",
+    "json-rpc",
+    "streamable-http",
+    "stdio"
+  ],
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  },
+  "devDependencies": {
+    "@astratra/testkit": "^2.0.0",
+    "jest": "30.4.2"
+  }
+}

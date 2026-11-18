@@ -139,14 +139,14 @@ describe('registry tools in runAgentLoop of @astratra/ai', () => {
 
 describe('MCP server', () => {
   test('lists both tools and answers a call; a failure is an isError result', async () => {
-    const { Client } = require('@modelcontextprotocol/sdk/client/index.js');
-    const { InMemoryTransport } = require('@modelcontextprotocol/sdk/inMemory.js');
+    const { createMcpClient, createInMemoryTransportPair } = require('@astratra/mcp');
     const network = fakeNetwork({ 'example.com': { addresses: ['93.184.216.34'], pages: { '/a': { body: '<article><p>Le guide complet.</p></article>' } } } });
     const ws = createWebSearch({ providers: [fakeProvider('one', [hit('https://example.com/a', 'Guide A', 'Extrait A.')])], ...network, now: () => NOW });
     const server = createMcpServer(ws);
-    const [clientSide, serverSide] = InMemoryTransport.createLinkedPair();
-    const client = new Client({ name: 'test', version: '1.0.0' });
-    await Promise.all([server.connect(serverSide), client.connect(clientSide)]);
+    const [clientSide, serverSide] = createInMemoryTransportPair();
+    const client = createMcpClient({ name: 'test', version: '1.0.0' });
+    await server.connect(serverSide);
+    await client.connect(clientSide);
     const { tools } = await client.listTools();
     expect(tools.map((tool) => [tool.name, tool.annotations.readOnlyHint])).toEqual([['web_search', true], ['read_page', true]]);
     const found = await client.callTool({ name: 'web_search', arguments: { query: 'guide' } });

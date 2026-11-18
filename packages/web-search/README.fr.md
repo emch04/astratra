@@ -160,8 +160,8 @@ toolDefinitions('gemini');      // [{ functionDeclarations: [...] }], schéma ne
 - **`runAgentLoop` de `@astratra/ai`** : `registryTools(ws, { roles })`
   inscrit `type: 'read'`, `risk: 'LOW'`, `external: true` (la requête sort de
   l'application : le masque des données personnelles s'y applique).
-- **MCP** : `createMcpServer(ws)` de `@astratra/web-search/mcp` (il faut
-  `@modelcontextprotocol/sdk`) sert les deux mêmes outils, marqués en lecture
+- **MCP** : `createMcpServer(ws)` de `@astratra/web-search/mcp` (protocole de
+  `@astratra/mcp`, sans dépendance) sert les deux mêmes outils, marqués en lecture
   seule. Un serveur stdio prêt à l'emploi lit ses moteurs dans l'environnement :
 
 ```bash

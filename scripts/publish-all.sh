@@ -34,6 +34,7 @@ ORDER=(
   "@astratra/payments"
   "@astratra/privacy"
   "@astratra/resilience"
+  "@astratra/mcp"
   "@astratra/ai"
   "@astratra/agent"
   "@astratra/memory"

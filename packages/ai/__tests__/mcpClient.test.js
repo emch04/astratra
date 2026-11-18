@@ -1,26 +1,23 @@
 const http = require('http');
-const { z } = require('zod');
-const { McpServer } = require('@modelcontextprotocol/sdk/server/mcp.js');
-const { StreamableHTTPServerTransport } = require('@modelcontextprotocol/sdk/server/streamableHttp.js');
-const { InMemoryTransport } = require('@modelcontextprotocol/sdk/inMemory.js');
+const { createMcpServer, createStreamableHttpHandler, createInMemoryTransportPair } = require('@astratra/mcp');
 const { connectMcpServer, mcpToolName, validateNativeTools, createToolCaller } = require('../src');
 
 /* Un petit serveur MCP de test, à la manière d'un salon de discussion : lire, écrire, et un outil en trop. */
 function serveur() {
-  const s = new McpServer({ name: 'salle-de-test', version: '1.0.0' }, { instructions: 'Parle librement.' });
+  const s = createMcpServer({ name: 'salle-de-test', version: '1.0.0' }, { instructions: 'Parle librement.' });
   const recus = [];
-  s.registerTool('lire_reunion', { description: 'Lit la réunion.', inputSchema: { apres: z.number().int().optional() } },
+  s.tool({ name: 'lire_reunion', description: 'Lit la réunion.', inputSchema: { type: 'object', properties: { apres: { type: 'integer' } } } },
     async ({ apres }) => ({ content: [{ type: 'text', text: JSON.stringify({ messages: [{ id: 1, texte: 'Bonjour' }], curseur: apres ?? 1 }) }] }));
-  s.registerTool('ecrire_message', { description: 'Écrit un message.', inputSchema: { texte: z.string() } },
+  s.tool({ name: 'ecrire_message', description: 'Écrit un message.', inputSchema: { type: 'object', properties: { texte: { type: 'string' } }, required: ['texte'] } },
     async ({ texte }) => { recus.push(texte); return { content: [{ type: 'text', text: JSON.stringify({ ok: true }) }] }; });
-  s.registerTool('outil-en-trop', { description: 'Ne doit pas être exposé.' }, async () => ({ content: [{ type: 'text', text: 'non' }] }));
-  s.registerTool('echoue', { description: 'Échoue.' }, async () => ({ isError: true, content: [{ type: 'text', text: '{"erreur":"reunion_fermee"}' }] }));
+  s.tool({ name: 'outil-en-trop', description: 'Ne doit pas être exposé.' }, async () => ({ content: [{ type: 'text', text: 'non' }] }));
+  s.tool({ name: 'echoue', description: 'Échoue.' }, async () => ({ isError: true, content: [{ type: 'text', text: '{"erreur":"reunion_fermee"}' }] }));
   return { s, recus };
 }
 
 async function enMemoire(options = {}) {
   const { s, recus } = serveur();
-  const [cote, coteServeur] = InMemoryTransport.createLinkedPair();
+  const [cote, coteServeur] = createInMemoryTransportPair();
   await s.connect(coteServeur);
   const connexion = await connectMcpServer({ transport: cote, ...options });
   return { connexion, recus };
@@ -63,16 +60,11 @@ describe('mcpClient', () => {
 
   test('par Streamable HTTP, avec la clé dans l’en-tête', async () => {
     const entetes = [];
+    const gestionnaire = createStreamableHttpHandler({ createServer: () => serveur().s });
     const http1 = http.createServer(async (req, res) => {
       entetes.push(req.headers.authorization);
       if (req.headers.authorization !== 'Bearer plb_test') { res.statusCode = 404; return res.end(); }
-      const { s } = serveur();
-      const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined });
-      res.on('close', () => { transport.close(); s.close(); });
-      await s.connect(transport);
-      let corps = '';
-      for await (const morceau of req) corps += morceau;
-      await transport.handleRequest(req, res, corps ? JSON.parse(corps) : undefined);
+      return gestionnaire(req, res);
     });
     await new Promise((ok) => http1.listen(0, '127.0.0.1', ok));
     const url = `http://127.0.0.1:${http1.address().port}/mcp`;
@@ -84,6 +76,7 @@ describe('mcpClient', () => {
       expect(entetes.every((e) => e === 'Bearer plb_test')).toBe(true);
       await expect(connectMcpServer({ url, headers: { Authorization: 'Bearer mauvaise' } })).rejects.toBeTruthy();
     } finally {
+      await gestionnaire.closeAll();
       await new Promise((ok) => http1.close(ok));
     }
   });

@@ -134,7 +134,7 @@ est dans [CHANGELOG.md](CHANGELOG.md).
 
 | Paquet | Version | Rôle |
 |---|---|---|
-| [`@astratra/ai`](packages/ai/README.md) | 2.0.0 | Routage multi-fournisseur avec quotas et repli, registre d'outils, boucle d'agent, niveaux de risque avec confirmation, fournisseur llama.cpp local |
+| [`@astratra/ai`](packages/ai/README.md) | 2.0.1 | Routage multi-fournisseur avec quotas et repli, registre d'outils, boucle d'agent, niveaux de risque avec confirmation, fournisseur llama.cpp local |
 | [`@astratra/agent`](packages/agent/README.md) | 1.4.2 | Tâches durables, budgets, plans, vérifications de fin, résumés de contexte, suivi de la consommation, retours utilisateur (👍/👎), ordonnanceur de tâches à heure fixe et file d'actions en attente d'approbation |
 | [`@astratra/models`](packages/models/README.md) | 1.3.1 | Service local de modèles sur CPU (vecteurs, reclassement, NLI, entités, transcription) et son client Node ; catalogue des prix et calcul du coût |
 | [`@astratra/conscience`](packages/conscience/README.md) | 1.5.2 | Mémoire documentée des décisions d'un agent (résultats, corrections, leçons avec preuves, modèle de soi, traçabilité, effacement) sous un gouverneur déterministe sans aucun modèle de langage |
@@ -160,6 +160,7 @@ est dans [CHANGELOG.md](CHANGELOG.md).
 | [`@astratra/loyalty`](packages/loyalty/README.md) | 1.1.0 | Cartes à tampons et cartes à quota mensuel, calculées sans base de données |
 | [`@astratra/wallet`](packages/wallet/README.md) | 1.2.1 | Cartes Apple Wallet et Google Wallet tenues à jour (fidélité, billets, embarquement) : signature, service web, lien d'ajout, retrait |
 | [`@astratra/pdf`](packages/pdf/README.md) | 1.1.0 | Primitives de mise en page PDFKit : texte qui tient dans sa case, tableaux paginés, planches de cartes avec QR vectoriel |
+| [`@astratra/mcp`](packages/mcp/README.md) | 1.0.0 | Model Context Protocol sans dépendance : client, serveur, stdio et Streamable HTTP ; en-tête Origin vérifié, limites de taille et de temps ; parle avec le SDK officiel |
 | [`@astratra/qr`](packages/qr/README.md) | 1.0.0 | Codes QR sans dépendance, Node et navigateur : tous les modes, L/M/Q/H, versions 1 à 40, meilleur masque ; SVG, PNG, adresse data: |
 | [`@astratra/s3`](packages/s3/README.md) | 1.0.0 | Client S3 sans dépendance (AWS S3, R2, MinIO, SeaweedFS) : objets, plages, flux, listes, suppression groupée, liens signés en lecture et en dépôt ; signature v4 avec node:crypto |
 | [`@astratra/closure`](packages/closure/README.md) | 1.1.0 | Liste de clôture de période à points bloquants et reconnus, archive sans aucun identifiant |

@@ -4,29 +4,19 @@
  * navigateur est branché) et le même texte cadré. Une capture d'écran revient
  * en contenu image, seulement avec `screenshots: true`.
  *
- * Le SDK MCP officiel (@modelcontextprotocol/sdk) est une dépendance
- * facultative : il n'est chargé qu'ici. Le serveur bas niveau prend les
- * schémas JSON tels quels (sans zod).
+ * Le protocole vient de @astratra/mcp (sans dépendance) ; un transport du
+ * SDK officiel se branche aussi tel quel.
  *
  *   const { createMcpServer } = require('@astratra/web-search/mcp');
  *   const server = createMcpServer(ws);
- *   await server.connect(transport);   // StdioServerTransport, Streamable HTTP…
+ *   await server.connect(transport);   // createStdioServerTransport(), createStreamableHttpHandler…
  *
  * Une erreur d'outil revient au client en `isError: true` avec son code et son
  * message (jamais une clé), pas en panne du serveur.
  */
 
+const { createMcpServer: createProtocolServer } = require('@astratra/mcp');
 const { toolDefinitions, runTool } = require('./tools');
-
-function loadSdk() {
-  try {
-    const { Server } = require('@modelcontextprotocol/sdk/server/index.js');
-    const { ListToolsRequestSchema, CallToolRequestSchema } = require('@modelcontextprotocol/sdk/types.js');
-    return { Server, ListToolsRequestSchema, CallToolRequestSchema };
-  } catch (error) {
-    throw new Error('createMcpServer needs @modelcontextprotocol/sdk: npm install @modelcontextprotocol/sdk', { cause: error });
-  }
-}
 
 /**
  * @param {object} ws  createWebSearch(…)
@@ -34,8 +24,7 @@ function loadSdk() {
  */
 function createMcpServer(ws, options = {}) {
   if (!ws || typeof ws.search !== 'function' || typeof ws.read !== 'function') throw new Error('createMcpServer needs a web search from createWebSearch().');
-  const { Server, ListToolsRequestSchema, CallToolRequestSchema } = loadSdk();
-  const server = new Server(
+  const server = createProtocolServer(
     { name: options.name || 'astratra-web-search', version: options.version || require('../package.json').version },
     {
       capabilities: { tools: {} },
@@ -49,9 +38,9 @@ function createMcpServer(ws, options = {}) {
     inputSchema: parameters,
     annotations: { readOnlyHint: true, openWorldHint: true, destructiveHint: false }
   }));
-  server.setRequestHandler(ListToolsRequestSchema, async () => ({ tools }));
-  server.setRequestHandler(CallToolRequestSchema, async (request, extra) => {
-    const { name, arguments: args } = request.params;
+  server.setRequestHandler('tools/list', async () => ({ tools }));
+  server.setRequestHandler('tools/call', async (request, extra) => {
+    const { name, arguments: args } = request.params || {};
     try {
       if ((name === 'browse_page' || name === 'search_site') && !offered.browser) throw Object.assign(new Error(`unknown tool ${name}`), { code: 'WEB_SEARCH_BAD_REQUEST' });
       const { text, images } = await runTool(ws, name, args || {}, { signal: extra?.signal, defaults: options.defaults, maxChars: options.maxChars, screenshots: offered.screenshots });
