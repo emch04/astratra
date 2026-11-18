@@ -234,3 +234,55 @@ export class GoogleAuthError extends Error {
   response?: { status: number; data: unknown };
 }
 export const GOOGLE_TOKEN_URI: string;
+
+/** Le téléversement de fichiers (multipart/form-data), en mémoire, sans multer ni busboy. */
+export interface UploadLimits {
+  /** 10 Mio par défaut. */
+  fileSize?: number;
+  /** 10 par défaut. */
+  files?: number;
+  /** 100 par défaut. */
+  fields?: number;
+  /** 1 Mio par défaut. */
+  fieldSize?: number;
+  fieldNameSize?: number;
+  /** 200 par défaut. */
+  parts?: number;
+  headerSize?: number;
+  headerPairs?: number;
+  /** 50 Mio par défaut. */
+  totalSize?: number;
+}
+export interface UploadedFile {
+  fieldname: string;
+  /** Le nom donné par le client, sans son chemin. */
+  originalname: string;
+  /** Le même nom, sans caractère réservé, utilisable sur un disque. */
+  safeName: string;
+  encoding: string;
+  /** Annoncé par le client : pas une preuve (voir detectFileType). */
+  mimetype: string;
+  size: number;
+  buffer: Buffer;
+}
+export type UploadFileFilter =
+  | ((req: any, file: Omit<UploadedFile, 'buffer' | 'size'> & { buffer?: Buffer; size?: number }, cb: (error: Error | null, accept?: boolean) => void) => void)
+  | ((req: any, file: UploadedFile) => boolean | Promise<boolean>);
+export interface Upload {
+  single(name: string): RequestHandler;
+  array(name: string, maxCount?: number): RequestHandler;
+  fields(fields: Array<{ name: string; maxCount?: number }>): RequestHandler;
+  none(): RequestHandler;
+  any(): RequestHandler;
+}
+export function createUpload(options?: { limits?: UploadLimits; fileFilter?: UploadFileFilter }): Upload;
+/** Le vrai type d'un fichier d'après ses premiers octets, ou null. */
+export function detectFileType(buffer: Buffer): { ext: string; mime: string } | null;
+export function safeFileName(name: string): string;
+export class UploadError extends Error {
+  code: 'LIMIT_PART_COUNT' | 'LIMIT_FILE_SIZE' | 'LIMIT_FILE_COUNT' | 'LIMIT_FIELD_KEY' | 'LIMIT_FIELD_VALUE' | 'LIMIT_FIELD_COUNT' | 'LIMIT_UNEXPECTED_FILE' | 'LIMIT_TOTAL_SIZE' | 'MISSING_FIELD_NAME' | 'FIELD_NAME_FORBIDDEN' | 'MALFORMED' | 'UNEXPECTED_END' | 'HEADER_TOO_LARGE';
+  field?: string;
+  status: number;
+  statusCode: number;
+}
+export const UPLOAD_DEFAULT_LIMITS: Required<UploadLimits>;

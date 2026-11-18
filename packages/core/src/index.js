@@ -22,5 +22,6 @@ module.exports = {
   validateMiddleware,
   loadEnv,
   ...require('./idempotency'),
-  ...require('./googleServiceAccount')
+  ...require('./googleServiceAccount'),
+  ...require('./upload')
 };

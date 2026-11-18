@@ -3,6 +3,15 @@
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Chaque package Astratra est versionné indépendamment.
 
+## 2026-11-18 — le téléversement de fichiers sans multer
+
+### Ajouté
+- `@astratra/core` 1.3.0 (à publier) : `createUpload({ limits, fileFilter })` (`.single`, `.array`, `.fields`, `.none`, `.any`), le téléversement `multipart/form-data` lu au fil du flux et gardé en mémoire, sans multer ni busboy ; mêmes usages que multer en mémoire (`req.file`, `req.files`, `req.body`, `fileFilter` en rappel ou en promesse), mêmes codes d'erreur avec `status` 400 ou 413. `detectFileType(buffer)` (le vrai type d'un fichier par ses premiers octets : jpg, png, gif, webp, avif, heic, pdf, mp4, mov, webm, ogg, mp3, wav, zip) et `safeFileName(nom)`. Pour les projets qui utilisent multer.
+- Des limites par défaut (10 Mio par fichier, 10 fichiers, 100 champs, 1 Mio par champ, 200 parties, 50 Mio au total). Plus strict que multer : champ `__proto__`, `constructor` ou `prototype` refusé ; en-tête répété dans une partie refusé (deux lectures possibles) ; nom d'en-tête hors des caractères permis refusé ; texte collé après une valeur entre guillemets refusé ; partie sans `Content-Disposition` refusée ; noms lus en UTF-8 ; rien n'est lu après la frontière finale (busboy y comptait encore des parties).
+
+### Essais
+- `__tests__/upload.test.js` (19), avec `@astratra/testkit/security` : comparé à multer 2.4.0 sur 191 formulaires enregistrés (`scripts/record-multer-reference.cjs`) — mêmes réponses sur les formulaires nommés hors écarts voulus, et, sur 150 corps abîmés, résultat identique chaque fois que les deux acceptent ; FormData réels ; propriété « le découpage en morceaux ne change rien » (frontières coupées entre deux morceaux, de 1 à 80 octets) ; noms de fichier piégés ; en-têtes trop longs, sans fin ou répétés ; limite totale ; corps de 64 Mio refusé avec moins de 48 Mio de mémoire ; envoi interrompu ; fuzz (400 corps) ; expressions régulières. `npm run verify:mutations` dans core : 11 mutations du lecteur, toutes tuées (trois survivaient d'abord : limite totale, en-têtes sans fin, type mal formé).
+
 ## 2026-11-18 — les jetons JWT sans jsonwebtoken
 
 ### Changé

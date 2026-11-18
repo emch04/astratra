@@ -13,7 +13,7 @@
   ],
   "scripts": {
     "test": "jest",
-    "verify:mutations": "node scripts/verify-google-mutations.cjs"
+    "verify:mutations": "node scripts/verify-google-mutations.cjs && node scripts/verify-upload-mutations.cjs"
   },
   "keywords": [
     "astratra",

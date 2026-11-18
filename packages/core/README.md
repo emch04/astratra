@@ -27,7 +27,9 @@ const {
   idempotencyMiddleware, // (options) => une écriture rejouée avec la même clé ne s'exécute qu'une fois
   createIdempotency,     // (options) => le même moteur, hors HTTP (tâches, files, RPC)
   createMemoryIdempotencyStore,
-  createGoogleServiceAccountAuth // ({ credentials, scopes }) => { getAccessToken, request } — jeton d'un compte de service Google
+  createGoogleServiceAccountAuth, // ({ credentials, scopes }) => { getAccessToken, request } — jeton d'un compte de service Google
+  createUpload,          // ({ limits, fileFilter }) => { single, array, fields, none, any } — téléversements, sans multer
+  detectFileType         // (buffer) => { ext, mime } | null — le vrai type d'un fichier, par ses premiers octets
 } = require('@astratra/core');
 ```
 
@@ -171,6 +173,35 @@ const { data } = await google.request({ method: 'GET', url: 'https://walletobjec
 - Une clé collée avec des `\n` écrits en toutes lettres est acceptée. Aucun
   message d'erreur ne reprend la clé, l'assertion ou le jeton ; chaque appel à
   Google a un délai (`timeoutMs`, 15 s).
+
+## Téléversement de fichiers
+
+Le téléversement (`multipart/form-data`), lu au fil du flux et gardé en mémoire,
+sans multer ni busboy. Les mêmes usages que multer en mémoire, les mêmes codes
+d'erreur (`LIMIT_FILE_SIZE`, `LIMIT_UNEXPECTED_FILE`…, avec `status` 400 ou 413) :
+
+```js
+const { createUpload, detectFileType } = require('@astratra/core');
+
+const upload = createUpload({ limits: { fileSize: 5 * 1024 * 1024, files: 1 } });
+app.post('/photos', upload.single('photo'), (req, res) => {
+  const type = detectFileType(req.file.buffer);           // le type annoncé (req.file.mimetype) n'est pas une preuve
+  if (!type || !['jpg', 'png', 'webp'].includes(type.ext)) return res.status(400).end();
+  // req.file : fieldname, originalname (sans chemin), safeName, mimetype, size, buffer ; req.body : les autres champs
+});
+```
+
+- Des limites par défaut (multer n'en avait aucune) : 10 Mio par fichier, 10
+  fichiers, 100 champs, 1 Mio par champ, 200 parties, 50 Mio au total.
+- Comparé à multer 2.4.0 sur 191 formulaires enregistrés : quand les deux
+  acceptent, mêmes champs et mêmes fichiers, octet pour octet. Écarts voulus :
+  noms lus en UTF-8 (multer donnait « Ã©lÃ¨ve »), champ `__proto__`,
+  `constructor` ou `prototype` refusé, en-tête répété dans une partie refusé,
+  partie sans `Content-Disposition` refusée, et rien n'est lu après la
+  frontière finale (busboy continuait).
+- Un corps interrompu, des en-têtes trop longs ou une frontière absente sont des
+  erreurs 400, jamais une attente sans fin ; au-delà de la limite totale, le
+  reste du corps n'est pas gardé.
 
 ## Tests
 
