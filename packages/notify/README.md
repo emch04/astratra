@@ -2,9 +2,9 @@
 
 Les messages sortants, faits une fois : **e-mail, SMS, notifications poussées**.
 
-Le transport est toujours injecté — SMTP, une API HTTP, Twilio, Infobip,
-web-push, Expo. Ce package apporte l'anneau autour, et c'est le même anneau
-pour les trois canaux :
+Le transport est injecté — SMTP, une API HTTP, Twilio, Infobip, Expo — ou
+fourni pour les notifications web et Apple, sans SDK. Ce package apporte
+l'anneau autour, et c'est le même anneau pour les trois canaux :
 
 - **rien ne lève jamais** — un message est la conséquence d'une action, pas
   l'action ;
@@ -192,8 +192,8 @@ traiter** :
 const { createPushSender } = require('@astratra/notify');
 
 const push = createPushSender({
-  transport: (subscription, payload) =>
-    webpush.sendNotification(subscription, JSON.stringify(payload)),
+  // createWebPushTransport (plus bas), Expo, le tien : tout transport qui lève avec le statut du fournisseur.
+  transport: (subscription, payload) => monFournisseur.send(subscription, payload),
   // LE point du module : l'abonnement mort t'est rendu pour suppression.
   onGone: (subscription) => Subscriptions.deleteOne({ endpoint: subscription.endpoint }),
   concurrency: 10, // défaut : 10 envois simultanés au maximum
@@ -217,8 +217,60 @@ désordre, `errors` suit toujours l'ordre des abonnements d'entrée (et conserve
 sa limite historique de dix raisons).
 
 Le statut du fournisseur est cherché où qu'il l'ait mis — `statusCode`,
-`status`, `response.status` — parce que web-push et les clients HTTP ne sont pas
-d'accord entre eux.
+`status`, `response.status` — parce que les clients HTTP ne sont pas d'accord
+entre eux.
+
+## Les notifications web, en direct : `createWebPushTransport`
+
+Web Push sans bibliothèque : le message est chiffré pour le navigateur
+(RFC 8291, « aes128gcm »), signé par le serveur (VAPID, RFC 8292) et remis au
+service de notification du navigateur (Google, Mozilla, Apple, Microsoft).
+Il remplace web-push.
+
+```js
+const { createWebPushTransport, createPushSender, generateVapidKeys } = require('@astratra/notify');
+
+// Une fois : la paire de clés VAPID, à garder dans l'environnement.
+// const { publicKey, privateKey } = generateVapidKeys();
+
+const transport = createWebPushTransport({
+  vapid: { subject: 'mailto:contact@exemple.fr', publicKey: process.env.VAPID_PUBLIQUE, privateKey: process.env.VAPID_PRIVEE },
+  ttl: 86_400,        // le service garde le message un jour (défaut : quatre semaines)
+  urgency: 'normal',  // very-low, low, normal, high
+});
+const push = createPushSender({ transport, onGone: (s) => Abonnements.deleteOne({ endpoint: s.endpoint }) });
+
+await push.broadcast(abonnements, { title: 'Nouveau message', body: 'Ouvrez l’application' });
+```
+
+`abonnement` est ce que le navigateur donne (`PushSubscription.toJSON()` :
+`{ endpoint, keys: { p256dh, auth } }`). Un objet est envoyé en JSON ; un texte
+ou un Buffer tel quel.
+
+- **L'adresse d'abonnement est vérifiée** : https:// seulement, sans
+  identifiants, et sur un service connu (`KNOWN_PUSH_HOSTS`). Sinon, n'importe
+  quel abonné ferait appeler n'importe quelle adresse à ton serveur (une adresse
+  interne, un service de métadonnées). Un service à toi : `extraHosts`.
+- **Le service ne peut pas faire attendre ni noyer le serveur** : délai de 30 s
+  (`timeoutMs`), réponse lue jusqu'à 64 Kio, redirection jamais suivie.
+- **Les clés sont lues à la création** : une clé VAPID mal formée, ou une clé
+  publique qui ne va pas avec la clé privée, échoue au démarrage (avec
+  web-push, le service répondait 403 à chaque envoi).
+- **L'en-tête VAPID est gardé par service** et refait quand il lui reste moins
+  d'une heure (il vaut 12 h).
+- Un message de plus de 3 993 octets (la limite de la RFC 8291) ou une clé
+  d'appareil hors de la courbe P-256 est refusé avant tout envoi.
+
+Pour un envoi isolé, `sendWebPush(abonnement, texte, { vapid, ttl, urgency,
+topic })` prend les mêmes arguments que `webpush.sendNotification` (`vapidDetails`,
+`TTL` et `timeout` sont aussi acceptés), et rend les mêmes résultats et les
+mêmes erreurs (`WebPushError` avec `statusCode`, `headers`, `body`,
+`endpoint`). `buildWebPushRequest` prépare la requête sans l'envoyer.
+`decryptWebPush` fait le travail du navigateur, pour tes essais.
+
+Pas repris de web-push : l'ancien chiffrement « aesgcm » (un brouillon de 2016,
+remplacé partout), les clés GCM (service fermé en 2019) et l'option `proxy`
+(passe un `agent` HTTPS, par exemple celui de ton mandataire).
 
 ## Les notifications Apple, en direct : `createApnsTransport`
 
@@ -403,9 +455,10 @@ test('le catalogue des notifications', () => {
 
 ## Ce que ce package ne fait pas
 
-- Il n'envoie **rien** lui-même, sauf vers Apple avec `createApnsTransport` :
-  les autres transports sont injectés. Aucun SDK — ni nodemailer, ni Twilio,
-  ni web-push — n'est importé.
+- Il n'envoie **rien** lui-même, sauf vers Apple avec `createApnsTransport` et
+  vers les navigateurs avec `createWebPushTransport` : les autres transports
+  sont injectés. Aucun SDK — ni nodemailer, ni Twilio, ni web-push — n'est
+  importé.
 - Il ne stocke pas les abonnements : il te rend les morts, tu les supprimes.
   Il ne tient pas non plus de registre d'appareils par compte : tu choisis la
   liste, `broadcast` l'envoie.
@@ -420,4 +473,5 @@ test('le catalogue des notifications', () => {
 
 ```bash
 npm test --workspace @astratra/notify
+npm run verify:mutations --workspace @astratra/notify   # 16 mutations du module Web Push
 ```

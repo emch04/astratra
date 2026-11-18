@@ -156,7 +156,7 @@ package is in [CHANGELOG.md](CHANGELOG.md).
 | [`@astratra/pdf`](packages/pdf/README.md) | 1.1.0 | PDFKit layout primitives: text that fits its box, paginated tables, card sheets with vector QR codes |
 | [`@astratra/qr`](packages/qr/README.md) | 1.0.0 | QR codes with no dependency, Node and browser: all modes, L/M/Q/H, versions 1 to 40, best mask; SVG, PNG, data URL |
 | [`@astratra/closure`](packages/closure/README.md) | 1.1.0 | Period closing checklist with blocking and acknowledged items, and an archive free of credentials |
-| [`@astratra/notify`](packages/notify/README.md) | 1.2.0 | Outbound e-mail, SMS and push: injected transport, header-injection safe, never throws |
+| [`@astratra/notify`](packages/notify/README.md) | 1.3.0 | Outbound e-mail, SMS and push: injected transport, header-injection safe, never throws; Web Push and APNs without SDK |
 
 ### Web and mobile
 

@@ -3,6 +3,17 @@
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Chaque package Astratra est versionné indépendamment.
 
+## 2026-11-18 — `@astratra/notify` 1.3.0 (à publier) : Web Push sans web-push
+
+### Ajouté
+- `createWebPushTransport({ vapid, ttl, urgency, topic })` : un transport prêt pour `createPushSender`, qui chiffre le message pour le navigateur (RFC 8291, aes128gcm de la RFC 8188), le signe (VAPID, RFC 8292) et le remet au service de notification (RFC 8030), avec node:crypto et node:https. `sendWebPush`, `buildWebPushRequest`, `generateVapidKeys`, `vapidAuthorization`, `encryptWebPush`, `decryptWebPush`, `WebPushError`, `KNOWN_PUSH_HOSTS`. Pour les projets qui utilisaient web-push : `sendWebPush` prend les mêmes arguments que `webpush.sendNotification` (`vapidDetails`, `TTL`, `timeout` compris) et rend les mêmes résultats et les mêmes erreurs.
+- Plus strict que web-push 3.6.7 : adresse d'abonnement en https://, sans identifiants, sur un service de notification connu (`extraHosts` pour un autre) ; délai de 30 s par défaut, réponse lue jusqu'à 64 Kio, redirection jamais suivie ; message de plus de 3 993 octets (limite de la RFC 8291) et clé d'appareil hors de la courbe refusés ; clés VAPID vérifiées ensemble à la création ; TTL entier ; en-têtes gérés non remplaçables et valeurs sans retour à la ligne ; échéance VAPID dans les 24 h à venir. L'en-tête VAPID est gardé par service et refait quand il lui reste moins d'une heure. Ni « aesgcm » (brouillon de 2016), ni clé GCM (service fermé en 2019), ni option `proxy` (un `agent` HTTPS à la place).
+- `create-astratra-app` 1.12.1 (à publier) : la brique `notify` demande `@astratra/notify` ^1.3.0.
+- `@astratra/testkit` 2.0.0 (à publier) : `standardVectors.webPushRfc8291`, l'exemple de la RFC 8291 avec ses valeurs intermédiaires.
+
+### Essais
+- `packages/notify/__tests__/webPush.test.js` (26), avec `@astratra/testkit/security` : vecteur de la RFC 8291 ; aller-retour pour tout message de 0 à 3 993 octets (propriété) ; comparé à web-push 3.6.7 et http_ece 1.2.0 sur des réponses enregistrées (`scripts/record-web-push-reference.cjs`) — 60 chiffrements identiques à l'octet, 40 messages chiffrés par web-push relus à l'identique, 20 en-têtes VAPID aux mêmes revendications (signatures vérifiées dans les deux sens), 14 grilles d'en-têtes identiques, 33 cas de refus aux mêmes verdicts hors 9 écarts voulus et nommés ; un service local en HTTPS (certificat fait par openssl) : message déchiffré par l'appareil, VAPID pour l'origine, 410 rendu à `onGone`, réponse immense coupée, service muet abandonné, redirection non suivie, certificat inconnu refusé, hôte hors liste refusé avant connexion ; fuzz des abonnements, messages, options et corps ; chaque octet modifié refusé au déchiffrement ; injection d'en-tête ; adresses piégées ; expressions régulières. `npm run verify:mutations` dans notify : 16 mutations, toutes tuées (deux survivaient d'abord : une limite de taille vérifiée deux fois, et aucun essai d'un enregistrement authentique sans délimiteur final).
+
 ## 2026-11-18 — `@astratra/qr` 1.0.0 (à publier) : les codes QR sans dépendance
 
 ### Ajouté

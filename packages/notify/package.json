@@ -1,7 +1,7 @@
 {
   "name": "@astratra/notify",
-  "version": "1.2.0",
-  "description": "Outbound messages done once — email, SMS and push. Transport injected, never throws, header-injection safe, loud simulation when unconfigured, dead push subscriptions handed back for pruning.",
+  "version": "1.3.0",
+  "description": "Outbound messages done once — email, SMS and push. Transport injected, never throws, header-injection safe, loud simulation when unconfigured, dead push subscriptions handed back for pruning. Web Push (RFC 8291, VAPID) and APNs built in, no SDK.",
   "engines": {
     "node": ">=22"
   },
@@ -12,7 +12,8 @@
     "src"
   ],
   "scripts": {
-    "test": "jest"
+    "test": "jest",
+    "verify:mutations": "node scripts/verify-web-push-mutations.cjs"
   },
   "jest": {
     "testMatch": [
@@ -24,6 +25,8 @@
     "email",
     "sms",
     "push",
+    "web-push",
+    "vapid",
     "notifications",
     "transactional"
   ],
@@ -32,6 +35,7 @@
     "access": "public"
   },
   "devDependencies": {
+    "@astratra/testkit": "^2.0.0",
     "jest": "30.4.2"
   }
 }

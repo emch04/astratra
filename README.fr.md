@@ -162,7 +162,7 @@ est dans [CHANGELOG.md](CHANGELOG.md).
 | [`@astratra/pdf`](packages/pdf/README.md) | 1.1.0 | Primitives de mise en page PDFKit : texte qui tient dans sa case, tableaux paginés, planches de cartes avec QR vectoriel |
 | [`@astratra/qr`](packages/qr/README.md) | 1.0.0 | Codes QR sans dépendance, Node et navigateur : tous les modes, L/M/Q/H, versions 1 à 40, meilleur masque ; SVG, PNG, adresse data: |
 | [`@astratra/closure`](packages/closure/README.md) | 1.1.0 | Liste de clôture de période à points bloquants et reconnus, archive sans aucun identifiant |
-| [`@astratra/notify`](packages/notify/README.md) | 1.2.0 | Messages sortants : e-mail, SMS, push ; transport injecté, protégé contre l'injection d'en-têtes, ne lève jamais |
+| [`@astratra/notify`](packages/notify/README.md) | 1.3.0 | Messages sortants : e-mail, SMS, push ; transport injecté, protégé contre l'injection d'en-têtes, ne lève jamais ; Web Push et APNs sans SDK |
 
 ### Web et mobile
 

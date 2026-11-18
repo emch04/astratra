@@ -5,6 +5,7 @@ module.exports = {
   ...require('./sms'),
   ...require('./push'),
   ...require('./apns'),
+  ...require('./webPush'),
   ...require('./inbox'),
   ...require('./catalog')
 };

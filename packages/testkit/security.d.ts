@@ -156,6 +156,7 @@ export const standardVectors: {
   hotpRfc4226: Vector<{ secret: Buffer; counter: number; digits: number; algorithm: string }>[];
   totpRfc6238: Vector<{ secret: Buffer; time: number; step: number; digits: number; algorithm: string }>[];
   jwsHs256Rfc7515: Vector<{ token: string; jwk: { kty: 'oct'; k: string } }>[];
+  webPushRfc8291: (Vector<{ plaintext: Buffer; asPublic: string; asPrivate: string; uaPublic: string; uaPrivate: string; salt: string; authSecret: string; recordSize: number }> & { expected: { ecdhSecret: string; ikm: string; cek: string; nonce: string; body: string } })[];
 };
 
 export interface RelationOutcome { ok: boolean; value?: unknown; error?: unknown }

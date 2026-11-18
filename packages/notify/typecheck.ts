@@ -142,3 +142,18 @@ async function exercise(): Promise<void> {
 }
 
 void exercise;
+
+// Web Push
+import { generateVapidKeys, sendWebPush, createWebPushTransport, buildWebPushRequest, WebPushError, type WebPushResult } from './src/index';
+const vapidKeys = generateVapidKeys();
+const webPushTransport = createWebPushTransport({ vapid: { subject: 'mailto:contact@example.test', ...vapidKeys }, ttl: 3600, urgency: 'high' });
+const webPushSub = { endpoint: 'https://fcm.googleapis.com/fcm/send/x', keys: { p256dh: 'p', auth: 'a' } };
+const webPushSent: Promise<WebPushResult> = sendWebPush(webPushSub, 'bonjour', { vapidDetails: { subject: 'mailto:contact@example.test', ...vapidKeys }, TTL: 60 });
+void webPushSent;
+void webPushTransport(webPushSub, { title: 'x' });
+const webPushRequest = buildWebPushRequest(webPushSub, null);
+const webPushHeaders: Record<string, string> = webPushRequest.headers;
+void webPushHeaders;
+const webPushError = new WebPushError('x');
+const webPushStatus: number | undefined = webPushError.statusCode;
+void webPushStatus;

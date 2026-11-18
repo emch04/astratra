@@ -104,7 +104,7 @@ export const tenants = createTenantScope({
 
   notify: {
     package: '@astratra/notify',
-    version: '^1.2.0',
+    version: '^1.3.0',
     summary: 'e-mail, SMS et notifications poussées, transport injecté',
     file: 'api/bricks/notify.js',
     contents: () => `import { createCaptureChannel, createMailer, renderEmail, renderText } from '@astratra/notify';

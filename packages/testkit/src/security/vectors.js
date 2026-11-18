@@ -93,6 +93,34 @@ const standardVectors = {
       expected: 'valid',
     },
   ],
+  /**
+   * RFC 8291, section 5 et annexe A : un message Web Push chiffré (aes128gcm, RFC 8188). Le chiffrement doit rendre
+   * ces octets exactement avec ce sel et cette clé du serveur ; le déchiffrement, avec la clé de l'appareil, le texte.
+   */
+  webPushRfc8291: [
+    {
+      id: 'RFC 8291 annexe A',
+      input: {
+        plaintext: Buffer.from('V2hlbiBJIGdyb3cgdXAsIEkgd2FudCB0byBiZSBhIHdhdGVybWVsb24', 'base64url'),
+        asPublic: 'BP4z9KsN6nGRTbVYI_c7VJSPQTBtkgcy27mlmlMoZIIgDll6e3vCYLocInmYWAmS6TlzAC8wEqKK6PBru3jl7A8',
+        asPrivate: 'yfWPiYE-n46HLnH0KqZOF1fJJU3MYrct3AELtAQ-oRw',
+        uaPublic: 'BCVxsr7N_eNgVRqvHtD0zTZsEc6-VV-JvLexhqUzORcxaOzi6-AYWXvTBHm4bjyPjs7Vd8pZGH6SRpkNtoIAiw4',
+        uaPrivate: 'q1dXpw3UpT5VOmu_cf_v6ih07Aems3njxI-JWgLcM94',
+        salt: 'DGv6ra1nlYgDCS1FRnbzlw',
+        authSecret: 'BTBZMqHH6r4Tts7J_aSIgg',
+        recordSize: 4096,
+      },
+      expected: {
+        ecdhSecret: 'kyrL1jIIOHEzg3sM2ZWRHDRB62YACZhhSlknJ672kSs',
+        ikm: 'S4lYMb_L0FxCeq0WhDx813KgSYqU26kOyzWUdsXYyrg',
+        cek: 'oIhVW04MRdy2XN9CiKLxTg',
+        nonce: '4h_95klXJ5E_qnoN',
+        body:
+          'DGv6ra1nlYgDCS1FRnbzlwAAEABBBP4z9KsN6nGRTbVYI_c7VJSPQTBtkgcy27mlmlMoZIIgDll6e3vCYLocInmYWAmS6TlzAC8wEqKK6PBru3jl7A_yl95bQpu6cVPT' +
+          'pK4Mqgkf1CXztLVBSt2Ks3oZwbuwXPXLWyouBWLVWGNWQexSgSxsj_Qulcy4a-fN',
+      },
+    },
+  ],
 };
 
 module.exports = { runVectors, assertVectors, fromWycheproof, standardVectors };

@@ -350,3 +350,80 @@ export function createApnsTransport(options: {
   now?: () => number;
 }): ApnsTransport;
 export function apnsBody(payload: ApnsPayload): string;
+
+/** A browser push subscription, as PushSubscription.toJSON() gives it. */
+export interface WebPushSubscription {
+  endpoint: string;
+  keys?: { p256dh: string; auth: string };
+}
+export interface VapidKeys {
+  /** An https: URL or a mailto: address the push service can reach you at. */
+  subject: string;
+  /** 65-byte uncompressed P-256 point, URL-safe base64 without "=". */
+  publicKey: string;
+  /** 32-byte P-256 scalar, URL-safe base64 without "=". */
+  privateKey: string;
+}
+export interface WebPushOptions {
+  vapid?: VapidKeys;
+  /** web-push's name for `vapid`. */
+  vapidDetails?: VapidKeys;
+  /** Seconds the push service keeps the message. Default 2 419 200 (four weeks). */
+  ttl?: number;
+  /** web-push's name for `ttl`. */
+  TTL?: number | string;
+  urgency?: 'very-low' | 'low' | 'normal' | 'high';
+  /** Replaces an undelivered message with the same topic (at most 32 URL-safe base64 characters). */
+  topic?: string;
+  /** Extra headers; the ones the library sets cannot be overridden. */
+  headers?: Record<string, string | number>;
+  /** Default 30 000. */
+  timeoutMs?: number;
+  /** web-push's name for `timeoutMs`. */
+  timeout?: number;
+  /** An https.Agent (a proxy agent, a custom CA). */
+  agent?: import('node:https').Agent;
+  /** Push service hosts allowed besides KNOWN_PUSH_HOSTS (a subdomain matches). */
+  extraHosts?: string[];
+  /** Skip the host check (a self-hosted push service whose hosts you cannot list). */
+  allowAnyHost?: boolean;
+  /** VAPID token expiry, UNIX seconds, at most 24 hours ahead. Default 12 hours. */
+  expiration?: number;
+  /** Only 'aes128gcm'. */
+  contentEncoding?: 'aes128gcm';
+  now?: () => number;
+}
+export interface WebPushResult {
+  statusCode: number;
+  body: string;
+  headers: Record<string, string | string[] | undefined>;
+}
+export class WebPushError extends Error {
+  name: 'WebPushError';
+  /** 'invalid_request' (refused before sending), 'timeout', 'decrypt_failed'. */
+  code?: 'invalid_request' | 'timeout' | 'decrypt_failed';
+  /** The push service's status, when it answered outside 2xx. */
+  statusCode?: number;
+  headers?: Record<string, string | string[] | undefined>;
+  /** The service's answer, cut at 64 KiB. */
+  body?: string;
+  endpoint?: string;
+}
+export const KNOWN_PUSH_HOSTS: readonly string[];
+export function generateVapidKeys(): { publicKey: string; privateKey: string };
+export function vapidAuthorization(options: { audience: string; vapid: VapidKeys; expiration?: number; now?: () => number }): { authorization: string; expiration: number };
+export function encryptWebPush(options: { p256dh: string; auth: string; payload: string | Uint8Array; deterministic?: { salt: string; privateKey: string } }): Buffer;
+export function decryptWebPush(options: { body: Uint8Array; privateKey: string; p256dh: string; auth: string }): Buffer;
+export function buildWebPushRequest(subscription: WebPushSubscription, payload?: string | Uint8Array | null, options?: WebPushOptions): {
+  endpoint: string;
+  method: 'POST';
+  headers: Record<string, string>;
+  body: Buffer | null;
+  timeoutMs: number;
+  agent?: import('node:https').Agent;
+};
+export function sendWebPush(subscription: WebPushSubscription, payload?: string | Uint8Array | null, options?: WebPushOptions): Promise<WebPushResult>;
+export interface WebPushTransport {
+  (subscription: WebPushSubscription, payload: string | Uint8Array | Record<string, unknown> | null, overrides?: Omit<WebPushOptions, 'vapid' | 'vapidDetails'>): Promise<WebPushResult>;
+}
+export function createWebPushTransport(options: WebPushOptions & { vapid: VapidKeys }): WebPushTransport;

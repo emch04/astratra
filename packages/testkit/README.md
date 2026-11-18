@@ -28,7 +28,7 @@ const { assertFuzz, gen, payloads, assertSafeRegex, assertConstantTime } = requi
 | Runaway expressions | `checkRegex`, `assertSafeRegex`, `extractRegexLiterals`, `assertLinearTime` | ReDoS, quadratic or exponential time |
 | Resource bombs | `bombs.*`, `checkBounded`, `assertBounded` | exploding gzip, very deep JSON, huge text, memory or time out of bounds |
 | Differential | `compareImplementations`, `assertSameBehavior` | any difference with the library being replaced |
-| Standard vectors | `runVectors`, `assertVectors`, `standardVectors`, `fromWycheproof` | deviation from a standard (RFC 4226, 6238, 7515; Wycheproof files) |
+| Standard vectors | `runVectors`, `assertVectors`, `standardVectors`, `fromWycheproof` | deviation from a standard (RFC 4226, 6238, 7515, 8291; Wycheproof files) |
 | Metamorphic | `checkRelation`, `assertRelation`, `relations`, `transforms` | a broken relation (same JSON reformatted, same address upper-cased or decomposed) |
 | Properties | `checkProperty`, `assertProperty` | a false rule, shrunk to its smallest example |
 | Constant time | `measureTiming`, `checkConstantTime`, `assertConstantTime` | a secret comparison whose duration leaks the secret (Welch's t-test, dudect method) |
