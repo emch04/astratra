@@ -3,6 +3,18 @@
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Chaque package Astratra est versionné indépendamment.
 
+## 2026-11-18 — analyse de sécurité : comparaison CSRF et dépendances
+
+### Corrigé
+- `@astratra/security` 1.15.1 (à publier) : `createCsrfMiddleware` compare le jeton envoyé et celui du cookie en temps constant (`crypto.timingSafeEqual`) ; un en-tête absent, vide ou répété est refusé comme avant. Tests ajoutés (longueur différente, un caractère changé, en-tête répété, caractère non ASCII).
+
+### Dépendances (dépôt)
+- Montées dans leurs plages : hono 4.13.19, `@hono/node-server` 2.1.9 (sous le SDK MCP), node-forge 1.4.3, undici 6.29.1, 7.30.2 et 8.12.4, vite 7.3.8, fast-uri 3.1.9, fast-xml-parser 5.12.1, ip-address 10.7.6, `@azure/identity` (msal-node 7.2.2), `@modelcontextprotocol/sdk` 1.32.2.
+- `@astratra/tooling` : promptfoo 0.125.1 en développement (la dépendance d'appairage reste `>=0.124.1`).
+- Surcharges : basic-ftp 6.2.4 ou plus (sous get-uri) ; zod 4.6.6 ou plus sous le SDK MCP.
+- `packages/models/server` : anyio 4.14.2, certifi 2026.10.18 et idna 3.15 épinglés (ils venaient de huggingface_hub sans version fixée).
+- Restent signalés, tous en développement et sans version corrigée compatible : zod 3 sous `@expo/cli`, `@hono/node-server` 2.1.5 épinglé par promptfoo, glob et minimatch (versions corrigées en majeure suivante), picomatch (aucune version corrigée publiée).
+
 ## 2026-11-17 — trois paquets et une version Swift quittent le dépôt public
 
 ### Retiré

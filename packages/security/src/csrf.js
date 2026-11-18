@@ -73,6 +73,18 @@ const headerValue = (req, name) => {
   return headers[name.toLowerCase()] || headers[name];
 };
 
+/**
+ * Compares the submitted header with the cookie token in constant time, so
+ * response timing never reveals how many leading characters were right.
+ * Anything but a non-empty string (a missing or repeated header) is refused.
+ */
+const tokensMatch = (received, expected) => {
+  if (typeof received !== 'string' || typeof expected !== 'string' || expected.length === 0) return false;
+  const a = Buffer.from(received, 'utf8');
+  const b = Buffer.from(expected, 'utf8');
+  return a.length === b.length && crypto.timingSafeEqual(a, b);
+};
+
 const setCsrfCookie = (res, token, options = {}) => {
   const parts = [
     `${options.name || DEFAULT_CSRF_COOKIE_NAME}=${token}`,
@@ -108,7 +120,7 @@ const createCsrfMiddleware = (options = {}) => {
       return next();
     }
 
-    if (headerValue(req, headerName) !== token) {
+    if (!tokensMatch(headerValue(req, headerName), token)) {
       return res.status(403).json({ success: false, message: 'Invalid CSRF token.' });
     }
 

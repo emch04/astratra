@@ -56,6 +56,43 @@ describe('csrf', () => {
     expect(res.status).not.toHaveBeenCalled();
   });
 
+  test('compares the tokens in constant time', () => {
+    const crypto = require('crypto');
+    const spy = jest.spyOn(crypto, 'timingSafeEqual');
+    const next = jest.fn();
+    try {
+      createCsrfMiddleware()({
+        method: 'POST',
+        cookies: { astratra_csrf: 'same-token' },
+        headers: { 'x-csrf-token': 'same-token' }
+      }, createRes(), next);
+      expect(spy).toHaveBeenCalledTimes(1);
+      expect(next).toHaveBeenCalledTimes(1);
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  test.each([
+    ['a token of another length', 'cookie-token-x'],
+    ['a token of the same length with one character changed', 'cookie-tokeN'],
+    ['an empty header', ''],
+    ['a repeated header (array)', ['cookie-token', 'cookie-token']],
+    ['a non-ASCII token of the same character count', 'cookie-tokén']
+  ])('returns 403 for %s', (_label, header) => {
+    const res = createRes();
+    const next = jest.fn();
+
+    createCsrfMiddleware()({
+      method: 'PATCH',
+      cookies: { astratra_csrf: 'cookie-token' },
+      headers: { 'x-csrf-token': header }
+    }, res, next);
+
+    expect(res.status).toHaveBeenCalledWith(403);
+    expect(next).not.toHaveBeenCalled();
+  });
+
   test('allows GET requests and sets a readable CSRF cookie when absent', () => {
     const res = createRes();
     const next = jest.fn();

@@ -10,3 +10,7 @@ protobuf==7.36.2
 safetensors==0.8.0
 huggingface_hub==1.33.0
 tqdm==4.70.1
+# Pulled in by huggingface_hub (httpx); pinned at or past their security fixes.
+anyio==4.14.2
+certifi==2026.10.18
+idna==3.15
