@@ -30,7 +30,7 @@
     "access": "public"
   },
   "dependencies": {
-    "@medplum/fhirtypes": "^5.2.0"
+    "@medplum/fhirtypes": "^5.2.18"
   },
   "devDependencies": {
     "jest": "30.4.2"
