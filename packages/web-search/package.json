@@ -59,8 +59,8 @@
     }
   },
   "devDependencies": {
-    "jest": "30.4.2",
-    "playwright": "^1.64.1"
+    "jest": "30.5.2",
+    "playwright": "^1.65.1"
   },
   "exports": {
     ".": {

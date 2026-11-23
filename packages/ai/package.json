@@ -54,7 +54,7 @@
   "devDependencies": {
     "@astratra/rag": "^1.0.0",
     "@astratra/resilience": "^1.0.0",
-    "jest": "30.4.2",
+    "jest": "30.5.2",
     "redis": "^6.3.1"
   },
   "exports": {
