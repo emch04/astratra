@@ -19,7 +19,7 @@
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "eslint": "^10.15.0",
-    "mongodb": "^6.0.0",
+    "mongodb": "^7.9.1",
     "redis": "^6.3.1",
     "typescript": "^7.0.2",
     "ws": "^8.22.0"
