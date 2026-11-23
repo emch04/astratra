@@ -43,7 +43,7 @@
   },
   "devDependencies": {
     "@astratra/testkit": "^2.0.0",
-    "jest": "30.4.2",
+    "jest": "30.5.2",
     "redis": "^6.3.1"
   }
 }

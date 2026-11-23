@@ -12,5 +12,5 @@
   "keywords": ["astratra", "closure", "archive", "period", "year-end"],
   "license": "MIT",
   "publishConfig": { "access": "public" },
-  "devDependencies": { "jest": "30.4.2" }
+  "devDependencies": { "jest": "30.5.2" }
 }

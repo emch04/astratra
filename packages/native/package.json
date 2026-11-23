@@ -39,7 +39,7 @@
     "access": "public"
   },
   "devDependencies": {
-    "jest": "30.4.2"
+    "jest": "30.5.2"
   },
   "dependencies": {
     "@astratra/client": "^1.0.0"
